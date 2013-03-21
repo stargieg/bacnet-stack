@@ -59,6 +59,7 @@
 #if defined(BACFILE)
 #include "bacfile.h"
 #endif /* defined(BACFILE) */
+#include "ucix.h"
 
 
 /** @file server/main.c  Example server application using the BACnet Stack. */
@@ -158,10 +159,22 @@ int main(
     uint32_t elapsed_milliseconds = 0;
     uint32_t address_binding_tmr = 0;
     uint32_t recipient_scan_tmr = 0;
+    int uci_id = 0;
+    struct uci_context *ctx;
 
-    /* allow the device ID to be set */
-    if (argc > 1)
-        Device_Set_Object_Instance_Number(strtol(argv[1], NULL, 0));
+    ctx = ucix_init("bacnet_dev");
+    if(!ctx)
+        fprintf(stderr,  "Failed to load config file bacnet_dev\n");
+    uci_id = ucix_get_option_int(ctx, "bacnet_dev", "0", "id", 0);
+    if (uci_id != 0) {
+        Device_Set_Object_Instance_Number(uci_id);
+    } else {
+        /* allow the device ID to be set */
+        if (argc > 1)
+            Device_Set_Object_Instance_Number(strtol(argv[1], NULL, 0));
+    }
+    ucix_cleanup(ctx);
+
     printf("BACnet Server Demo\n" "BACnet Stack Version %s\n"
         "BACnet Device ID: %u\n" "Max APDU: %d\n", BACnet_Version,
         Device_Object_Instance_Number(), MAX_APDU);

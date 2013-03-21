@@ -88,6 +88,10 @@ extern "C" {
         uint32_t object_instance,
         BACNET_CHARACTER_STRING * object_name);
 
+    bool Analog_Value_Name_Set(
+        uint32_t object_instance,
+        char *new_name);
+
     int Analog_Value_Read_Property(
         BACNET_READ_PROPERTY_DATA * rpdata);
 
@@ -119,6 +123,9 @@ extern "C" {
         unsigned index,
         BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data);
 #endif
+    bool Analog_Value_Input_Description_Set(
+        uint32_t object_instance,
+        char *text_string);
 
     void Analog_Value_Init(
         void);

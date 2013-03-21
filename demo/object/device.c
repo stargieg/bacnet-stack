@@ -67,6 +67,7 @@
 #if defined(BACFILE)
 #include "bacfile.h"
 #endif /* defined(BACFILE) */
+#include "ucix.h"
 
 
 #if defined(__BORLANDC__)
@@ -303,7 +304,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* Value_Lists */ ,
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+        Multistate_Value_Intrinsic_Reporting },
 #endif
     {OBJECT_TRENDLOG,
             Trend_Log_Init,
@@ -690,6 +691,15 @@ bool Device_Set_Object_Name(
         /* Make the change and update the database revision */
         status = characterstring_copy(&My_Object_Name, object_name);
         Device_Inc_Database_Revision();
+        struct uci_context *ctx;
+        ctx = ucix_init("bacnet_dev");
+        if(ctx) {
+            ucix_add_option(ctx, "bacnet_dev", "0", "name", object_name->value);
+            ucix_commit(ctx, "bacnet_dev");
+            ucix_cleanup(ctx);
+        } else {
+            fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+        }
     }
 
     return status;
@@ -851,6 +861,15 @@ bool Device_Set_Description(
     if (length < sizeof(Description)) {
         memmove(Description, name, length);
         Description[length] = 0;
+        struct uci_context *ctx;
+        ctx = ucix_init("bacnet_dev");
+        if(ctx) {
+            ucix_add_option(ctx, "bacnet_dev", "0", "description", name);
+            ucix_commit(ctx, "bacnet_dev");
+            ucix_cleanup(ctx);
+        } else {
+            fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+        }
         status = true;
     }
 
@@ -872,6 +891,15 @@ bool Device_Set_Location(
     if (length < sizeof(Location)) {
         memmove(Location, name, length);
         Location[length] = 0;
+        struct uci_context *ctx;
+        ctx = ucix_init("bacnet_dev");
+        if(ctx) {
+            ucix_add_option(ctx, "bacnet_dev", "0", "location", name);
+            ucix_commit(ctx, "bacnet_dev");
+            ucix_cleanup(ctx);
+        } else {
+            fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+        }
         status = true;
     }
 
@@ -1812,6 +1840,50 @@ void Device_Init(
     struct object_functions *pObject = NULL;
 
     characterstring_init_ansi(&My_Object_Name, "SimpleServer");
+    struct uci_context *ctx;
+    static char *uci_name;
+    static char *uci_location;
+    static char *uci_description;
+    static char *uci_modelname;
+    //static int32_t uci_utc_offset;
+    //static bool uci_daylight_savings;
+    static char *uci_app_ver;
+    fprintf(stderr, "Device_Init\n");
+    ctx = ucix_init("bacnet_dev");
+    if(!ctx)
+        fprintf(stderr,  "Failed to load config file bacnet_dev\n");
+
+    uci_name = ucix_get_option(ctx, "bacnet_dev", "0", "name");
+    if (uci_name != 0)
+        characterstring_init_ansi(&My_Object_Name, uci_name);
+
+    uci_location = ucix_get_option(ctx, "bacnet_dev", "0", "location");
+    if (uci_location != 0)
+        ucix_string_copy(&Location, sizeof(Location), uci_location);
+
+    uci_description = ucix_get_option(ctx, "bacnet_dev", "0", "description");
+    if (uci_description != 0)
+        ucix_string_copy(&Description, sizeof(Description), uci_description);
+
+    uci_modelname = ucix_get_option(ctx, "bacnet_dev", "0", "modelname");
+    if (uci_modelname != 0)
+        ucix_string_copy(&Model_Name, sizeof(Model_Name), uci_modelname);
+
+    //uci_utc_offset = ucix_get_option_int(ctx, "bacnet_dev", "0", "utc_offset", 0);
+    //if (uci_utc_offset != 0)
+    //    UTC_Offset = uci_utc_offset;
+
+    //uci_daylight_savings = ucix_get_option_int(ctx, "bacnet_dev", "0", "daylight_savings", 0);
+    //if (uci_daylight_savings == 1)
+    //    Daylight_Savings_Status = true;
+
+    uci_app_ver = ucix_get_option(ctx, "bacnet_dev", "0", "app_ver");
+    if (uci_app_ver != 0)
+        ucix_string_copy(&Application_Software_Version,
+            sizeof(Application_Software_Version), uci_app_ver);
+
+    ucix_cleanup(ctx);
+
     if (object_table) {
         Object_Table = object_table;
     } else {

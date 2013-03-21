@@ -40,6 +40,7 @@
 #include "device.h"
 #include "handlers.h"
 #include "av.h"
+#include "ucix.h"
 
 
 #ifndef MAX_ANALOG_VALUES
@@ -54,6 +55,12 @@
 
 
 ANALOG_VALUE_DESCR AV_Descr[MAX_ANALOG_VALUES];
+
+/* Here is our Present Value */
+static uint8_t Present_Value[MAX_ANALOG_VALUES];
+static char Object_Name[MAX_ANALOG_VALUES][64];
+static char Object_Description[MAX_ANALOG_VALUES][64];
+
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Analog_Value_Properties_Required[] = {
@@ -110,6 +117,24 @@ void Analog_Value_Init(
     void)
 {
     unsigned i, j;
+    const char description[64] = "";
+    const char *uciname;
+    const char *ucidescription;
+    const char *ucidescription_default;
+    int uciunit = 0;
+    int uciunit_default = 0;
+    int ucivalue = 0;
+    int ucivalue_default = 0;
+    const char int_to_string[64] = "";
+    struct uci_context *ctx;
+    //fprintf(stderr, "Analog_Value_Init\n");
+    ctx = ucix_init("bacnet_mv");
+    if(!ctx)
+        fprintf(stderr,  "Failed to load config file");
+
+    ucidescription_default = ucix_get_option(ctx, "bacnet_mv", "default", "description");
+    uciunit_default = ucix_get_option_int(ctx, "bacnet_mv", "default", "si_unit", 0);
+    ucivalue_default = ucix_get_option_int(ctx, "bacnet_mv", "default", "value", 0);
 
     for (i = 0; i < MAX_ANALOG_VALUES; i++) {
         memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
@@ -117,11 +142,84 @@ void Analog_Value_Init(
         for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
             AV_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
         }
-        AV_Descr[i].Units = UNITS_PERCENT;
+        sprintf(int_to_string, "%lu", (unsigned long) i);
+        uciname = ucix_get_option(ctx, "bacnet_av", int_to_string, "name");
+        if (uciname != 0) {
+            //fprintf(stderr, "UCI Name %s \n",uciname);
+            for (j = 0; j < sizeof(Object_Name[i]); j++) {
+                if (uciname[j]) {
+                    Object_Name[i][j] = uciname[j];
+                }
+            }
+            ucidescription = ucix_get_option(ctx, "bacnet_av", int_to_string, "description");
+            //fprintf(stderr, "UCI Description %s \n",ucidescription);
+            if (ucidescription != 0) {
+                sprintf(description, "%s", ucidescription);
+            } else if (ucidescription_default != 0) {
+                sprintf(description, "%s %lu", ucidescription_default , (unsigned long) i);
+            } else {
+                sprintf(description, "AV%lu no uci section configured", (unsigned long) i);
+            }
+            for (j = 0; j < sizeof(Object_Description[i]); j++) {
+                if (description[j]) {
+                    Object_Description[i][j] = description[j];
+                }
+            }
+            uciunit = ucix_get_option_int(ctx, "bacnet_av", int_to_string, "si_unit", 0);
+            //fprintf(stderr, "UCI SI Unit %i \n",uciunit);
+            if (uciunit != 0) {
+                AV_Descr[i].Units = uciunit;
+            } else if (uciunit_default != 0) {
+                AV_Descr[i].Units = uciunit_default;
+            } else {
+                AV_Descr[i].Units = UNITS_PERCENT;
+            }
+            ucivalue = ucix_get_option_int(ctx, "bacnet_av", int_to_string, "value", 0);
+            //fprintf(stderr, "UCI Value %i \n",uciunit);
+            if (ucivalue != 0) {
+                AV_Descr[i].Priority_Array[15] = ucivalue;
+                Present_Value[i] = ucivalue;
+            } else if (ucivalue_default != 0) {
+                AV_Descr[i].Priority_Array[15] = ucivalue_default;
+                Present_Value[i] = ucivalue_default;
+            } else {
+                AV_Descr[i].Priority_Array[15] = 0;
+                Present_Value[i] = 0;
+            }
+        } else {
+            sprintf(int_to_string, "AV%lu_not_configured", (unsigned long) i);
+            //fprintf(stderr, "UCI Name %s \n",int_to_string);
+            for (j = 0; j < sizeof(Object_Name[i]); j++) {
+                if (int_to_string[j]) {
+                    Object_Name[i][j] = int_to_string[j];
+                }
+            }
+            if (ucidescription_default != 0) {
+                sprintf(description, "%s %lu", ucidescription_default , (unsigned long) i);
+            } else {
+                sprintf(description, "MV%lu no uci section configured", (unsigned long) i);
+            }
+            for (j = 0; j < sizeof(Object_Description[i]); j++) {
+                if (description[j]) {
+                    Object_Description[i][j] = description[j];
+                }
+            }
+            if (uciunit_default != 0) {
+                AV_Descr[i].Units = uciunit_default;
+            } else {
+                AV_Descr[i].Units = UNITS_PERCENT;
+            }
+        }
 #if defined(INTRINSIC_REPORTING)
         AV_Descr[i].Event_State = EVENT_STATE_NORMAL;
         /* notification class not connected */
-        AV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
+        //AV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
+        AV_Descr[i].Notification_Class = 1;
+        AV_Descr[i].Event_Enable = 7;
+        AV_Descr[i].Limit_Enable = 3;
+        AV_Descr[i].High_Limit = 40;
+        AV_Descr[i].Low_Limit = 0;
+        
         /* initialize Event time stamps using wildcards
            and set Acked_transitions */
         for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
@@ -218,7 +316,7 @@ float Analog_Value_Present_Value(
 {
     ANALOG_VALUE_DESCR *CurrentAV;
     float value = 0;
-    unsigned index = 0;
+    unsigned index = 0; /* offset from instance lookup */
     unsigned i = 0;
 
     index = Analog_Value_Instance_To_Index(object_instance);
@@ -238,18 +336,160 @@ float Analog_Value_Present_Value(
     return value;
 }
 
+static char *Analog_Value_Description(
+    uint32_t object_instance)
+{
+    unsigned index = 0; /* offset from instance lookup */
+    char *pName = NULL; /* return value */
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_VALUES) {
+        pName = Object_Description[index];
+    }
+
+    return pName;
+}
+
+bool Analog_Value_Description_Set(
+    uint32_t object_instance,
+    char *new_name)
+{
+    unsigned index = 0; /* offset from instance lookup */
+    size_t i = 0;       /* loop counter */
+    bool status = false;        /* return value */
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_VALUES) {
+        status = true;
+        if (new_name) {
+            for (i = 0; i < sizeof(Object_Description[index]); i++) {
+                Object_Description[index][i] = new_name[i];
+                if (new_name[i] == 0) {
+                    break;
+                }
+            }
+        } else {
+            for (i = 0; i < sizeof(Object_Description[index]); i++) {
+                Object_Description[index][i] = 0;
+            }
+        }
+    }
+
+    return status;
+}
+
+static bool Analog_Value_Description_Write(
+    uint32_t object_instance,
+    BACNET_CHARACTER_STRING *char_string,
+    BACNET_ERROR_CLASS *error_class,
+    BACNET_ERROR_CODE *error_code)
+{
+    unsigned index = 0; /* offset from instance lookup */
+    size_t length = 0;
+    uint8_t encoding = 0;
+    bool status = false;        /* return value */
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_VALUES) {
+        length = characterstring_length(char_string);
+        if (length <= sizeof(Object_Description[index])) {
+            encoding = characterstring_encoding(char_string);
+            if (encoding == CHARACTER_UTF8) {
+                status = characterstring_ansi_copy(
+                    Object_Description[index],
+                    sizeof(Object_Description[index]),
+                    char_string);
+                if (!status) {
+                    *error_class = ERROR_CLASS_PROPERTY;
+                    *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
+                } else {
+                    struct uci_context *ctx;
+                    const char index_c[32] = "";
+                    sprintf(index_c, "%u", index);
+                    ctx = ucix_init("bacnet_av");
+                    if(ctx) {
+                        ucix_add_option(ctx, "bacnet_av", index_c, "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_av");
+                        ucix_cleanup(ctx);
+                    } else {
+                        fprintf(stderr,  "Failed to open config file bacnet_av\n");
+                    }
+                }
+            } else {
+                *error_class = ERROR_CLASS_PROPERTY;
+                *error_code = ERROR_CODE_CHARACTER_SET_NOT_SUPPORTED;
+            }
+        } else {
+            *error_class = ERROR_CLASS_PROPERTY;
+            *error_code = ERROR_CODE_NO_SPACE_TO_WRITE_PROPERTY;
+        }
+    }
+
+    return status;
+}
+
 /* note: the object name must be unique within this device */
 bool Analog_Value_Object_Name(
     uint32_t object_instance,
     BACNET_CHARACTER_STRING * object_name)
 {
-    static char text_string[32] = "";   /* okay for single thread */
+    unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
-    if (object_instance < MAX_ANALOG_VALUES) {
-        sprintf(text_string, "ANALOG VALUE %lu",
-            (unsigned long) object_instance);
-        status = characterstring_init_ansi(object_name, text_string);
+    index = Analog_Value_Instance_To_Index(object_instance);
+
+    if (index < MAX_ANALOG_VALUES) {
+        status = characterstring_init_ansi(object_name, Object_Name[index]);
+    }
+
+    return status;
+}
+
+static bool Analog_Value_Object_Name_Write(
+    uint32_t object_instance,
+    BACNET_CHARACTER_STRING *char_string,
+    BACNET_ERROR_CLASS *error_class,
+    BACNET_ERROR_CODE *error_code)
+{
+    unsigned index = 0; /* offset from instance lookup */
+    size_t length = 0;
+    uint8_t encoding = 0;
+    bool status = false;        /* return value */
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_VALUES) {
+        length = characterstring_length(char_string);
+        if (length <= sizeof(Object_Name[index])) {
+            encoding = characterstring_encoding(char_string);
+            if (encoding == CHARACTER_UTF8) {
+                status = characterstring_ansi_copy(
+                    Object_Name[index],
+                    sizeof(Object_Name[index]),
+                    char_string);
+                if (!status) {
+                    *error_class = ERROR_CLASS_PROPERTY;
+                    *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
+                } else {
+                    struct uci_context *ctx;
+                    const char index_c[32] = "";
+                    sprintf(index_c, "%u", index);
+                    ctx = ucix_init("bacnet_av");
+                    if(ctx) {
+                        ucix_add_option(ctx, "bacnet_av", index_c, "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_av");
+                        ucix_cleanup(ctx);
+                    } else {
+                        fprintf(stderr,  "Failed to open config file bacnet_av\n");
+                    }
+                }
+            } else {
+                *error_class = ERROR_CLASS_PROPERTY;
+                *error_code = ERROR_CODE_CHARACTER_SET_NOT_SUPPORTED;
+            }
+        } else {
+            *error_class = ERROR_CLASS_PROPERTY;
+            *error_code = ERROR_CODE_NO_SPACE_TO_WRITE_PROPERTY;
+        }
     }
 
     return status;
@@ -291,8 +531,14 @@ int Analog_Value_Read_Property(
             break;
 
         case PROP_OBJECT_NAME:
-        case PROP_DESCRIPTION:
             Analog_Value_Object_Name(rpdata->object_instance, &char_string);
+            apdu_len =
+                encode_application_character_string(&apdu[0], &char_string);
+            break;
+
+        case PROP_DESCRIPTION:
+            characterstring_init_ansi(&char_string,
+                Analog_Value_Description(rpdata->object_instance));
             apdu_len =
                 encode_application_character_string(&apdu[0], &char_string);
             break;
@@ -543,6 +789,8 @@ bool Analog_Value_Write_Property(
 {
     bool status = false;        /* return value */
     unsigned int object_index = 0;
+    int object_type = 0;
+    uint32_t object_instance = 0;
     unsigned int priority = 0;
     uint8_t level = ANALOG_LEVEL_NULL;
     int len = 0;
@@ -575,6 +823,44 @@ bool Analog_Value_Write_Property(
         return false;
 
     switch (wp_data->object_property) {
+        case PROP_OBJECT_NAME:
+            if (value.tag == BACNET_APPLICATION_TAG_CHARACTER_STRING) {
+                /* All the object names in a device must be unique */
+                if (Device_Valid_Object_Name(&value.type.Character_String,
+                    &object_type, &object_instance)) {
+                    if ((object_type == wp_data->object_type) &&
+                        (object_instance == wp_data->object_instance)) {
+                        /* writing same name to same object */
+                        status = true;
+                    } else {
+                        status = false;
+                        wp_data->error_class = ERROR_CLASS_PROPERTY;
+                        wp_data->error_code = ERROR_CODE_DUPLICATE_NAME;
+                    }
+                } else {
+                    status = Analog_Value_Object_Name_Write(
+                        wp_data->object_instance,
+                        &value.type.Character_String,
+                        &wp_data->error_class,
+                        &wp_data->error_code);
+                }
+            } else {
+                wp_data->error_class = ERROR_CLASS_PROPERTY;
+                wp_data->error_code = ERROR_CODE_INVALID_DATA_TYPE;
+            }
+            break;
+        case PROP_DESCRIPTION:
+            if (value.tag == BACNET_APPLICATION_TAG_CHARACTER_STRING) {
+                status = Analog_Value_Description_Write(
+                    wp_data->object_instance,
+                    &value.type.Character_String,
+                    &wp_data->error_class,
+                    &wp_data->error_code);
+            } else {
+                wp_data->error_class = ERROR_CLASS_PROPERTY;
+                wp_data->error_code = ERROR_CODE_INVALID_DATA_TYPE;
+            }
+            break;
         case PROP_PRESENT_VALUE:
             if (value.tag == BACNET_APPLICATION_TAG_REAL) {
                 /* Command priority 6 is reserved for use by Minimum On/Off
@@ -752,11 +1038,9 @@ bool Analog_Value_Write_Property(
             break;
 #endif
         case PROP_OBJECT_IDENTIFIER:
-        case PROP_OBJECT_NAME:
         case PROP_OBJECT_TYPE:
         case PROP_STATUS_FLAGS:
         case PROP_EVENT_STATE:
-        case PROP_DESCRIPTION:
         case PROP_PRIORITY_ARRAY:
 #if defined(INTRINSIC_REPORTING)
         case PROP_ACKED_TRANSITIONS:

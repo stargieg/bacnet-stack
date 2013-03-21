@@ -40,6 +40,7 @@
 #include "txbuf.h"
 #include "wp.h"
 #include "nc.h"
+#include "ucix.h"
 
 
 #ifndef MAX_NOTIFICATION_CLASSES
@@ -49,6 +50,8 @@
 
 #if defined(INTRINSIC_REPORTING)
 static NOTIFICATION_CLASS_INFO NC_Info[MAX_NOTIFICATION_CLASSES];
+static char Object_Name[MAX_NOTIFICATION_CLASSES][64];
+static char Object_Description[MAX_NOTIFICATION_CLASSES][64];
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Notification_Properties_Required[] = {
@@ -89,15 +92,94 @@ void Notification_Class_Init(
     void)
 {
     uint8_t NotifyIdx = 0;
+    unsigned j;
+    static bool initialized = false;
+    const char description[64] = "";
+    const char *uciname;
+    const char *ucidescription;
+    const char *ucidescription_default;
+    const char int_to_string[64] = "";
+    struct uci_context *ctx;
+    if (!initialized) {
+        initialized = true;
+        fprintf(stderr, "Notification_Class_Init\n");
+        ctx = ucix_init("bacnet_nc");
+        if(!ctx)
+            fprintf(stderr,  "Failed to load config file");
 
-    for (NotifyIdx = 0; NotifyIdx < MAX_NOTIFICATION_CLASSES; NotifyIdx++) {
-        /* init with zeros */
-        memset(&NC_Info[NotifyIdx], 0x00, sizeof(NOTIFICATION_CLASS_INFO));
-        /* set the basic parameters */
-        NC_Info[NotifyIdx].Ack_Required = 0;
-        NC_Info[NotifyIdx].Priority[TRANSITION_TO_OFFNORMAL] = 255;     /* The lowest priority for Normal message. */
-        NC_Info[NotifyIdx].Priority[TRANSITION_TO_FAULT] = 255; /* The lowest priority for Normal message. */
-        NC_Info[NotifyIdx].Priority[TRANSITION_TO_NORMAL] = 255;        /* The lowest priority for Normal message. */
+        ucidescription_default = ucix_get_option(ctx, "bacnet_nc", "default", "description");
+        /* initialize all the analog output priority arrays to NULL */
+        for (NotifyIdx = 0; NotifyIdx < MAX_NOTIFICATION_CLASSES; NotifyIdx++) {
+            /* init with zeros */
+            memset(&NC_Info[NotifyIdx], 0x00, sizeof(NOTIFICATION_CLASS_INFO));
+    	    sprintf(int_to_string, "%lu", (unsigned long) NotifyIdx);
+            uciname = ucix_get_option(ctx, "bacnet_nc", int_to_string, "name");
+            if (uciname != 0) {
+                //fprintf(stderr, "UCI Name %s %s\n",uciname,int_to_string);
+                for (j = 0; j < sizeof(Object_Name[NotifyIdx]); j++) {
+                    if (uciname[j]) {
+                        Object_Name[NotifyIdx][j] = uciname[j];
+                    }
+                }
+                ucidescription = ucix_get_option(ctx, "bacnet_nc", int_to_string, "description");
+                fprintf(stderr, "UCI Description %s \n",ucidescription);
+                if (ucidescription != 0) {
+                    sprintf(description, "%s", ucidescription);
+                } else if (ucidescription_default != 0) {
+                    sprintf(description, "%s %lu", ucidescription_default , (unsigned long) NotifyIdx);
+                } else {
+                    sprintf(description, "NC%lu no uci section configured", (unsigned long) NotifyIdx);
+                }
+                //fprintf(stderr, "UCI Description %s \n",description);
+                for (j = 0; j < sizeof(Object_Description[NotifyIdx]); j++) {
+                    if (description[j]) {
+                        Object_Description[NotifyIdx][j] = description[j];
+                    }
+                }
+            } else {
+                sprintf(int_to_string, "NC%lu_not_configured", (unsigned long) NotifyIdx);
+                //fprintf(stderr, "UCI Name %s \n",int_to_string);
+                for (j = 0; j < sizeof(Object_Name[NotifyIdx]); j++) {
+                    if (int_to_string[j]) {
+                        Object_Name[NotifyIdx][j] = int_to_string[j];
+                    }
+                }
+                if (ucidescription_default != 0) {
+                    sprintf(description, "%s %lu", ucidescription_default , (unsigned long) NotifyIdx);
+                } else {
+                    sprintf(description, "NC%lu no uci section configured", (unsigned long) NotifyIdx);
+                }
+                for (j = 0; j < sizeof(Object_Description[NotifyIdx]); j++) {
+                    if (description[j]) {
+                        Object_Description[NotifyIdx][j] = description[j];
+                    }
+                }
+            }
+
+            /* set the basic parameters */
+            NC_Info[NotifyIdx].Ack_Required = 0;
+            NC_Info[NotifyIdx].Priority[TRANSITION_TO_OFFNORMAL] = 255;     /* The lowest priority for Normal message. */
+            NC_Info[NotifyIdx].Priority[TRANSITION_TO_FAULT] = 255; /* The lowest priority for Normal message. */
+            NC_Info[NotifyIdx].Priority[TRANSITION_TO_NORMAL] = 255;        /* The lowest priority for Normal message. */
+        }
+//        if (NC_Info[0].Recipient_List[0]) {
+            NC_Info[0].Recipient_List[0].Transitions = 7; //bit string 1,1,1 To Alarm,To Fault,To Normal
+            NC_Info[0].Recipient_List[0].ValidDays = 127; //bit string 1,1,1,1,1,1,1 Mo,Di,Mi,Do,Fr,Sa,So
+            NC_Info[0].Recipient_List[0].FromTime.hour = 0;
+            NC_Info[0].Recipient_List[0].FromTime.min = 0;
+            NC_Info[0].Recipient_List[0].FromTime.sec = 0;
+            NC_Info[0].Recipient_List[0].FromTime.hundredths = 0;
+            NC_Info[0].Recipient_List[0].ToTime.hour = 23;
+            NC_Info[0].Recipient_List[0].ToTime.min = 59;
+            NC_Info[0].Recipient_List[0].ToTime.sec = 59;
+            NC_Info[0].Recipient_List[0].ToTime.hundredths = 99;
+            NC_Info[0].Recipient_List[0].Recipient.RecipientType =
+                        RECIPIENT_TYPE_ADDRESS;
+            NC_Info[0].Recipient_List[0].Recipient._.Address.net = 65535;
+            //NC_Info[0].Recipient_List[0].Recipient._.Address.mac[0] = 0;
+            //NC_Info[0].Recipient_List[0].Recipient._.Address.mac_len = 0;
+    //    }
+        ucix_cleanup(ctx);
     }
 
     return;
@@ -150,18 +232,30 @@ unsigned Notification_Class_Instance_To_Index(
     return index;
 }
 
+static char *Notification_Class_Description(
+    uint32_t object_instance)
+{
+    unsigned index = 0; /* offset from instance lookup */
+    char *pName = NULL; /* return value */
+
+    index = Notification_Class_Instance_To_Index(object_instance);
+    if (index < MAX_NOTIFICATION_CLASSES) {
+        pName = Object_Description[index];
+    }
+
+    return pName;
+}
+
 bool Notification_Class_Object_Name(
     uint32_t object_instance,
     BACNET_CHARACTER_STRING * object_name)
 {
-    static char text_string[32] = "";   /* okay for single thread */
     unsigned int index;
     bool status = false;
 
     index = Notification_Class_Instance_To_Index(object_instance);
     if (index < MAX_NOTIFICATION_CLASSES) {
-        sprintf(text_string, "NOTIFICATION CLASS %lu", (unsigned long) index);
-        status = characterstring_init_ansi(object_name, text_string);
+        status = characterstring_init_ansi(object_name, Object_Name[index]);
     }
 
     return status;
@@ -200,9 +294,15 @@ int Notification_Class_Read_Property(
             break;
 
         case PROP_OBJECT_NAME:
-        case PROP_DESCRIPTION:
             Notification_Class_Object_Name(rpdata->object_instance,
                 &char_string);
+            apdu_len =
+                encode_application_character_string(&apdu[0], &char_string);
+            break;
+
+        case PROP_DESCRIPTION:
+            characterstring_init_ansi(&char_string,
+                Notification_Class_Description(rpdata->object_instance));
             apdu_len =
                 encode_application_character_string(&apdu[0], &char_string);
             break;
