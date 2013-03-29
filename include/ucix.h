@@ -31,10 +31,12 @@ int ucix_get_option_int(struct uci_context *ctx,
 	const char *p, const char *s, const char *o, int def);
 void ucix_add_section(struct uci_context *ctx,
 	const char *p, const char *s, const char *t);
-void ucix_add_option(struct uci_context *ctx,
-	const char *p, const char *s, const char *o, const char *t);
 void ucix_add_option_int(struct uci_context *ctx,
 	const char *p, const char *s, const char *o, int t);
+void ucix_add_option(struct uci_context *ctx,
+	const char *p, const char *s, const char *o, const char *t);
+void ucix_set_list(struct uci_context *ctx,
+	const char *p, const char *s, const char *o, const char *value[254][64], int *l);
 int ucix_commit(struct uci_context *ctx, const char *p);
 void ucix_revert(struct uci_context *ctx,
 	const char *p, const char *s, const char *o);
