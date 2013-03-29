@@ -62,12 +62,6 @@
 
 MULTI_STATE_VALUE_DESCR MSV_Descr[MAX_MULTI_STATE_VALUES];
 
-/* Here is our Present Value */
-static uint8_t Present_Value[MAX_MULTI_STATE_VALUES];
-static bool Out_Of_Service[MAX_MULTI_STATE_VALUES];
-static char Object_Name[MAX_MULTI_STATE_VALUES][64];
-static char Object_Description[MAX_MULTI_STATE_VALUES][64];
-
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Multistate_Value_Properties_Required[] = {
     PROP_OBJECT_IDENTIFIER,
@@ -153,7 +147,7 @@ void Multistate_Value_Init(
         sprintf(int_to_string, "%lu", (unsigned long) i);
         uciname = ucix_get_option(ctx, "bacnet_mv", int_to_string, "name");
         if (uciname != 0) {
-            ucix_string_copy(&Object_Name[i], sizeof(Object_Name[i]), uciname);
+            ucix_string_copy(&MSV_Descr[i].Object_Name, sizeof(MSV_Descr[i].Object_Name), uciname);
             ucidescription = ucix_get_option(ctx, "bacnet_mv",
                 int_to_string, "description");
             //fprintf(stderr, "UCI Description %s \n",ucidescription);
@@ -164,28 +158,28 @@ void Multistate_Value_Init(
             } else {
                 sprintf(description, "MV%lu no uci section configured", (unsigned long) i);
             }
-            ucix_string_copy(&Object_Description[i], 
-                sizeof(Object_Description[i]), ucidescription);
+            ucix_string_copy(&MSV_Descr[i].Object_Description,
+                sizeof(MSV_Descr[i].Object_Description), ucidescription);
 
             uci_value = ucix_get_option_int(ctx, "bacnet_mv", int_to_string, "value", 1);
             MSV_Descr[i].Priority_Array[15] = uci_value;
-            Present_Value[i] = uci_value;
+            //Present_Value[i] = uci_value;
         } else {
             sprintf(int_to_string, "MV%lu_not_configured", (unsigned long) i);
             //fprintf(stderr, "UCI Name %s \n",int_to_string);
-            ucix_string_copy(&Object_Name[i], sizeof(Object_Name[i]), int_to_string);
+            ucix_string_copy(&MSV_Descr[i].Object_Name, sizeof(MSV_Descr[i].Object_Name), int_to_string);
             if (ucidescription_default != 0) {
                 sprintf(description, "%s %lu", ucidescription_default , (unsigned long) i);
             } else {
                 sprintf(description, "MV%lu no uci section configured", (unsigned long) i);
             }
-            ucix_string_copy(&Object_Description[i], 
-                sizeof(Object_Description[i]), description);
+            ucix_string_copy(&MSV_Descr[i].Object_Description,
+                sizeof(MSV_Descr[i].Object_Description), description);
         }
-//        for (j = 0; j < MULTI_STATE_NUMBER_OF_STATES; j++) {
-            MSV_Descr[i].number_of_states = number_of_states_default;
-            for (j = 0; j < number_of_states_default; j++) {
 
+        MSV_Descr[i].number_of_states = number_of_states_default;
+        MSV_Descr[i].Relinquish_Default = 1; //TODO read uci
+        for (j = 0; j < number_of_states_default; j++) {
             if (ucistate_default[j]) {
                 sprintf(MSV_Descr[i].State_Text[j], ucistate_default[j]);
             } else {
@@ -329,7 +323,7 @@ bool Multistate_Value_Present_Value_Set(
     if (index < MAX_MULTI_STATE_VALUES) {
         CurrentMSV = &MSV_Descr[index];
         if ((value > 0) && (value <= CurrentMSV->number_of_states)) {
-            Present_Value[index] = (uint8_t) value;
+            CurrentMSV->Present_Value = (uint8_t) value;
             CurrentMSV->Priority_Array[priority - 1] = (uint8_t) value;
             status = true;
             //if (priority && (priority <= BACNET_MAX_PRIORITY) &&
@@ -369,11 +363,14 @@ void Multistate_Value_Out_Of_Service_Set(
     uint32_t object_instance,
     bool value)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0;
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES) {
-        Out_Of_Service[index] = value;
+        CurrentMSV = &MSV_Descr[index];
+        //Out_Of_Service[index] = value;
+        CurrentMSV->Out_Of_Service = value;
     }
 
     return;
@@ -382,12 +379,14 @@ void Multistate_Value_Out_Of_Service_Set(
 static char *Multistate_Value_Description(
     uint32_t object_instance)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES) {
-        pName = Object_Description[index];
+        CurrentMSV = &MSV_Descr[index];
+        pName = CurrentMSV->Object_Description;
     }
 
     return pName;
@@ -397,23 +396,25 @@ bool Multistate_Value_Description_Set(
     uint32_t object_instance,
     char *new_name)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES) {
+        CurrentMSV = &MSV_Descr[index];
         status = true;
         if (new_name) {
-            for (i = 0; i < sizeof(Object_Description[index]); i++) {
-                Object_Description[index][i] = new_name[i];
+            for (i = 0; i < sizeof(CurrentMSV->Object_Description); i++) {
+                CurrentMSV->Object_Description[i] = new_name[i];
                 if (new_name[i] == 0) {
                     break;
                 }
             }
         } else {
-            for (i = 0; i < sizeof(Object_Description[index]); i++) {
-                Object_Description[index][i] = 0;
+            for (i = 0; i < sizeof(CurrentMSV->Object_Description); i++) {
+                CurrentMSV->Object_Description[i] = 0;
             }
         }
     }
@@ -427,6 +428,7 @@ static bool Multistate_Value_Description_Write(
     BACNET_ERROR_CLASS *error_class,
     BACNET_ERROR_CODE *error_code)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     size_t length = 0;
     uint8_t encoding = 0;
@@ -434,13 +436,14 @@ static bool Multistate_Value_Description_Write(
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES) {
+        CurrentMSV = &MSV_Descr[index];
         length = characterstring_length(char_string);
-        if (length <= sizeof(Object_Description[index])) {
+        if (length <= sizeof(CurrentMSV->Object_Description)) {
             encoding = characterstring_encoding(char_string);
             if (encoding == CHARACTER_UTF8) {
                 status = characterstring_ansi_copy(
-                    Object_Description[index],
-                    sizeof(Object_Description[index]),
+                    CurrentMSV->Object_Description,
+                    sizeof(CurrentMSV->Object_Description),
                     char_string);
                 if (!status) {
                     *error_class = ERROR_CLASS_PROPERTY;
@@ -476,13 +479,15 @@ bool Multistate_Value_Object_Name(
     uint32_t object_instance,
     BACNET_CHARACTER_STRING * object_name)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
     index = Multistate_Value_Instance_To_Index(object_instance);
 
     if (index < MAX_MULTI_STATE_VALUES) {
-        status = characterstring_init_ansi(object_name, Object_Name[index]);
+        CurrentMSV = &MSV_Descr[index];
+        status = characterstring_init_ansi(object_name, CurrentMSV->Object_Name);
     }
 
     return status;
@@ -493,24 +498,26 @@ bool Multistate_Value_Name_Set(
     uint32_t object_instance,
     char *new_name)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES) {
+        CurrentMSV = &MSV_Descr[index];
         status = true;
         /* FIXME: check to see if there is a matching name */
         if (new_name) {
-            for (i = 0; i < sizeof(Object_Name[index]); i++) {
-                Object_Name[index][i] = new_name[i];
+            for (i = 0; i < sizeof(CurrentMSV->Object_Name); i++) {
+                CurrentMSV->Object_Name[i] = new_name[i];
                 if (new_name[i] == 0) {
                     break;
                 }
             }
         } else {
-            for (i = 0; i < sizeof(Object_Name[index]); i++) {
-                Object_Name[index][i] = 0;
+            for (i = 0; i < sizeof(CurrentMSV->Object_Name); i++) {
+                CurrentMSV->Object_Name[i] = 0;
             }
         }
     }
@@ -524,6 +531,7 @@ static bool Multistate_Value_Object_Name_Write(
     BACNET_ERROR_CLASS *error_class,
     BACNET_ERROR_CODE *error_code)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     size_t length = 0;
     uint8_t encoding = 0;
@@ -531,13 +539,14 @@ static bool Multistate_Value_Object_Name_Write(
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES) {
+        CurrentMSV = &MSV_Descr[index];
         length = characterstring_length(char_string);
-        if (length <= sizeof(Object_Name[index])) {
+        if (length <= sizeof(CurrentMSV->Object_Name)) {
             encoding = characterstring_encoding(char_string);
             if (encoding == CHARACTER_UTF8) {
                 status = characterstring_ansi_copy(
-                    Object_Name[index],
-                    sizeof(Object_Name[index]),
+                    CurrentMSV->Object_Name,
+                    sizeof(CurrentMSV->Object_Name),
                     char_string);
                 if (!status) {
                     *error_class = ERROR_CLASS_PROPERTY;
@@ -573,9 +582,9 @@ static char *Multistate_Value_State_Text(
     uint32_t object_instance,
     uint32_t state_index)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
-    MULTI_STATE_VALUE_DESCR *CurrentMSV;
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES)
@@ -598,10 +607,10 @@ bool Multistate_Value_State_Text_Set(
     uint32_t state_index,
     char *new_name)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index = 0; /* offset from instance lookup */
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
-    MULTI_STATE_VALUE_DESCR *CurrentMSV;
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < MAX_MULTI_STATE_VALUES)
@@ -636,6 +645,7 @@ bool Multistate_Value_State_Text_Set(
 int Multistate_Value_Read_Property(
     BACNET_READ_PROPERTY_DATA * rpdata)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     int len = 0;
     int apdu_len = 0;   /* return value */
     BACNET_BIT_STRING bit_string;
@@ -645,7 +655,6 @@ int Multistate_Value_Read_Property(
     unsigned i = 0;
     bool state = false;
     uint8_t *apdu = NULL;
-    MULTI_STATE_VALUE_DESCR *CurrentMSV;
 
     if ((rpdata == NULL) || (rpdata->application_data == NULL) ||
         (rpdata->application_data_len == 0)) {
@@ -963,6 +972,7 @@ int Multistate_Value_Read_Property(
 bool Multistate_Value_Write_Property(
     BACNET_WRITE_PROPERTY_DATA * wp_data)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     bool status = false;        /* return value */
     unsigned int object_index = 0;
     int object_type = 0;
@@ -971,7 +981,6 @@ bool Multistate_Value_Write_Property(
     uint8_t level = MULTI_STATE_LEVEL_NULL;
     int len = 0;
     BACNET_APPLICATION_DATA_VALUE value;
-    MULTI_STATE_VALUE_DESCR *CurrentMSV;
 
     /* decode the some of the request */
     len =
@@ -1176,9 +1185,9 @@ void Multistate_Value_Intrinsic_Reporting(
     uint32_t object_instance)
 {
 #if defined(INTRINSIC_REPORTING)
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     BACNET_EVENT_NOTIFICATION_DATA event_data;
     BACNET_CHARACTER_STRING msgText;
-    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned int object_index;
     uint8_t FromState = 0;
     uint8_t ToState;
@@ -1417,6 +1426,7 @@ int Multistate_Value_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
@@ -1424,6 +1434,7 @@ int Multistate_Value_Event_Information(
 
     /* check index */
     if (index < MAX_MULTI_STATE_VALUES) {
+        CurrentMSV = &MSV_Descr[index];
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (MSV_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
@@ -1591,32 +1602,33 @@ int Multistate_Value_Alarm_Summary(
     unsigned index,
     BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data)
 {
-
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     /* check index */
     if (index < MAX_MULTI_STATE_VALUES) {
+        CurrentMSV = &MSV_Descr[index];
         /* Event_State is not equal to NORMAL  and
            Notify_Type property value is ALARM */
-        if ((MSV_Descr[index].Event_State != EVENT_STATE_NORMAL) &&
-            (MSV_Descr[index].Notify_Type == NOTIFY_ALARM)) {
+        if ((CurrentMSV->Event_State != EVENT_STATE_NORMAL) &&
+            (CurrentMSV->Notify_Type == NOTIFY_ALARM)) {
             /* Object Identifier */
             getalarm_data->objectIdentifier.type = OBJECT_MULTI_STATE_VALUE;
             getalarm_data->objectIdentifier.instance =
                 Multistate_Value_Index_To_Instance(index);
             /* Alarm State */
-            getalarm_data->alarmState = MSV_Descr[index].Event_State;
+            getalarm_data->alarmState = CurrentMSV->Event_State;
             /* Acknowledged Transitions */
             bitstring_init(&getalarm_data->acknowledgedTransitions);
             bitstring_set_bit(&getalarm_data->acknowledgedTransitions,
                 TRANSITION_TO_OFFNORMAL,
-                MSV_Descr[index].
+                CurrentMSV->
                 Acked_Transitions[TRANSITION_TO_OFFNORMAL].bIsAcked);
             bitstring_set_bit(&getalarm_data->acknowledgedTransitions,
                 TRANSITION_TO_FAULT,
-                MSV_Descr[index].Acked_Transitions[TRANSITION_TO_FAULT].
+                CurrentMSV->Acked_Transitions[TRANSITION_TO_FAULT].
                 bIsAcked);
             bitstring_set_bit(&getalarm_data->acknowledgedTransitions,
                 TRANSITION_TO_NORMAL,
-                MSV_Descr[index].Acked_Transitions[TRANSITION_TO_NORMAL].
+                CurrentMSV->Acked_Transitions[TRANSITION_TO_NORMAL].
                 bIsAcked);
 
             return 1;   /* active alarm */
