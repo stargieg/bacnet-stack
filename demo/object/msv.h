@@ -50,9 +50,11 @@ int max_multi_state_values;
         uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        bool Disable;
         uint8_t Units;
         char State_Text[254][64];
         int number_of_states;
+        int number_of_alarmstates;
         /* Here is our Priority Array.  They are supposed to be Real, but */
         /* we don't have that kind of memory, so we will use a single byte */
         /* and load a Real for returning the value when asked. */
