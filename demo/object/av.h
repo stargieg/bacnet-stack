@@ -37,15 +37,21 @@
 #include "alarm_ack.h"
 #include "getevent.h"
 #include "get_alarm_sum.h"
-#endif
+#endif /* INTRINSIC_REPORTING */
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
+int max_analog_values;
+
     typedef struct analog_value_descr {
+        char Object_Name[64];
+        char Object_Description[64];
+        uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        bool Disable;
         uint8_t Units;
         /* Here is our Priority Array.  They are supposed to be Real, but */
         /* we don't have that kind of memory, so we will use a single byte */
@@ -67,7 +73,7 @@ extern "C" {
         uint32_t Remaining_Time_Delay;
         /* AckNotification informations */
         ACK_NOTIFICATION Ack_notify_data;
-#endif
+#endif /* INTRINSIC_REPORTING */
     } ANALOG_VALUE_DESCR;
 
 
@@ -75,14 +81,28 @@ extern "C" {
         const int **pRequired,
         const int **pOptional,
         const int **pProprietary);
+
     bool Analog_Value_Valid_Instance(
         uint32_t object_instance);
+
     unsigned Analog_Value_Count(
         void);
+
     uint32_t Analog_Value_Index_To_Instance(
         unsigned index);
+
     unsigned Analog_Value_Instance_To_Index(
         uint32_t object_instance);
+
+    int Analog_Value_Read_Property(
+        BACNET_READ_PROPERTY_DATA * rpdata);
+
+    bool Analog_Value_Write_Property(
+        BACNET_WRITE_PROPERTY_DATA * wp_data);
+
+    /* optional API */
+    bool Analog_Value_Object_Instance_Add(
+        uint32_t instance);
 
     bool Analog_Value_Object_Name(
         uint32_t object_instance,
@@ -92,18 +112,24 @@ extern "C" {
         uint32_t object_instance,
         char *new_name);
 
-    int Analog_Value_Read_Property(
-        BACNET_READ_PROPERTY_DATA * rpdata);
-
-    bool Analog_Value_Write_Property(
-        BACNET_WRITE_PROPERTY_DATA * wp_data);
-
     bool Analog_Value_Present_Value_Set(
         uint32_t object_instance,
         float value,
         uint8_t priority);
+
     float Analog_Value_Present_Value(
         uint32_t object_instance);
+
+    bool Analog_Value_Out_Of_Service(
+        uint32_t object_instance);
+
+    void Analog_Value_Out_Of_Service_Set(
+        uint32_t object_instance,
+        bool value);
+
+    bool Analog_Value_Description_Set(
+        uint32_t object_instance,
+        char *text_string);
 
     /* note: header of Intrinsic_Reporting function is required
        even when INTRINSIC_REPORTING is not defined */
@@ -123,9 +149,6 @@ extern "C" {
         unsigned index,
         BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data);
 #endif
-    bool Analog_Value_Input_Description_Set(
-        uint32_t object_instance,
-        char *text_string);
 
     void Analog_Value_Init(
         void);
