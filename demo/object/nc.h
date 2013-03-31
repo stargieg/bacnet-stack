@@ -75,11 +75,14 @@ BACnetRecipient ::= CHOICE {
 
 
 /* Structure containing configuration for a Notification Class */
-    typedef struct Notification_Class_info {
+    typedef struct notification_class_descr {
+        char Object_Name[64];
+        char Object_Description[64];
+        bool Disable;
         uint8_t Priority[MAX_BACNET_EVENT_TRANSITION];  /* BACnetARRAY[3] of Unsigned */
         uint8_t Ack_Required;   /* BACnetEventTransitionBits */
         BACNET_DESTINATION Recipient_List[NC_MAX_RECIPIENTS];   /* List of BACnetDestination */
-    } NOTIFICATION_CLASS_INFO;
+    } NOTIFICATION_CLASS_DESCR;
 
 
 /* Indicates whether the transaction has been confirmed */

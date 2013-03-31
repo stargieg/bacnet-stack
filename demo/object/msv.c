@@ -531,7 +531,6 @@ bool Multistate_Value_Object_Name(
     return status;
 }
 
-#if 0
 /* note: the object name must be unique within this device */
 bool Multistate_Value_Name_Set(
     uint32_t object_instance,
@@ -563,7 +562,6 @@ bool Multistate_Value_Name_Set(
 
     return status;
 }
-#endif
 
 static bool Multistate_Value_Object_Name_Write(
     uint32_t object_instance,
