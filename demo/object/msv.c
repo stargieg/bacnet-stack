@@ -138,6 +138,8 @@ void Multistate_Value_Init(
     int ucinc;
     int ucievent_default;
     int ucievent;
+    int ucitime_delay_default;
+    int ucitime_delay;
     const char int_to_string[64] = "";
     fprintf(stderr, "Multistate_Value_Init\n");
     ctx = ucix_init("bacnet_mv");
@@ -154,6 +156,8 @@ void Multistate_Value_Init(
         "nc", -1);
     ucievent_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
         "event", -1);
+    ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
+        "time_delay", -1);
 
     for (i = 0; i < MAX_MULTI_STATE_VALUES; i++) {
         memset(&MSV_Descr[i], 0x00, sizeof(MULTI_STATE_VALUE_DESCR));
@@ -228,13 +232,17 @@ void Multistate_Value_Init(
             ucinc = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
                 "nc", ucinc_default);
             ucievent = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
-                "nc", ucievent_default);
+                "event", ucievent_default);
+            ucitime_delay = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
+                "time_delay", ucitime_delay_default);
             MSV_Descr[i].Event_State = EVENT_STATE_NORMAL;
             /* notification class not connected */
             if (ucinc > -1) MSV_Descr[i].Notification_Class = ucinc;
             else MSV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
-            if (ucinc > -1) MSV_Descr[i].Event_Enable = ucievent;
+            if (ucievent > -1) MSV_Descr[i].Event_Enable = ucievent;
             else MSV_Descr[i].Event_Enable = 0;
+            if (ucitime_delay > -1) MSV_Descr[i].Time_Delay = ucitime_delay;
+            else MSV_Descr[i].Time_Delay = 0;
             /* initialize Event time stamps using wildcards
                and set Acked_transitions */
             for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
@@ -1299,6 +1307,7 @@ bool Multistate_Value_Write_Property(
             if (status) {
                 CurrentMSV->Time_Delay = value.type.Unsigned_Int;
                 CurrentMSV->Remaining_Time_Delay = CurrentMSV->Time_Delay;
+                ucix_add_option_int(ctx, "bacnet_mv", index_c, "time_delay", value.type.Unsigned_Int);
             }
             break;
 

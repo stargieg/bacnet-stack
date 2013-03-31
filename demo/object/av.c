@@ -134,6 +134,8 @@ void Analog_Value_Init(
     int ucinc;
     int ucievent_default;
     int ucievent;
+    int ucitime_delay_default;
+    int ucitime_delay;
     int ucilimit_default;
     int ucilimit;
     int ucihigh_limit_default;
@@ -159,6 +161,8 @@ void Analog_Value_Init(
         "nc", -1);
     ucievent_default = ucix_get_option_int(ctx, "bacnet_av", "default",
         "event", -1);
+    ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+        "time_delay", -1);
     ucilimit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
         "limit", -1);
     ucihigh_limit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
@@ -222,6 +226,8 @@ void Analog_Value_Init(
                 "nc", ucinc_default);
             ucievent = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
                 "event", ucievent_default);
+            ucitime_delay = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
+                "time_delay", ucitime_delay_default);
             ucilimit = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
                 "limit", ucilimit_default);
             ucihigh_limit = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
@@ -234,6 +240,8 @@ void Analog_Value_Init(
             else AV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
             if (ucievent > -1) AV_Descr[i].Event_Enable = ucievent;
             else AV_Descr[i].Event_Enable = 0;
+            if (ucitime_delay > -1) AV_Descr[i].Time_Delay = ucitime_delay;
+            else AV_Descr[i].Time_Delay = 0;
             if (ucilimit > -1) AV_Descr[i].Limit_Enable = ucilimit;
             else AV_Descr[i].Limit_Enable = 0;
             if (ucihigh_limit > -1) AV_Descr[i].High_Limit = ucihigh_limit;
@@ -1038,6 +1046,7 @@ bool Analog_Value_Write_Property(
             if (status) {
                 CurrentAV->Time_Delay = value.type.Unsigned_Int;
                 CurrentAV->Remaining_Time_Delay = CurrentAV->Time_Delay;
+                ucix_add_option_int(ctx, "bacnet_av", index_c, "time_delay", value.type.Unsigned_Int);
             }
             break;
 
