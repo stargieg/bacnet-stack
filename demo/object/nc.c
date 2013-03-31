@@ -50,9 +50,9 @@
 
 /* number of demo objects */
 #ifndef MAX_NOTIFICATION_CLASSES
-#define MAX_NOTIFICATION_CLASSES 128
+#define MAX_NOTIFICATION_CLASSES 16
 #endif
-unsigned max_notificaton_classes_int = 128;
+unsigned max_notificaton_classes_int = 16;
 
 
 #if defined(INTRINSIC_REPORTING)

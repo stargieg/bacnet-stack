@@ -46,9 +46,9 @@
 /* number of demo objects */
 #ifndef MAX_MULTI_STATE_VALUES
 //#define MAX_MULTI_STATE_VALUES 65535
-#define MAX_MULTI_STATE_VALUES 1024
+#define MAX_MULTI_STATE_VALUES 512
 #endif
-unsigned max_multi_state_values_int = 1024;
+unsigned max_multi_state_values_int = 512;
 
 /* When all the priorities are level null, the present value returns */
 /* the Relinquish Default value */
