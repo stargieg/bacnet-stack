@@ -81,10 +81,16 @@ extern "C" {
 #define TL_T_STOP_WILD  2       /* Stop Time is wild carded */
 
 #define TL_MAX_ENTRIES 1000     /* Entries per datalog */
+#define TL_INIT_ENTRIES 1     /* Entries per datalog */
 
 /* Structure containing config and status info for a Trend Log */
 
-    typedef struct tl_log_info {
+    typedef struct trend_log_descr {
+        char Object_Name[64];
+        char Object_Description[64];
+        bool Disable;
+        char Int_type;
+        char Int_name;
         bool bEnable;   /* Trend log is active when this is true */
         BACNET_DATE_TIME StartTime;     /* BACnet format start time */
         time_t tStartTime;      /* Local time working copy of start time */
@@ -102,7 +108,7 @@ extern "C" {
         bool bTrigger;  /* Set to 1 to cause a reading to be taken */
         int iIndex;     /* Current insertion point */
         time_t tLastDataTime;
-    } TL_LOG_INFO;
+    } TREND_LOG_DESCR;
 
 /*
  * Data types associated with a BACnet Log Record. We use these for managing the
@@ -130,12 +136,16 @@ extern "C" {
 
     bool Trend_Log_Valid_Instance(
         uint32_t object_instance);
+
     unsigned Trend_Log_Count(
         void);
+
     uint32_t Trend_Log_Index_To_Instance(
         unsigned index);
+
     unsigned Trend_Log_Instance_To_Index(
         uint32_t instance);
+
     bool Trend_Log_Object_Instance_Add(
         uint32_t instance);
 
