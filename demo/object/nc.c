@@ -52,13 +52,11 @@
 #ifndef MAX_NOTIFICATION_CLASSES
 #define MAX_NOTIFICATION_CLASSES 16
 #endif
-unsigned max_notificaton_classes_int = 16;
+unsigned max_notificaton_classes_int = 0;
 
 
 #if defined(INTRINSIC_REPORTING)
 static NOTIFICATION_CLASS_DESCR NC_Descr[MAX_NOTIFICATION_CLASSES];
-//static char Object_Name[MAX_NOTIFICATION_CLASSES][64];
-//static char Object_Description[MAX_NOTIFICATION_CLASSES][64];
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Notification_Properties_Required[] = {
