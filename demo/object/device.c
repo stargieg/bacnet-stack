@@ -89,6 +89,8 @@ extern bool Routed_Device_Write_Property_Local(
 /* may be overridden by outside table */
 static object_functions_t *Object_Table;
 
+struct uci_context *ctx;
+
 static object_functions_t My_Object_Table[] = {
     {OBJECT_DEVICE,
             NULL /* Init - don't init Device or it will recourse! */ ,
@@ -479,37 +481,50 @@ bool Device_Reinitialize(
     BACNET_REINITIALIZE_DEVICE_DATA * rd_data)
 {
     bool status = false;
-
-    if (characterstring_ansi_same(&rd_data->password, "Jesus")) {
-        switch (rd_data->state) {
-            case BACNET_REINIT_COLDSTART:
-            case BACNET_REINIT_WARMSTART:
-                dcc_set_status_duration(COMMUNICATION_ENABLE, 0);
-                break;
-            case BACNET_REINIT_STARTBACKUP:
-                break;
-            case BACNET_REINIT_ENDBACKUP:
-                break;
-            case BACNET_REINIT_STARTRESTORE:
-                break;
-            case BACNET_REINIT_ENDRESTORE:
-                break;
-            case BACNET_REINIT_ABORTRESTORE:
-                break;
-            default:
-                break;
+    static char *uci_password;
+    bool enable_pw = false;
+    ctx = ucix_init("bacnet_dev");
+    if(ctx) {
+        enable_pw = ucix_get_option_int(ctx, "bacnet_dev", "0",
+            "enable_pw", false);
+        if (enable_pw) {
+            uci_password = ucix_get_option(ctx, "bacnet_dev", "0", "password");
         }
-        /* Note: you could use a mix of state
-           and password to multiple things */
-        /* note: you probably want to restart *after* the
-           simple ack has been sent from the return handler
-           so just set a flag from here */
-        status = true;
     } else {
-        rd_data->error_class = ERROR_CLASS_SECURITY;
-        rd_data->error_code = ERROR_CODE_PASSWORD_FAILURE;
+        fprintf(stderr,  "Failed to open config file bacnet_dev\n");
     }
 
+    if (enable_pw) {
+        if (characterstring_ansi_same(&rd_data->password, uci_password)) {
+            switch (rd_data->state) {
+                case BACNET_REINIT_COLDSTART:
+                case BACNET_REINIT_WARMSTART:
+                    dcc_set_status_duration(COMMUNICATION_ENABLE, 0);
+                    break;
+                case BACNET_REINIT_STARTBACKUP:
+                    break;
+                case BACNET_REINIT_ENDBACKUP:
+                    break;
+                case BACNET_REINIT_STARTRESTORE:
+                    break;
+                case BACNET_REINIT_ENDRESTORE:
+                    break;
+                case BACNET_REINIT_ABORTRESTORE:
+                    break;
+                default:
+                    break;
+            }
+            /* Note: you could use a mix of state
+               and password to multiple things */
+            /* note: you probably want to restart *after* the
+               simple ack has been sent from the return handler
+               so just set a flag from here */
+            status = true;
+        } else {
+            rd_data->error_class = ERROR_CLASS_SECURITY;
+            rd_data->error_code = ERROR_CODE_PASSWORD_FAILURE;
+        }
+    }
     return status;
 }
 
@@ -693,7 +708,6 @@ bool Device_Set_Object_Name(
         /* Make the change and update the database revision */
         status = characterstring_copy(&My_Object_Name, object_name);
         Device_Inc_Database_Revision();
-        struct uci_context *ctx;
         ctx = ucix_init("bacnet_dev");
         if(ctx) {
             ucix_add_option(ctx, "bacnet_dev", "0", "name", object_name->value);
@@ -863,7 +877,6 @@ bool Device_Set_Description(
     if (length < sizeof(Description)) {
         memmove(Description, name, length);
         Description[length] = 0;
-        struct uci_context *ctx;
         ctx = ucix_init("bacnet_dev");
         if(ctx) {
             ucix_add_option(ctx, "bacnet_dev", "0", "description", name);
@@ -893,7 +906,6 @@ bool Device_Set_Location(
     if (length < sizeof(Location)) {
         memmove(Location, name, length);
         Location[length] = 0;
-        struct uci_context *ctx;
         ctx = ucix_init("bacnet_dev");
         if(ctx) {
             ucix_add_option(ctx, "bacnet_dev", "0", "location", name);
@@ -1842,7 +1854,6 @@ void Device_Init(
     struct object_functions *pObject = NULL;
 
     characterstring_init_ansi(&My_Object_Name, "SimpleServer");
-    struct uci_context *ctx;
     static char *uci_name;
     static char *uci_location;
     static char *uci_description;
@@ -1868,14 +1879,6 @@ void Device_Init(
     uci_modelname = ucix_get_option(ctx, "bacnet_dev", "0", "modelname");
     if (uci_modelname != 0)
         ucix_string_copy(&Model_Name, sizeof(Model_Name), uci_modelname);
-
-    //uci_utc_offset = ucix_get_option_int(ctx, "bacnet_dev", "0", "utc_offset", 0);
-    //if (uci_utc_offset != 0)
-    //    UTC_Offset = uci_utc_offset;
-
-    //uci_daylight_savings = ucix_get_option_int(ctx, "bacnet_dev", "0", "daylight_savings", 0);
-    //if (uci_daylight_savings == 1)
-    //    Daylight_Savings_Status = true;
 
     uci_app_ver = ucix_get_option(ctx, "bacnet_dev", "0", "app_ver");
     if (uci_app_ver != 0)
