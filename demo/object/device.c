@@ -308,7 +308,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         Multistate_Value_Intrinsic_Reporting },
-#if 0
     {OBJECT_TRENDLOG,
             Trend_Log_Init,
             Trend_Log_Count,
@@ -340,7 +339,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#endif
 #endif
     {MAX_BACNET_OBJECT_TYPE,
             NULL /* Init */ ,
@@ -1849,8 +1847,6 @@ void Device_Init(
     static char *uci_location;
     static char *uci_description;
     static char *uci_modelname;
-    //static int32_t uci_utc_offset;
-    //static bool uci_daylight_savings;
     static char *uci_app_ver;
     fprintf(stderr, "Device_Init\n");
     ctx = ucix_init("bacnet_dev");

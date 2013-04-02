@@ -48,7 +48,7 @@
 //#define MAX_ANALOG_VALUES 65535
 #define MAX_ANALOG_VALUES 512
 #endif
-unsigned max_analog_values_int = 512;
+unsigned max_analog_values_int = 0;
 
 /* When all the priorities are level null, the present value returns */
 /* the Relinquish Default value */
@@ -147,7 +147,7 @@ void Analog_Value_Init(
     const char int_to_string[64] = "";
     //struct uci_context *ctx;
     fprintf(stderr, "Analog_Value_Init\n");
-    ctx = ucix_init("bacnet_mv");
+    ctx = ucix_init("bacnet_av");
     if(!ctx)
         fprintf(stderr,  "Failed to load config file");
 
@@ -442,7 +442,6 @@ static char *Analog_Value_Description(
     return pName;
 }
 
-#if 0
 bool Analog_Value_Description_Set(
     uint32_t object_instance,
     char *new_name)
@@ -472,7 +471,6 @@ bool Analog_Value_Description_Set(
 
     return status;
 }
-#endif
 
 static bool Analog_Value_Description_Write(
     uint32_t object_instance,
@@ -501,16 +499,12 @@ static bool Analog_Value_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    //struct uci_context *ctx;
                     const char index_c[32] = "";
                     sprintf(index_c, "%u", index);
-                    //ctx = ucix_init("bacnet_av");
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_av", index_c, "description", char_string->value);
-                        //ucix_commit(ctx, "bacnet_av");
-                        //ucix_cleanup(ctx);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_mv\n");
+                        fprintf(stderr,  "Failed to open config file bacnet_av\n");
                     }
                 }
             } else {
@@ -572,14 +566,10 @@ static bool Analog_Value_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    //struct uci_context *ctx;
                     const char index_c[32] = "";
                     sprintf(index_c, "%u", index);
-                    //ctx = ucix_init("bacnet_av");
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_av", index_c, "name", char_string->value);
-                        //ucix_commit(ctx, "bacnet_av");
-                        //ucix_cleanup(ctx);
                     } else {
                         fprintf(stderr,  "Failed to open config file bacnet_av\n");
                     }
