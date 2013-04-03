@@ -109,6 +109,7 @@ static const int Trend_Log_Properties_Proprietary[] = {
 };
 
 struct uci_context *ctx;
+struct uci_context *ctxd;
 
 void Trend_Log_Property_Lists(
     const int **pRequired,
@@ -136,16 +137,20 @@ void Trend_Log_Init(
     int i;
     const char description[64] = "";
     const char *uciname;
-    const int *ucidisable;
-    const int *ucivalue;
+    int ucidisable;
+    int ucivalue;
     const char *ucidescription;
     const char *ucidescription_default;
-    const int *ucidevice_type;
-    const int *uciobject_type;
-    const int *uciobject_instance;
-    const int *uciinterval;
-    const int *uciinterval_default;
-    const char int_to_string[64] = "";
+    int ucidevice_type;
+    int ucidevice_type_default;
+    int uciobject_type;
+    int uciobject_type_default;
+    const char *uciobject_s;
+    int uciobject_instance;
+    int uciinterval;
+    int uciinterval_default;
+    const char i_string[64] = "";
+    const char i_instance_string[64] = "";
     int iEntry;
     struct tm TempTime;
     time_t tClock;
@@ -160,6 +165,10 @@ void Trend_Log_Init(
             "description");
         uciinterval_default = ucix_get_option_int(ctx, "bacnet_tl",
             "default", "interval", 900);
+        ucidevice_type_default = ucix_get_option_int(ctx, "bacnet_tl",
+            i_string, "device_type", OBJECT_DEVICE);
+        uciobject_type_default = ucix_get_option_int(ctx, "bacnet_tl",
+            i_string, "object_type", OBJECT_ANALOG_VALUE);
 
         /* initialize all the values */
 
@@ -175,17 +184,52 @@ void Trend_Log_Init(
              * entries into any active logs if the power down or reset
              * may have caused us to miss readings.
              */
-            sprintf(int_to_string, "%lu", (unsigned long) i);
-            uciname = ucix_get_option(ctx, "bacnet_tl", int_to_string, "name");
-            ucidisable = ucix_get_option_int(ctx, "bacnet_tl", int_to_string,
-                "disable", 0);
+            sprintf(i_string, "%lu", (unsigned long) i);
+            ucidevice_type = ucix_get_option_int(ctx, "bacnet_tl",
+                i_string, "device_type", ucidevice_type_default);
+            uciobject_type = ucix_get_option_int(ctx, "bacnet_tl",
+                i_string, "object_type", uciobject_type_default);
+            uciobject_instance = ucix_get_option_int(ctx, "bacnet_tl",
+                i_string, "object_instance", i);
+            sprintf(i_instance_string, "%lu",
+                (unsigned long) uciobject_instance);
+/*            switch (ucidevice_type) {
+                case OBJECT_DEVICE:
+                    printf("local");
+                    break;
+                default:
+                    printf("default external");
+                    break;
+            } */
+            switch (uciobject_type) {
+                case OBJECT_ANALOG_INPUT:
+                    uciobject_s = "bacnet_ai";
+                    break;
+                case OBJECT_ANALOG_OUTPUT:
+                    uciobject_s = "bacnet_ao";
+                    break;
+                case OBJECT_ANALOG_VALUE:
+                    uciobject_s = "bacnet_av";
+                    break;
+                case OBJECT_MULTI_STATE_VALUE:
+                    uciobject_s = "bacnet_mv";
+                    break;
+                default:
+                    uciobject_s = "bacnet_tl";
+                    break;
+            }
+            ctxd = ucix_init(uciobject_s);
+            uciname = ucix_get_option(ctxd, uciobject_s,
+                i_instance_string, "name");
+            ucidisable = ucix_get_option_int(ctxd, uciobject_s,
+                i_instance_string, "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
                 TL_Descr[i].Disable=false;
                 max_trend_logs_int = i+1;
                 ucix_string_copy(&TL_Descr[i].Object_Name,
                     sizeof(TL_Descr[i].Object_Name), uciname);
-                ucidescription = ucix_get_option(ctx, "bacnet_tl", int_to_string,
-                    "description");
+                ucidescription = ucix_get_option(ctxd, uciobject_s,
+                    i_instance_string, "description");
                 if (ucidescription != 0) {
                     sprintf(description, "%s", ucidescription);
                 } else if (ucidescription_default != 0) {
@@ -197,14 +241,8 @@ void Trend_Log_Init(
                 }
                 ucix_string_copy(&TL_Descr[i].Object_Description,
                     sizeof(TL_Descr[i].Object_Description), ucidescription);
-                ucidevice_type = ucix_get_option_int(ctx, "bacnet_tl",
-                    int_to_string, "device_type", OBJECT_DEVICE);
-                uciobject_type = ucix_get_option_int(ctx, "bacnet_tl",
-                    int_to_string, "object_type", OBJECT_ANALOG_VALUE);
-                uciobject_instance = ucix_get_option_int(ctx, "bacnet_tl",
-                    int_to_string, "object_instance", i);
                 uciinterval = ucix_get_option_int(ctx, "bacnet_tl",
-                    int_to_string, "interval", uciinterval_default);
+                    i_string, "interval", uciinterval_default);
 
                 /* We will just fill the logs with some entries for testing
                  * purposes.
