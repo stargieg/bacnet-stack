@@ -97,6 +97,11 @@
 /** @file linux/net.h  Includes Linux network headers. */
 
 /* Local helper functions for this port */
+int get_local_address_ioctl(
+    char *ifname,
+    struct in_addr *addr,
+    int request);
+
 extern int bip_get_local_netmask(
     struct in_addr *netmask);
 
