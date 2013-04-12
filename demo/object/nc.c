@@ -37,7 +37,7 @@
 #include "bacdcode.h"
 #include "bacenum.h"
 #include "bacapp.h"
-#include "client.h"
+#include "client.h"     /* the custom stuff */
 #include "config.h"
 #include "device.h"
 #include "event.h"
@@ -95,24 +95,33 @@ void Notification_Class_Property_Lists(
     return;
 }
 
+/*
+ * Things to do when starting up the stack for Notification Class.
+ * Should be called whenever we reset the device or power it up
+ */
 void Notification_Class_Init(
     void)
 {
-    uint8_t i = 0;
-    unsigned j;
+    int i = 0;
     static bool initialized = false;
-    const char description[64] = "";
-    const char uci_string[64];
+    char name[64];
     const char *uciname;
-    const int *ucidisable;
+    int ucidisable;
+    char description[64];
     const char *ucidescription;
     const char *ucidescription_default;
-    const char idx_c[32] = "";
-    const char *ucirecp[NC_MAX_RECIPIENTS][64];
+    const char *idx_c;
+    char idx_cc[64];
+    char *ucirecp[NC_MAX_RECIPIENTS];
     BACNET_DESTINATION recplist[NC_MAX_RECIPIENTS];
     int ucirecp_n = 0;
     int ucirecp_i = 0;
     struct uci_context *ctx;
+    char *uci_ptr;
+    char *uci_ptr_a;
+    char *src_ip;
+    const char *src_net;
+    unsigned src_port, src_port1, src_port2;
     fprintf(stderr, "Notification_Class_Init\n");
     if (!initialized) {
         initialized = true;
@@ -120,30 +129,36 @@ void Notification_Class_Init(
         if(!ctx)
             fprintf(stderr,  "Failed to load config file");
 
-        ucidescription_default = ucix_get_option(ctx, "bacnet_nc", "default", "description");
+        ucidescription_default = ucix_get_option(ctx, "bacnet_nc", "default",
+            "description");
         /* initialize all the analog output priority arrays to NULL */
         for (i = 0; i < MAX_NOTIFICATION_CLASSES; i++) {
             /* init with zeros */
             memset(&NC_Descr[i], 0x00, sizeof(NOTIFICATION_CLASS_DESCR));
-    	    sprintf(idx_c, "%lu", (unsigned long) i);
+    	    sprintf(idx_cc,"%d",i);
+    	    idx_c = idx_cc;
             uciname = ucix_get_option(ctx, "bacnet_nc", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_nc", idx_c,
             "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
                 NC_Descr[i].Disable=false;
                 max_notificaton_classes_int = i+1;
-                ucix_string_copy(&NC_Descr[i].Object_Name,
-                    sizeof(NC_Descr[i].Object_Name), uciname);
-                ucidescription = ucix_get_option(ctx, "bacnet_nc", idx_c, "description");
+                sprintf(name, "%s", uciname);
+                ucix_string_copy(NC_Descr[i].Object_Name,
+                    sizeof(NC_Descr[i].Object_Name), name);
+                ucidescription = ucix_get_option(ctx, "bacnet_nc", idx_c,
+                    "description");
                 if (ucidescription != 0) {
                     sprintf(description, "%s", ucidescription);
                 } else if (ucidescription_default != 0) {
-                    sprintf(description, "%s %lu", ucidescription_default , (unsigned long) i);
+                    sprintf(description, "%s %lu", ucidescription_default ,
+                        (unsigned long) i);
                 } else {
-                    sprintf(description, "NC%lu no uci section configured", (unsigned long) i);
+                    sprintf(description, "NC%lu no uci section configured",
+                        (unsigned long) i);
                 }
-                ucix_string_copy(&NC_Descr[i].Object_Description,
-                    sizeof(NC_Descr[i].Object_Description), ucidescription);
+                ucix_string_copy(NC_Descr[i].Object_Description,
+                    sizeof(NC_Descr[i].Object_Description), description);
             } else {
                 NC_Descr[i].Disable=true;
             }
@@ -153,14 +168,9 @@ void Notification_Class_Init(
             NC_Descr[i].Priority[TRANSITION_TO_OFFNORMAL] = 255;     /* The lowest priority for Normal message. */
             NC_Descr[i].Priority[TRANSITION_TO_FAULT] = 255; /* The lowest priority for Normal message. */
             NC_Descr[i].Priority[TRANSITION_TO_NORMAL] = 255;        /* The lowest priority for Normal message. */
-           	char *uci_ptr;
-           	char *uci_ptr_a;
-            char *src_ip;
-            char *src_net;
-            unsigned src_port, src_port1, src_port2;
-            ucirecp_n = ucix_get_list(&ucirecp, ctx, "bacnet_nc", idx_c, "recipient");
+            ucirecp_n = ucix_get_list(ucirecp, ctx, "bacnet_nc", idx_c,
+                "recipient");
             for (ucirecp_i = 0; ucirecp_i < ucirecp_n; ucirecp_i++) {
-                recplist[ucirecp_i].Transitions = 7; //bit string 1,1,1 To Alarm,To Fault,To Normal
                 recplist[ucirecp_i].ValidDays = 127; //bit string 1,1,1,1,1,1,1 Mo,Di,Mi,Do,Fr,Sa,So
                 recplist[ucirecp_i].FromTime.hour = 0;
                 recplist[ucirecp_i].FromTime.min = 0;
@@ -170,12 +180,15 @@ void Notification_Class_Init(
                 recplist[ucirecp_i].ToTime.min = 59;
                 recplist[ucirecp_i].ToTime.sec = 59;
                 recplist[ucirecp_i].ToTime.hundredths = 99;
-               	uci_ptr = strtok(ucirecp[ucirecp_i], ",");
-               	src_net = uci_ptr;
                 recplist[ucirecp_i].Recipient.RecipientType =
                             RECIPIENT_TYPE_ADDRESS;
-                recplist[ucirecp_i].Recipient._.Address.net = atoi(src_net);
                 recplist[ucirecp_i].Recipient._.Address.len = 0;
+                uci_ptr = strtok(ucirecp[ucirecp_i], ",");
+               	src_net = uci_ptr;
+               	if (!src_net) {
+               	    src_net = "65535";
+               	}
+                recplist[ucirecp_i].Recipient._.Address.net = atoi(src_net);
                	if (atoi(src_net) != 65535) {
                     uci_ptr = strtok(NULL, ":");
                     src_ip = uci_ptr;
@@ -195,6 +208,9 @@ void Notification_Class_Init(
                     recplist[ucirecp_i].Recipient._.Address.adr[5] = src_port2;
                     recplist[ucirecp_i].Recipient._.Address.len = 6;
                 }
+                recplist[ucirecp_i].ProcessIdentifier = ucirecp_i;
+                recplist[ucirecp_i].Transitions = 7; //bit string 1,1,1 To Alarm,To Fault,To Normal
+                recplist[ucirecp_i].ConfirmedNotify = true;
             }
             for (ucirecp_i = 0; ucirecp_i < ucirecp_n; ucirecp_i++) {
                 BACNET_ADDRESS src = { 0 };
@@ -347,6 +363,8 @@ static bool Notification_Class_Description_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Notification_Class_Instance_To_Index(object_instance);
     if (index < max_notificaton_classes_int) {
@@ -363,12 +381,14 @@ static bool Notification_Class_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_nc", index_c, "description", char_string->value);
+                        ucix_add_option(ctx, "bacnet_nc", idx_c, 
+                            "description", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_nc\n");
+                        fprintf(stderr, 
+                            "Failed to open config file bacnet_nc\n");
                     }
                 }
             } else {
@@ -444,6 +464,8 @@ static bool Notification_Class_Object_Name_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Notification_Class_Instance_To_Index(object_instance);
     if (index < max_notificaton_classes_int) {
@@ -460,12 +482,14 @@ static bool Notification_Class_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_nc", index_c, "name", char_string->value);
+                        ucix_add_option(ctx, "bacnet_nc", idx_c,
+                            "name", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_nc\n");
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_nc\n");
                     }
                 }
             } else {
@@ -726,7 +750,8 @@ bool Notification_Class_Write_Property(
     int object_type = 0;
     uint32_t object_instance = 0;
     ctx = ucix_init("bacnet_nc");
-    const char index_c[32] = "";
+    const char *idx_c;
+    char idx_cc[64];
 
     /* decode the some of the request */
     len =
@@ -749,7 +774,8 @@ bool Notification_Class_Write_Property(
     object_index = Notification_Class_Instance_To_Index(wp_data->object_instance);
     if (object_index < max_notificaton_classes_int) {
         CurrentNC = &NC_Descr[object_index];
-        sprintf(index_c, "%u", object_index);
+        sprintf(idx_cc,"%d",object_index);
+        idx_c = idx_cc;
     } else
         return false;
 
@@ -833,12 +859,10 @@ bool Notification_Class_Write_Property(
 
             memset(&TmpNotify, 0x00, sizeof(NOTIFICATION_CLASS_DESCR));
             struct uci_context *ctx;
-            const char index_c[32] = "";
-            sprintf(index_c, "%u", object_index);
             ctx = ucix_init("bacnet_nc");
-            const char *ucirecp[NC_MAX_RECIPIENTS][64];
+            char ucirecp[NC_MAX_RECIPIENTS][64];
             int ucirecp_n = 0;
-            const char uci_str[32] = "";
+            char uci_str[64];
 
             if (!ctx) fprintf(stderr,  "Failed to open config file bacnet_nc\n");
 
@@ -986,19 +1010,22 @@ bool Notification_Class_Write_Property(
                         sprintf(uci_str,  "%i,%i.%i.%i.%i:%i\n", TmpNotify.
                             Recipient_List[idx].Recipient._.Address.net,
                             TmpNotify.Recipient_List[idx].Recipient._.
-                            Address.adr[0], TmpNotify.Recipient_List[idx].Recipient._.
-                            Address.adr[1], TmpNotify.Recipient_List[idx].Recipient._.
-                            Address.adr[2], TmpNotify.Recipient_List[idx].Recipient._.
+                            Address.adr[0],
+                            TmpNotify.Recipient_List[idx].Recipient._.
+                            Address.adr[1],
+                            TmpNotify.Recipient_List[idx].Recipient._.
+                            Address.adr[2],
+                            TmpNotify.Recipient_List[idx].Recipient._.
                             Address.adr[3], src_port);
                         if(ctx) {
-                                sprintf(&ucirecp[ucirecp_n], "%s", uci_str);
+                                sprintf(ucirecp[ucirecp_n], "%s", uci_str);
                                 ucirecp_n++;
                         }
                     } else {
                         sprintf(uci_str,  "%i\n", TmpNotify.
                             Recipient_List[idx].Recipient._.Address.net);
                         if(ctx) {
-                                sprintf(&ucirecp[ucirecp_n], "%s", uci_str);
+                                sprintf(ucirecp[ucirecp_n], "%s", uci_str);
                                 ucirecp_n++;
                         }
                     }
@@ -1119,7 +1146,10 @@ bool Notification_Class_Write_Property(
             }
 
             if(ctx) {
-                ucix_set_list(ctx, "bacnet_nc", index_c, "recipient", ucirecp, ucirecp_n);
+                ucix_set_list(ctx, "bacnet_nc", idx_c, "recipient",
+                    ucirecp, ucirecp_n);
+                ucix_commit(ctx, "bacnet_nc");
+                ucix_cleanup(ctx);
             }
 
             status = true;
@@ -1131,8 +1161,6 @@ bool Notification_Class_Write_Property(
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
     }
-    ucix_commit(ctx, "bacnet_nc");
-    ucix_cleanup(ctx);
     return status;
 }
 

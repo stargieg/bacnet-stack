@@ -110,18 +110,30 @@ BACnetRecipient ::= CHOICE {
 
     bool Notification_Class_Valid_Instance(
         uint32_t object_instance);
+
     unsigned Notification_Class_Count(
         void);
+
     uint32_t Notification_Class_Index_To_Instance(
         unsigned index);
+
     unsigned Notification_Class_Instance_To_Index(
         uint32_t object_instance);
+
     bool Notification_Class_Object_Name(
         uint32_t object_instance,
         BACNET_CHARACTER_STRING * object_name);
 
+    bool Notification_Class_Name_Set(
+        uint32_t object_instance,
+        char *new_name);
+
     int Notification_Class_Read_Property(
         BACNET_READ_PROPERTY_DATA * rpdata);
+
+    bool Notification_Class_Description_Set(
+        uint32_t object_instance,
+        char *text_string);
 
     bool Notification_Class_Write_Property(
         BACNET_WRITE_PROPERTY_DATA * wp_data);
