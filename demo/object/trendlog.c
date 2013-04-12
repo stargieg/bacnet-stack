@@ -122,7 +122,6 @@ void Trend_Log_Property_Lists(
         *pOptional = Trend_Log_Properties_Optional;
     if (pProprietary)
         *pProprietary = Trend_Log_Properties_Proprietary;
-
     return;
 }
 
@@ -133,12 +132,13 @@ void Trend_Log_Property_Lists(
 void Trend_Log_Init(
     void)
 {
+    int i = 0;
     static bool initialized = false;
-    int i;
-    const char description[64] = "";
+    char name[64];
     const char *uciname;
+    char description[64];
     int ucidisable;
-    int ucivalue;
+    //int ucivalue;
     const char *ucidescription;
     const char *ucidescription_default;
     int ucidevice_type;
@@ -149,8 +149,8 @@ void Trend_Log_Init(
     int uciobject_instance;
     int uciinterval;
     int uciinterval_default;
-    const char i_string[64] = "";
-    const char i_instance_string[64] = "";
+    char i_string[64];
+    char i_instance_string[64];
     int iEntry;
     struct tm TempTime;
     time_t tClock;
@@ -161,6 +161,7 @@ void Trend_Log_Init(
         ctx = ucix_init("bacnet_tl");
         if(!ctx)
             fprintf(stderr,  "Failed to load config file");
+
         ucidescription_default = ucix_get_option(ctx, "bacnet_tl", "default",
             "description");
         uciinterval_default = ucix_get_option_int(ctx, "bacnet_tl",
@@ -184,7 +185,7 @@ void Trend_Log_Init(
              * entries into any active logs if the power down or reset
              * may have caused us to miss readings.
              */
-            sprintf(i_string, "%lu", (unsigned long) i);
+            sprintf(i_string,"%d",i);
             ucidevice_type = ucix_get_option_int(ctx, "bacnet_tl",
                 i_string, "device_type", ucidevice_type_default);
             uciobject_type = ucix_get_option_int(ctx, "bacnet_tl",
@@ -226,8 +227,9 @@ void Trend_Log_Init(
             if ((uciname != 0) && (ucidisable == 0)) {
                 TL_Descr[i].Disable=false;
                 max_trend_logs_int = i+1;
-                ucix_string_copy(&TL_Descr[i].Object_Name,
-                    sizeof(TL_Descr[i].Object_Name), uciname);
+                sprintf(name, "%s", uciname);
+                ucix_string_copy(TL_Descr[i].Object_Name,
+                    sizeof(TL_Descr[i].Object_Name), name);
                 ucidescription = ucix_get_option(ctxd, uciobject_s,
                     i_instance_string, "description");
                 if (ucidescription != 0) {
@@ -239,8 +241,8 @@ void Trend_Log_Init(
                     sprintf(description, "TL%lu no uci section configured",
                         (unsigned long) i);
                 }
-                ucix_string_copy(&TL_Descr[i].Object_Description,
-                    sizeof(TL_Descr[i].Object_Description), ucidescription);
+                ucix_string_copy(TL_Descr[i].Object_Description,
+                    sizeof(TL_Descr[i].Object_Description), description);
                 uciinterval = ucix_get_option_int(ctx, "bacnet_tl",
                     i_string, "interval", uciinterval_default);
 
@@ -431,6 +433,8 @@ static bool Trend_Log_Description_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Trend_Log_Instance_To_Index(object_instance);
     if (index < max_trend_logs_int) {
@@ -447,12 +451,14 @@ static bool Trend_Log_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc, "%u", index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_tl", index_c, "description", char_string->value);
+                        ucix_add_option(ctx, "bacnet_tl", idx_c,
+                            "description", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_tl\n");
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_tl\n");
                     }
                 }
             } else {
@@ -499,6 +505,8 @@ static bool Trend_Log_Object_Name_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Trend_Log_Instance_To_Index(object_instance);
     if (index < max_trend_logs_int) {
@@ -515,12 +523,14 @@ static bool Trend_Log_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc, "%d", index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_tl", index_c, "name", char_string->value);
+                        ucix_add_option(ctx, "bacnet_tl", idx_c,
+                            "name", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_tl\n");
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_tl\n");
                     }
                 }
             } else {
@@ -738,7 +748,8 @@ bool Trend_Log_Write_Property(
     BACNET_DEVICE_OBJECT_PROPERTY_REFERENCE TempSource;
     bool bEffectiveEnable;
     ctx = ucix_init("bacnet_tl");
-    const char index_c[32] = "";
+    const char *idx_c;
+    char idx_cc[64];
 
 
     /* decode the some of the request */
@@ -762,7 +773,8 @@ bool Trend_Log_Write_Property(
     object_index = Trend_Log_Instance_To_Index(wp_data->object_instance);
     if (object_index < max_trend_logs_int) {
         CurrentTL = &TL_Descr[object_index];
-        sprintf(index_c, "%u", object_index);
+        sprintf(idx_cc, "%d", object_index);
+        idx_c = idx_cc;
     } else
         return false;
 

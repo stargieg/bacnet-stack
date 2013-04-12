@@ -156,8 +156,13 @@ extern "C" {
     int Trend_Log_Read_Property(
         BACNET_READ_PROPERTY_DATA * rpdata);
 
+    bool Trend_Log_Description_Set(
+        uint32_t object_instance,
+        char *text_string);
+
     bool Trend_Log_Write_Property(
         BACNET_WRITE_PROPERTY_DATA * wp_data);
+
     void Trend_Log_Init(
         void);
 
@@ -200,6 +205,9 @@ extern "C" {
     int rr_trend_log_encode(
         uint8_t * apdu,
         BACNET_READ_RANGE_DATA * pRequest);
+
+    void TL_fetch_property(
+        int i);
 
     void trend_log_timer(
         uint16_t uSeconds);
