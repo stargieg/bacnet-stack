@@ -115,155 +115,167 @@ void Multistate_Value_Property_Lists(
 
     return;
 }
-
+/*
+ * Things to do when starting up the stack for Multistate Value.
+ * Should be called whenever we reset the device or power it up
+ */
 void Multistate_Value_Init(
     void)
 {
     unsigned i, j, k;
-    const char description[64] = "";
+    static bool initialized = false;
+    char name[64];
     const char *uciname;
-    const int *ucidisable;
-    const uint8_t *ucivalue;
+    int ucidisable;
+    uint8_t ucivalue;
+    char description[64];
     const char *ucidescription;
     const char *ucidescription_default;
-    char *ucistate_default[254][64];
-    int *ucistate_n_default;
-    const char *ucistate[254][64];
+    const char *idx_c;
+    char idx_cc[64];
+    char *ucistate_default[254];
+    int ucistate_n_default = 0;
+    char *ucistate[254];
     int ucistate_n = 0;
-    char *ucialarmstate_default[254][64];
-    int *ucialarmstate_n_default;
-    char *ucialarmstate[254][64];
-    int *ucialarmstate_n;
+    char *ucialarmstate_default[254];
+    int ucialarmstate_n_default = 0;
+    char *ucialarmstate[254];
+    int ucialarmstate_n= 0;
     int ucinc_default;
     int ucinc;
     int ucievent_default;
     int ucievent;
     int ucitime_delay_default;
     int ucitime_delay;
-    const char int_to_string[64] = "";
     fprintf(stderr, "Multistate_Value_Init\n");
-    ctx = ucix_init("bacnet_mv");
-    if(!ctx)
-        fprintf(stderr,  "Failed to load config file");
-
-    ucidescription_default = ucix_get_option(ctx, "bacnet_mv", "default",
-        "description");
-    ucistate_n_default = ucix_get_list(&ucistate_default, ctx,
-        "bacnet_mv", "default", "state");
-    ucialarmstate_n_default = ucix_get_list(&ucialarmstate_default, ctx,
-        "bacnet_mv", "default", "alarmstate");
-    ucinc_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
-        "nc", -1);
-    ucievent_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
-        "event", -1);
-    ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
-        "time_delay", -1);
-
-    for (i = 0; i < MAX_MULTI_STATE_VALUES; i++) {
-        memset(&MSV_Descr[i], 0x00, sizeof(MULTI_STATE_VALUE_DESCR));
-        /* initialize all the analog output priority arrays to NULL */
-        for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
-            MSV_Descr[i].Priority_Array[j] = MULTI_STATE_LEVEL_NULL;
-        }
-        sprintf(int_to_string, "%lu", (unsigned long) i);
-        uciname = ucix_get_option(ctx, "bacnet_mv", int_to_string, "name");
-        ucidisable = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
-            "disable", 0);
-        if ((uciname != 0) && (ucidisable == 0)) {
-            MSV_Descr[i].Disable=false;
-            max_multi_state_values_int = i+1;
-            ucix_string_copy(&MSV_Descr[i].Object_Name,
-                sizeof(MSV_Descr[i].Object_Name), uciname);
-            ucidescription = ucix_get_option(ctx, "bacnet_mv",
-                int_to_string, "description");
-            if (ucidescription != 0) {
-                sprintf(description, "%s", ucidescription);
-            } else if (ucidescription_default != 0) {
-                sprintf(description, "%s %lu", ucidescription_default,
-                    (unsigned long) i);
-            } else {
-                sprintf(description, "MV%lu no uci section configured",
-                    (unsigned long) i);
+    if (!initialized) {
+        initialized = true;
+        ctx = ucix_init("bacnet_mv");
+        if(!ctx)
+            fprintf(stderr,  "Failed to load config file");
+    
+        ucidescription_default = ucix_get_option(ctx, "bacnet_mv", "default",
+            "description");
+        ucistate_n_default = ucix_get_list(ucistate_default, ctx,
+            "bacnet_mv", "default", "state");
+        ucialarmstate_n_default = ucix_get_list(ucialarmstate_default, ctx,
+            "bacnet_mv", "default", "alarmstate");
+        ucinc_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
+            "nc", -1);
+        ucievent_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
+            "event", -1);
+        ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_mv", "default",
+            "time_delay", -1);
+    
+        for (i = 0; i < MAX_MULTI_STATE_VALUES; i++) {
+            memset(&MSV_Descr[i], 0x00, sizeof(MULTI_STATE_VALUE_DESCR));
+            /* initialize all the analog output priority arrays to NULL */
+            for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
+                MSV_Descr[i].Priority_Array[j] = MULTI_STATE_LEVEL_NULL;
             }
-            ucix_string_copy(&MSV_Descr[i].Object_Description,
-                sizeof(MSV_Descr[i].Object_Description), ucidescription);
-
-            ucivalue = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
-                "value", 1);
-            MSV_Descr[i].Priority_Array[15] = ucivalue;
-            MSV_Descr[i].Relinquish_Default = 1; //TODO read uci
-
-            ucistate_n = ucix_get_list(&ucistate, ctx,
-                "bacnet_mv", int_to_string, "state");
-            if (ucistate_n == 0) {
-                ucistate_n = ucistate_n_default;
-                for (j = 0; j < ucistate_n; j++) {
-                    sprintf(ucistate[j], ucistate_default[j]);
-                }
-            }
-            MSV_Descr[i].number_of_states = ucistate_n;
-
-            ucialarmstate_n = ucix_get_list(&ucialarmstate, ctx,
-                "bacnet_mv", int_to_string, "alarmstate");
-            if (ucialarmstate_n == 0) {
-                ucialarmstate_n = ucialarmstate_n_default;
-                for (j = 0; j < ucialarmstate_n; j++) {
-                    sprintf(ucialarmstate[j], ucialarmstate_default[j]);
-                }
-            }
-            MSV_Descr[i].number_of_alarmstates = ucialarmstate_n;
-
-            for (j = 0; j < ucistate_n; j++) {
-                if (ucistate[j]) {
-                    sprintf(MSV_Descr[i].State_Text[j], ucistate[j]);
+    	    sprintf(idx_cc,"%d",i);
+    	    idx_c = idx_cc;
+            uciname = ucix_get_option(ctx, "bacnet_mv", idx_c, "name");
+            ucidisable = ucix_get_option_int(ctx, "bacnet_mv", idx_c,
+                "disable", 0);
+            if ((uciname != 0) && (ucidisable == 0)) {
+                MSV_Descr[i].Disable=false;
+                max_multi_state_values_int = i+1;
+                sprintf(name, "%s", uciname);
+                ucix_string_copy(MSV_Descr[i].Object_Name,
+                    sizeof(MSV_Descr[i].Object_Name), name);
+                ucidescription = ucix_get_option(ctx, "bacnet_mv",
+                    idx_c, "description");
+                if (ucidescription != 0) {
+                    sprintf(description, "%s", ucidescription);
+                } else if (ucidescription_default != 0) {
+                    sprintf(description, "%s %lu", ucidescription_default,
+                        (unsigned long) i);
                 } else {
-                    sprintf(MSV_Descr[i].State_Text[j], "STATUS: %i", j);
+                    sprintf(description, "MV%lu no uci section configured",
+                        (unsigned long) i);
                 }
-                for (k = 0; k < ucialarmstate_n; k++) {
-                    if (strcmp(ucistate[j],ucialarmstate[k]) ==
-                        0) {
-                        MSV_Descr[i].Alarm_Values[k] = j+1;
+                ucix_string_copy(MSV_Descr[i].Object_Description,
+                    sizeof(MSV_Descr[i].Object_Description), description);
+    
+                ucivalue = ucix_get_option_int(ctx, "bacnet_mv", idx_c,
+                    "value", 1);
+                MSV_Descr[i].Priority_Array[15] = ucivalue;
+                MSV_Descr[i].Relinquish_Default = 1; //TODO read uci
+    
+                ucistate_n = ucix_get_list(ucistate, ctx,
+                    "bacnet_mv", idx_c, "state");
+                if (ucistate_n == 0) {
+                    ucistate_n = ucistate_n_default;
+                    for (j = 0; j < ucistate_n; j++) {
+                        sprintf(ucistate[j], "%s", ucistate_default[j]);
                     }
                 }
-            }
-#if defined(INTRINSIC_REPORTING)
-            ucinc = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
-                "nc", ucinc_default);
-            ucievent = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
-                "event", ucievent_default);
-            ucitime_delay = ucix_get_option_int(ctx, "bacnet_mv", int_to_string,
-                "time_delay", ucitime_delay_default);
-            MSV_Descr[i].Event_State = EVENT_STATE_NORMAL;
-            /* notification class not connected */
-            if (ucinc > -1) MSV_Descr[i].Notification_Class = ucinc;
-            else MSV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
-            if (ucievent > -1) MSV_Descr[i].Event_Enable = ucievent;
-            else MSV_Descr[i].Event_Enable = 0;
-            if (ucitime_delay > -1) MSV_Descr[i].Time_Delay = ucitime_delay;
-            else MSV_Descr[i].Time_Delay = 0;
-            /* initialize Event time stamps using wildcards
-               and set Acked_transitions */
-            for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
-                datetime_wildcard_set(&MSV_Descr[i].Event_Time_Stamps[j]);
-                MSV_Descr[i].Acked_Transitions[j].bIsAcked = true;
-            }
+                MSV_Descr[i].number_of_states = ucistate_n;
     
-            /* Set handler for GetEventInformation function */
-            handler_get_event_information_set(OBJECT_MULTI_STATE_VALUE,
-                Multistate_Value_Event_Information);
-            /* Set handler for AcknowledgeAlarm function */
-            handler_alarm_ack_set(OBJECT_MULTI_STATE_VALUE, Multistate_Value_Alarm_Ack);
-            /* Set handler for GetAlarmSummary Service */
-            handler_get_alarm_summary_set(OBJECT_MULTI_STATE_VALUE,
-                Multistate_Value_Alarm_Summary);
+                ucialarmstate_n = ucix_get_list(ucialarmstate, ctx,
+                    "bacnet_mv", idx_c, "alarmstate");
+                if (ucialarmstate_n == 0) {
+                    ucialarmstate_n = ucialarmstate_n_default;
+                    for (j = 0; j < ucialarmstate_n; j++) {
+                        sprintf(ucialarmstate[j], "%s",
+                            ucialarmstate_default[j]);
+                    }
+                }
+                MSV_Descr[i].number_of_alarmstates = ucialarmstate_n;
+    
+                for (j = 0; j < ucistate_n; j++) {
+                    if (ucistate[j]) {
+                        sprintf(MSV_Descr[i].State_Text[j], "%s", ucistate[j]);
+                    } else {
+                        sprintf(MSV_Descr[i].State_Text[j], "STATUS: %i", j);
+                    }
+                    for (k = 0; k < ucialarmstate_n; k++) {
+                        if (strcmp(ucistate[j],ucialarmstate[k]) ==
+                            0) {
+                            MSV_Descr[i].Alarm_Values[k] = j+1;
+                        }
+                    }
+                }
+#if defined(INTRINSIC_REPORTING)
+                ucinc = ucix_get_option_int(ctx, "bacnet_mv", idx_c,
+                    "nc", ucinc_default);
+                ucievent = ucix_get_option_int(ctx, "bacnet_mv", idx_c,
+                    "event", ucievent_default);
+                ucitime_delay = ucix_get_option_int(ctx, "bacnet_mv", idx_c,
+                    "time_delay", ucitime_delay_default);
+                MSV_Descr[i].Event_State = EVENT_STATE_NORMAL;
+                /* notification class not connected */
+                if (ucinc > -1) MSV_Descr[i].Notification_Class = ucinc;
+                else MSV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
+                if (ucievent > -1) MSV_Descr[i].Event_Enable = ucievent;
+                else MSV_Descr[i].Event_Enable = 0;
+                if (ucitime_delay > -1) MSV_Descr[i].Time_Delay = ucitime_delay;
+                else MSV_Descr[i].Time_Delay = 0;
+                /* initialize Event time stamps using wildcards
+                   and set Acked_transitions */
+                for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
+                    datetime_wildcard_set(&MSV_Descr[i].Event_Time_Stamps[j]);
+                    MSV_Descr[i].Acked_Transitions[j].bIsAcked = true;
+                }
+        
+                /* Set handler for GetEventInformation function */
+                handler_get_event_information_set(OBJECT_MULTI_STATE_VALUE,
+                    Multistate_Value_Event_Information);
+                /* Set handler for AcknowledgeAlarm function */
+                handler_alarm_ack_set(OBJECT_MULTI_STATE_VALUE,
+                    Multistate_Value_Alarm_Ack);
+                /* Set handler for GetAlarmSummary Service */
+                handler_get_alarm_summary_set(OBJECT_MULTI_STATE_VALUE,
+                    Multistate_Value_Alarm_Summary);
 #endif
-        } else {
-            MSV_Descr[i].Disable=true;
+            } else {
+                MSV_Descr[i].Disable=true;
+            }
         }
+        fprintf(stderr, "max_multi_state_values: %i\n", max_multi_state_values_int);
+        ucix_cleanup(ctx);
     }
-    fprintf(stderr, "max_multi_state_values: %i\n", max_multi_state_values_int);
-    ucix_cleanup(ctx);
-
     return;
 }
 
@@ -475,6 +487,8 @@ static bool Multistate_Value_Description_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < max_multi_state_values_int) {
@@ -491,12 +505,14 @@ static bool Multistate_Value_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_mv", index_c, "description", char_string->value);
+                        ucix_add_option(ctx, "bacnet_mv", idx_c,
+                            "description", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_mv\n");
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_mv\n");
                     }
                 }
             } else {
@@ -574,6 +590,8 @@ static bool Multistate_Value_Object_Name_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index < max_multi_state_values_int) {
@@ -590,12 +608,14 @@ static bool Multistate_Value_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_mv", index_c, "name", char_string->value);
+                        ucix_add_option(ctx, "bacnet_mv", idx_c,
+                            "name", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_mv\n");
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_mv\n");
                     }
                 }
             } else {
@@ -624,7 +644,9 @@ static char *Multistate_Value_State_Text(
     if (index < max_multi_state_values_int)
         CurrentMSV = &MSV_Descr[index];
     else
-        return BACNET_STATUS_ERROR;
+        //return BACNET_STATUS_ERROR;
+        return pName;
+        //TODO return ERROR Code
 
     if ((index < max_multi_state_values_int) && (state_index > 0) &&
         (state_index <= CurrentMSV->number_of_states)) {
@@ -685,18 +707,17 @@ static bool Multistate_Value_State_Text_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
-    const char index_c[32] = "";
-    const char *ucistate[254][64];
-    int ucistate_n = 0;
-    const char *ucialarmstate[254][64];
+    const char *idx_c;
+    char idx_cc[64];
+    char ucialarmstate[254][64];
     int ucialarmstate_n = 0;
-    int j,k;
-    int alarm_value;
+    int j, alarm_value;
     
     object_index = Multistate_Value_Instance_To_Index(object_instance);
     if (object_index < max_multi_state_values_int) {
         CurrentMSV = &MSV_Descr[object_index];
-        sprintf(index_c, "%u", object_index);
+        sprintf(idx_cc,"%d",object_index);
+        idx_c = idx_cc;
     } else
         return false;
     
@@ -710,20 +731,17 @@ static bool Multistate_Value_State_Text_Write(
                 status =
                     characterstring_ansi_copy(CurrentMSV->State_Text[state_index],
                     sizeof(CurrentMSV->State_Text[state_index]), char_string);
-                    sprintf(ucistate[state_index], char_string);
-                    ucistate_n = CurrentMSV->number_of_states;
-                    for (j = 0; j < ucistate_n; j++) {
-                        sprintf(ucistate[j], CurrentMSV->State_Text[j]);
-                    }
-                    ucix_set_list(ctx, "bacnet_mv", index_c, "state",
-                        ucistate, ucistate_n);
-                    ucialarmstate_n = CurrentMSV->number_of_alarmstates;
-                    for (k = 0; k < ucialarmstate_n; k++) {
-                        alarm_value = CurrentMSV->Alarm_Values[k];
-                        sprintf(ucialarmstate[k], ucistate[alarm_value-1]);
-                    }
-                    ucix_set_list(ctx, "bacnet_mv", index_c, "alarmstate",
-                        ucialarmstate, ucialarmstate_n);
+                ucix_set_list(ctx, "bacnet_mv", idx_c, "state",
+                    CurrentMSV->State_Text, CurrentMSV->number_of_states);
+                ucialarmstate_n = CurrentMSV->number_of_alarmstates;
+                for (j = 0; j < ucialarmstate_n; j++) {
+                    alarm_value = CurrentMSV->Alarm_Values[j];
+                    length = sizeof(CurrentMSV->State_Text[state_index]);
+                    sprintf(ucialarmstate[j], "%s",
+                        CurrentMSV->State_Text[alarm_value-1]);
+                }
+                ucix_set_list(ctx, "bacnet_mv", idx_c, "alarmstate",
+                    ucialarmstate, ucialarmstate_n);
                 if (!status) {
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1090,6 +1108,8 @@ bool Multistate_Value_Write_Property(
     uint32_t array_index = 0;
     ctx = ucix_init("bacnet_mv");
     const char index_c[32] = "";
+    const char *idx_c;
+    char idx_cc[64];
 
     /* decode the some of the request */
     len =
@@ -1106,7 +1126,8 @@ bool Multistate_Value_Write_Property(
     object_index = Multistate_Value_Instance_To_Index(wp_data->object_instance);
     if (object_index < max_multi_state_values_int) {
         CurrentMSV = &MSV_Descr[object_index];
-        sprintf(index_c, "%u", object_index);
+        sprintf(idx_cc,"%d",object_index);
+        idx_c = idx_cc;
     } else
         return false;
 
@@ -1278,20 +1299,21 @@ bool Multistate_Value_Write_Property(
                 } else if (wp_data->array_index == BACNET_ARRAY_ALL) {
                     int j, alarm_value;
                     int array_index = 0;
+                    char ucialarmstate[254][64];
                     int ucialarmstate_n = 0;
-                    char *ucialarmstate[254][64];
                     for (j = 0; j < CurrentMSV->number_of_states; j++) {
                         array_index++;
                         if (wp_data->application_data[array_index] > 0) {
                             alarm_value = wp_data->application_data[array_index];
                             CurrentMSV->Alarm_Values[j] = alarm_value;
-                            sprintf(ucialarmstate[j],CurrentMSV->State_Text[alarm_value-1]);
+                            sprintf(ucialarmstate[j], "%s", 
+                                CurrentMSV->State_Text[alarm_value-1]);
                             ucialarmstate_n++;
                         }
                         array_index++;        
                     }
                     CurrentMSV->number_of_alarmstates = ucialarmstate_n;
-                    ucix_set_list(ctx, "bacnet_mv", index_c, "alarmstate",
+                    ucix_set_list(ctx, "bacnet_mv", idx_c, "alarmstate",
                         ucialarmstate, ucialarmstate_n);
                 }
             }
@@ -1412,7 +1434,7 @@ void Multistate_Value_Intrinsic_Reporting(
         ToState = CurrentMSV->Ack_notify_data.EventState;
 
 #if PRINT_ENABLED
-        fprintf(stderr, "Send Acknotification for (%i,%d).\n",
+        fprintf(stderr, "Send Acknotification for (%s,%d).\n",
             bactext_object_type_name(OBJECT_MULTI_STATE_VALUE), object_instance);
 #endif /* PRINT_ENABLED */
 
@@ -1503,8 +1525,9 @@ void Multistate_Value_Intrinsic_Reporting(
             }   /* switch (ToState) */
 
 #if PRINT_ENABLED
-            fprintf(stderr, "Event_State for (%i,%d) goes from %i to %i.\n",
-                bactext_object_type_name(OBJECT_MULTI_STATE_VALUE), object_instance,
+            fprintf(stderr, "Event_State for (%s,%d) goes from %s to %s.\n",
+                bactext_object_type_name(OBJECT_MULTI_STATE_VALUE),
+                object_instance,
                 bactext_event_state_name(FromState),
                 bactext_event_state_name(ToState));
 #endif /* PRINT_ENABLED */
