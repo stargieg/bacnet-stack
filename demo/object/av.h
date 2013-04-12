@@ -56,7 +56,7 @@ int max_analog_values;
         /* Here is our Priority Array.  They are supposed to be Real, but */
         /* we don't have that kind of memory, so we will use a single byte */
         /* and load a Real for returning the value when asked. */
-        uint8_t Priority_Array[BACNET_MAX_PRIORITY];
+        float Priority_Array[BACNET_MAX_PRIORITY];
         float Relinquish_Default;
 #if defined(INTRINSIC_REPORTING)
         uint32_t Time_Delay;

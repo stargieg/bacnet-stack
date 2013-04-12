@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "bacdef.h"
 #include "bacdcode.h"
@@ -121,15 +122,19 @@ void Analog_Value_Init(
     void)
 {
     unsigned i, j;
-    const char description[64] = "";
+    static bool initialized = false;
+    char name[64];
     const char *uciname;
-    const int *ucidisable;
-    const int *ucivalue;
+    int ucidisable;
+    const char *ucivalue;
+    char description[64];
     const char *ucidescription;
     const char *ucidescription_default;
+    const char *idx_c;
+    char idx_cc[64];
     int uciunit = 0;
     int uciunit_default = 0;
-    int ucivalue_default = 0;
+    const char *ucivalue_default;
     int ucinc_default;
     int ucinc;
     int ucievent_default;
@@ -138,141 +143,167 @@ void Analog_Value_Init(
     int ucitime_delay;
     int ucilimit_default;
     int ucilimit;
-    int ucihigh_limit_default;
-    int ucihigh_limit;
-    int ucilow_limit_default;
-    int ucilow_limit;
-    int ucidead_limit_default;
-    int ucidead_limit;
-    const char int_to_string[64] = "";
-    //struct uci_context *ctx;
+    const char *ucihigh_limit_default;
+    const char *ucihigh_limit;
+    const char *ucilow_limit_default;
+    const char *ucilow_limit;
+    const char *ucidead_limit_default;
+    const char *ucidead_limit;
     fprintf(stderr, "Analog_Value_Init\n");
-    ctx = ucix_init("bacnet_av");
-    if(!ctx)
-        fprintf(stderr,  "Failed to load config file");
-
-    ucidescription_default = ucix_get_option(ctx, "bacnet_av", "default",
-        "description");
-    uciunit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "si_unit", 0);
-    ucivalue_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "value", 0);
-    ucinc_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "nc", -1);
-    ucievent_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "event", -1);
-    ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "time_delay", -1);
-    ucilimit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "limit", -1);
-    ucihigh_limit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "high_limit", -1);
-    ucilow_limit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "low_limit", -1);
-    ucidead_limit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
-        "dead_limit", -1);
-
-    for (i = 0; i < MAX_ANALOG_VALUES; i++) {
-        memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
-        /* initialize all the analog output priority arrays to NULL */
-        for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
-            AV_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
-        }
-        sprintf(int_to_string, "%lu", (unsigned long) i);
-        uciname = ucix_get_option(ctx, "bacnet_av", int_to_string, "name");
-        ucidisable = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-            "disable", 0);
-        if ((uciname != 0) && (ucidisable == 0)) {
-            AV_Descr[i].Disable=false;
-            max_analog_values_int = i+1;
-            ucix_string_copy(&AV_Descr[i].Object_Name,
-                sizeof(AV_Descr[i].Object_Name), uciname);
-            ucidescription = ucix_get_option(ctx, "bacnet_av", int_to_string,
-                "description");
-            if (ucidescription != 0) {
-                sprintf(description, "%s", ucidescription);
-            } else if (ucidescription_default != 0) {
-                sprintf(description, "%s %lu", ucidescription_default,
-                    (unsigned long) i);
-            } else {
-                sprintf(description, "AV%lu no uci section configured",
-                    (unsigned long) i);
-            }
-            ucix_string_copy(&AV_Descr[i].Object_Description,
-                sizeof(AV_Descr[i].Object_Description), ucidescription);
-            uciunit = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "si_unit", 0);
-            if (uciunit != 0) {
-                AV_Descr[i].Units = uciunit;
-            } else if (uciunit_default != 0) {
-                AV_Descr[i].Units = uciunit_default;
-            } else {
-                AV_Descr[i].Units = UNITS_PERCENT;
-            }
- 
-            ucivalue = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "value", 0);
-            if (ucivalue != 0) {
-                AV_Descr[i].Priority_Array[15] = ucivalue;
-            } else if (ucivalue_default != 0) {
-                AV_Descr[i].Priority_Array[15] = ucivalue_default;
-            } else {
-                AV_Descr[i].Priority_Array[15] = 0;
-            }
-            AV_Descr[i].Relinquish_Default = 0; //TODO read uci
-
-#if defined(INTRINSIC_REPORTING)
-            ucinc = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "nc", ucinc_default);
-            ucievent = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "event", ucievent_default);
-            ucitime_delay = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "time_delay", ucitime_delay_default);
-            ucilimit = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "limit", ucilimit_default);
-            ucihigh_limit = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "high_limit", ucihigh_limit_default);
-            ucilow_limit = ucix_get_option_int(ctx, "bacnet_av", int_to_string,
-                "low_limit", ucilow_limit_default);
-            AV_Descr[i].Event_State = EVENT_STATE_NORMAL;
-            /* notification class not connected */
-            if (ucinc > -1) AV_Descr[i].Notification_Class = ucinc;
-            else AV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
-            if (ucievent > -1) AV_Descr[i].Event_Enable = ucievent;
-            else AV_Descr[i].Event_Enable = 0;
-            if (ucitime_delay > -1) AV_Descr[i].Time_Delay = ucitime_delay;
-            else AV_Descr[i].Time_Delay = 0;
-            if (ucilimit > -1) AV_Descr[i].Limit_Enable = ucilimit;
-            else AV_Descr[i].Limit_Enable = 0;
-            if (ucihigh_limit > -1) AV_Descr[i].High_Limit = ucihigh_limit;
-            else AV_Descr[i].High_Limit = 0;
-            if (ucilow_limit > -1) AV_Descr[i].Low_Limit = ucilow_limit;
-            else AV_Descr[i].Low_Limit = 0;
-            if (ucidead_limit > -1) AV_Descr[i].Deadband = ucidead_limit;
-            else AV_Descr[i].Deadband = 0;
-            
-            /* initialize Event time stamps using wildcards
-               and set Acked_transitions */
-            for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
-                datetime_wildcard_set(&AV_Descr[i].Event_Time_Stamps[j]);
-                AV_Descr[i].Acked_Transitions[j].bIsAcked = true;
-            }
+    if (!initialized) {
+        initialized = true;
+        ctx = ucix_init("bacnet_av");
+        if(!ctx)
+            fprintf(stderr,  "Failed to load config file");
     
-            /* Set handler for GetEventInformation function */
-            handler_get_event_information_set(OBJECT_ANALOG_VALUE,
-                Analog_Value_Event_Information);
-            /* Set handler for AcknowledgeAlarm function */
-            handler_alarm_ack_set(OBJECT_ANALOG_VALUE, Analog_Value_Alarm_Ack);
-            /* Set handler for GetAlarmSummary Service */
-            handler_get_alarm_summary_set(OBJECT_ANALOG_VALUE,
-                Analog_Value_Alarm_Summary);
-#endif
-        } else {
-            AV_Descr[i].Disable=true;
+        ucidescription_default = ucix_get_option(ctx, "bacnet_av", "default",
+            "description");
+        uciunit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+            "si_unit", 0);
+        ucivalue_default = ucix_get_option(ctx, "bacnet_av", "default",
+            "value");
+        ucinc_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+            "nc", -1);
+        ucievent_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+            "event", -1);
+        ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+            "time_delay", -1);
+        ucilimit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+            "limit", -1);
+        ucihigh_limit_default = ucix_get_option(ctx, "bacnet_av", "default",
+            "high_limit");
+        ucilow_limit_default = ucix_get_option(ctx, "bacnet_av", "default",
+            "low_limit");
+        ucidead_limit_default = ucix_get_option(ctx, "bacnet_av", "default",
+            "dead_limit");
+    
+        for (i = 0; i < MAX_ANALOG_VALUES; i++) {
+            memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
+            /* initialize all the analog output priority arrays to NULL */
+            for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
+                AV_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
+            }
+    	    sprintf(idx_cc,"%d",i);
+    	    idx_c = idx_cc;
+            uciname = ucix_get_option(ctx, "bacnet_av", idx_c, "name");
+            ucidisable = ucix_get_option_int(ctx, "bacnet_av", idx_c,
+                "disable", 0);
+            if ((uciname != 0) && (ucidisable == 0)) {
+                AV_Descr[i].Disable=false;
+                max_analog_values_int = i+1;
+                sprintf(name, "%s", uciname);
+                ucix_string_copy(AV_Descr[i].Object_Name,
+                    sizeof(AV_Descr[i].Object_Name), name);
+                ucidescription = ucix_get_option(ctx, "bacnet_av", idx_c,
+                    "description");
+                if (ucidescription != 0) {
+                    sprintf(description, "%s", ucidescription);
+                } else if (ucidescription_default != 0) {
+                    sprintf(description, "%s %lu", ucidescription_default,
+                        (unsigned long) i);
+                } else {
+                    sprintf(description, "AV%lu no uci section configured",
+                        (unsigned long) i);
+                }
+                ucix_string_copy(AV_Descr[i].Object_Description,
+                    sizeof(AV_Descr[i].Object_Description), description);
+                uciunit = ucix_get_option_int(ctx, "bacnet_av", idx_c,
+                    "si_unit", 0);
+                if (uciunit != 0) {
+                    AV_Descr[i].Units = uciunit;
+                } else if (uciunit_default != 0) {
+                    AV_Descr[i].Units = uciunit_default;
+                } else {
+                    AV_Descr[i].Units = UNITS_PERCENT;
+                }
+     
+                ucivalue = ucix_get_option(ctx, "bacnet_av", idx_c,
+                    "value");
+                if (ucivalue == NULL) {
+                    if (ucivalue_default == NULL) {
+                        ucivalue = 0;
+                    } else {
+                        ucivalue = ucivalue_default;
+                    }
+                }
+                AV_Descr[i].Priority_Array[15] = strtof(ucivalue,
+                    (char **) NULL);
+
+                AV_Descr[i].Relinquish_Default = 0; //TODO read uci
+    
+    #if defined(INTRINSIC_REPORTING)
+                ucinc = ucix_get_option_int(ctx, "bacnet_av", idx_c,
+                    "nc", ucinc_default);
+                ucievent = ucix_get_option_int(ctx, "bacnet_av", idx_c,
+                    "event", ucievent_default);
+                ucitime_delay = ucix_get_option_int(ctx, "bacnet_av", idx_c,
+                    "time_delay", ucitime_delay_default);
+                ucilimit = ucix_get_option_int(ctx, "bacnet_av", idx_c,
+                    "limit", ucilimit_default);
+                ucihigh_limit = ucix_get_option(ctx, "bacnet_av", idx_c,
+                    "high_limit");
+                if (ucihigh_limit == NULL) {
+                    if (ucihigh_limit_default == NULL) {
+                        ucihigh_limit = 0;
+                    } else {
+                        ucihigh_limit = ucihigh_limit_default;
+                    }
+                }
+                ucilow_limit = ucix_get_option(ctx, "bacnet_av", idx_c,
+                    "low_limit");
+                if (ucilow_limit == NULL) {
+                    if (ucilow_limit_default == NULL) {
+                        ucilow_limit = 0;
+                    } else {
+                        ucilow_limit = ucilow_limit_default;
+                    }
+                }
+                ucidead_limit = ucix_get_option(ctx, "bacnet_av", idx_c,
+                    "dead_limit");
+                if (ucidead_limit == NULL) {
+                    if (ucidead_limit_default == NULL) {
+                        ucidead_limit = 0;
+                    } else {
+                        ucidead_limit = ucidead_limit_default;
+                    }
+                }
+                AV_Descr[i].Event_State = EVENT_STATE_NORMAL;
+                /* notification class not connected */
+                if (ucinc > -1) AV_Descr[i].Notification_Class = ucinc;
+                else AV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
+                if (ucievent > -1) AV_Descr[i].Event_Enable = ucievent;
+                else AV_Descr[i].Event_Enable = 0;
+                if (ucitime_delay > -1) AV_Descr[i].Time_Delay = ucitime_delay;
+                else AV_Descr[i].Time_Delay = 0;
+                if (ucilimit > -1) AV_Descr[i].Limit_Enable = ucilimit;
+                else AV_Descr[i].Limit_Enable = 0;
+                AV_Descr[i].High_Limit = strtof(ucihigh_limit, (char **) NULL);
+                AV_Descr[i].Low_Limit = strtof(ucilow_limit, (char **) NULL);
+                AV_Descr[i].Deadband = strtof(ucidead_limit, (char **) NULL);
+                
+                /* initialize Event time stamps using wildcards
+                   and set Acked_transitions */
+                for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
+                    datetime_wildcard_set(&AV_Descr[i].Event_Time_Stamps[j]);
+                    AV_Descr[i].Acked_Transitions[j].bIsAcked = true;
+                }
+        
+                /* Set handler for GetEventInformation function */
+                handler_get_event_information_set(OBJECT_ANALOG_VALUE,
+                    Analog_Value_Event_Information);
+                /* Set handler for AcknowledgeAlarm function */
+                handler_alarm_ack_set(OBJECT_ANALOG_VALUE, Analog_Value_Alarm_Ack);
+                /* Set handler for GetAlarmSummary Service */
+                handler_get_alarm_summary_set(OBJECT_ANALOG_VALUE,
+                    Analog_Value_Alarm_Summary);
+    #endif
+            } else {
+                AV_Descr[i].Disable=true;
+            }
         }
+        fprintf(stderr, "max_analog_values %i\n", max_analog_values_int);
+        ucix_cleanup(ctx);
     }
-    fprintf(stderr, "max_analog_values %i\n", max_analog_values_int);
-    ucix_cleanup(ctx);
     return;
 }
 
@@ -483,6 +514,8 @@ static bool Analog_Value_Description_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Analog_Value_Instance_To_Index(object_instance);
     if (index < max_analog_values_int) {
@@ -499,12 +532,14 @@ static bool Analog_Value_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_av", index_c, "description", char_string->value);
+                        ucix_add_option(ctx, "bacnet_av", idx_c,
+                            "description", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_av\n");
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_av\n");
                     }
                 }
             } else {
@@ -550,6 +585,8 @@ static bool Analog_Value_Object_Name_Write(
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
 
     index = Analog_Value_Instance_To_Index(object_instance);
     if (index < max_analog_values_int) {
@@ -566,12 +603,14 @@ static bool Analog_Value_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    const char index_c[32] = "";
-                    sprintf(index_c, "%u", index);
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
                     if(ctx) {
-                        ucix_add_option(ctx, "bacnet_av", index_c, "name", char_string->value);
+                        ucix_add_option(ctx, "bacnet_av", idx_c,
+                            "name", char_string->value);
                     } else {
-                        fprintf(stderr,  "Failed to open config file bacnet_av\n");
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_av\n");
                     }
                 }
             } else {
@@ -889,7 +928,8 @@ bool Analog_Value_Write_Property(
     int len = 0;
     BACNET_APPLICATION_DATA_VALUE value;
     ctx = ucix_init("bacnet_av");
-    const char index_c[32] = "";
+    const char *idx_c;
+    char idx_cc[64];
     
 
     /* decode the some of the request */
@@ -914,7 +954,8 @@ bool Analog_Value_Write_Property(
     object_index = Analog_Value_Instance_To_Index(wp_data->object_instance);
     if (object_index < max_analog_values_int) {
         CurrentAV = &AV_Descr[object_index];
-        sprintf(index_c, "%u", object_index);
+        sprintf(idx_cc,"%d",object_index);
+        idx_c = idx_cc;
     } else
         return false;
 
@@ -1036,7 +1077,8 @@ bool Analog_Value_Write_Property(
             if (status) {
                 CurrentAV->Time_Delay = value.type.Unsigned_Int;
                 CurrentAV->Remaining_Time_Delay = CurrentAV->Time_Delay;
-                ucix_add_option_int(ctx, "bacnet_av", index_c, "time_delay", value.type.Unsigned_Int);
+                ucix_add_option_int(ctx, "bacnet_av", idx_c, "time_delay",
+                    value.type.Unsigned_Int);
             }
             break;
 
@@ -1047,7 +1089,8 @@ bool Analog_Value_Write_Property(
 
             if (status) {
                 CurrentAV->Notification_Class = value.type.Unsigned_Int;
-                ucix_add_option_int(ctx, "bacnet_av", index_c, "nc", value.type.Unsigned_Int);
+                ucix_add_option_int(ctx, "bacnet_av", idx_c, "nc",
+                    value.type.Unsigned_Int);
             }
             break;
 
@@ -1058,7 +1101,7 @@ bool Analog_Value_Write_Property(
 
             if (status) {
                 CurrentAV->High_Limit = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_av", index_c, "high_limit",
+                ucix_add_option_int(ctx, "bacnet_av", idx_c, "high_limit",
                         value.type.Real);
             }
             break;
@@ -1070,7 +1113,7 @@ bool Analog_Value_Write_Property(
 
             if (status) {
                 CurrentAV->Low_Limit = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_av", index_c, "low_limit",
+                ucix_add_option_int(ctx, "bacnet_av", idx_c, "low_limit",
                         value.type.Real);
             }
             break;
@@ -1082,7 +1125,7 @@ bool Analog_Value_Write_Property(
 
             if (status) {
                 CurrentAV->Deadband = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_av", index_c, "dead_limit",
+                ucix_add_option_int(ctx, "bacnet_av", idx_c, "dead_limit",
                         value.type.Real);
             }
             break;
@@ -1095,7 +1138,7 @@ bool Analog_Value_Write_Property(
             if (status) {
                 if (value.type.Bit_String.bits_used == 2) {
                     CurrentAV->Limit_Enable = value.type.Bit_String.value[0];
-                    ucix_add_option_int(ctx, "bacnet_av", index_c, "limit",
+                    ucix_add_option_int(ctx, "bacnet_av", idx_c, "limit",
                         value.type.Bit_String.value[0]);
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
@@ -1113,7 +1156,8 @@ bool Analog_Value_Write_Property(
             if (status) {
                 if (value.type.Bit_String.bits_used == 3) {
                     CurrentAV->Event_Enable = value.type.Bit_String.value[0];
-                    ucix_add_option_int(ctx, "bacnet_av", index_c, "event", value.type.Bit_String.value[0]);
+                    ucix_add_option_int(ctx, "bacnet_av", idx_c, "event",
+                        value.type.Bit_String.value[0]);
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1473,7 +1517,7 @@ int Analog_Value_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
-    ANALOG_VALUE_DESCR *CurrentAV;
+    //ANALOG_VALUE_DESCR *CurrentAV;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
@@ -1650,7 +1694,7 @@ int Analog_Value_Alarm_Summary(
     unsigned index,
     BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data)
 {
-    ANALOG_VALUE_DESCR *CurrentAV;
+    //ANALOG_VALUE_DESCR *CurrentAV;
 
     /* check index */
     if (index < max_analog_values_int) {
