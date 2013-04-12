@@ -481,7 +481,7 @@ bool Device_Reinitialize(
     BACNET_REINITIALIZE_DEVICE_DATA * rd_data)
 {
     bool status = false;
-    static char *uci_password;
+    const char *uci_password;
     bool enable_pw = false;
     ctx = ucix_init("bacnet_dev");
     if(ctx) {
@@ -1854,11 +1854,11 @@ void Device_Init(
     struct object_functions *pObject = NULL;
 
     characterstring_init_ansi(&My_Object_Name, "SimpleServer");
-    static char *uci_name;
-    static char *uci_location;
-    static char *uci_description;
-    static char *uci_modelname;
-    static char *uci_app_ver;
+    const char *uci_name;
+    const char *uci_location;
+    const char *uci_description;
+    const char *uci_modelname;
+    const char *uci_app_ver;
     fprintf(stderr, "Device_Init\n");
     ctx = ucix_init("bacnet_dev");
     if(!ctx)
@@ -1870,20 +1870,19 @@ void Device_Init(
 
     uci_location = ucix_get_option(ctx, "bacnet_dev", "0", "location");
     if (uci_location != 0)
-        ucix_string_copy(&Location, sizeof(Location), uci_location);
+        sprintf(Location, "%s", uci_location);
 
     uci_description = ucix_get_option(ctx, "bacnet_dev", "0", "description");
     if (uci_description != 0)
-        ucix_string_copy(&Description, sizeof(Description), uci_description);
+        sprintf(Description, "%s", uci_description);
 
     uci_modelname = ucix_get_option(ctx, "bacnet_dev", "0", "modelname");
     if (uci_modelname != 0)
-        ucix_string_copy(&Model_Name, sizeof(Model_Name), uci_modelname);
+        sprintf(Model_Name, "%s", uci_modelname);
 
     uci_app_ver = ucix_get_option(ctx, "bacnet_dev", "0", "app_ver");
     if (uci_app_ver != 0)
-        ucix_string_copy(&Application_Software_Version,
-            sizeof(Application_Software_Version), uci_app_ver);
+        sprintf(Application_Software_Version, "%s", uci_app_ver);
 
     ucix_cleanup(ctx);
 
