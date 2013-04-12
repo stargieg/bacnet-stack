@@ -25,7 +25,7 @@ void ucix_save(struct uci_context *ctx);
 void ucix_save_state(struct uci_context *ctx);
 const char* ucix_get_option(struct uci_context *ctx,
 	const char *p, const char *s, const char *o);
-int ucix_get_list(char *value[254][64], struct uci_context *ctx,
+int ucix_get_list(char *value[254], struct uci_context *ctx,
 	const char *p, const char *s, const char *o);
 int ucix_get_option_int(struct uci_context *ctx,
 	const char *p, const char *s, const char *o, int def);
@@ -36,7 +36,7 @@ void ucix_add_option_int(struct uci_context *ctx,
 void ucix_add_option(struct uci_context *ctx,
 	const char *p, const char *s, const char *o, const char *t);
 void ucix_set_list(struct uci_context *ctx,
-	const char *p, const char *s, const char *o, const char *value[254][64], int *l);
+	const char *p, const char *s, const char *o, char value[254][64], int l);
 int ucix_commit(struct uci_context *ctx, const char *p);
 void ucix_revert(struct uci_context *ctx,
 	const char *p, const char *s, const char *o);

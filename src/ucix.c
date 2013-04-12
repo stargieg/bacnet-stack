@@ -104,20 +104,21 @@ const char* ucix_get_option(struct uci_context *ctx, const char *p, const char *
 		}
 		break;
 	default:
-		return 0;
+		value = NULL;
+		break;
 	}
 
 	return value;
 }
 
-int ucix_get_list(char *value[254][64], struct uci_context *ctx, const char *p, const char *s, const char *o)
+int ucix_get_list(char *value[254], struct uci_context *ctx, const char *p, const char *s, const char *o)
 {
 	struct uci_element *e = NULL;
 	int n;
 	if(ucix_get_ptr(ctx, p, s, o, NULL))
-		return NULL;
+		return 0;
 	if (!(ptr.flags & UCI_LOOKUP_COMPLETE))
-		return NULL;
+		return 0;
 	e = ptr.last;
 	switch (e->type)
 	{
@@ -126,14 +127,12 @@ int ucix_get_list(char *value[254][64], struct uci_context *ctx, const char *p, 
 			case UCI_TYPE_LIST:
 				n = 0;
                 uci_foreach_element(&ptr.o->v.list, e) {
-                      sprintf(value[n],e->name);
+                      value[n] = e->name;
                       n++;
                 }
-                
 				break;
 			default:
 			    n = 0;
-				value[0][0] = "";
 				break;
 		}
 		break;
@@ -154,28 +153,31 @@ int ucix_get_option_int(struct uci_context *ctx, const char *p, const char *s, c
 	return ret;
 }
 
-void ucix_add_section(struct uci_context *ctx, const char *p, const char *s, const char *t)
+void ucix_add_section(struct uci_context *ctx, const char *p, const char *s,
+    const char *t)
 {
 	if(ucix_get_ptr(ctx, p, s, NULL, t))
 		return;
 	uci_set(ctx, &ptr);
 }
 
-void ucix_add_option_int(struct uci_context *ctx, const char *p, const char *s, const char *o, int t)
+void ucix_add_option_int(struct uci_context *ctx, const char *p, const char *s,
+    const char *o, int t)
 {
 	char tmp[64];
 	snprintf(tmp, 64, "%d", t);
 	ucix_add_option(ctx, p, s, o, tmp);
 }
 
-void ucix_add_option(struct uci_context *ctx, const char *p, const char *s, const char *o, const char *t)
+void ucix_add_option(struct uci_context *ctx, const char *p, const char *s,
+    const char *o, const char *t)
 {
 	if(ucix_get_ptr(ctx, p, s, o, (t)?(t):("")))
 		return;
 	uci_set(ctx, &ptr);
 }
 
-void ucix_set_list(struct uci_context *ctx, const char *p, const char *s, const char *o, const char *value[254][64], int *l)
+void ucix_set_list(struct uci_context *ctx, const char *p, const char *s, const char *o, char value[254][64], int l)
 {
     int i;
     ucix_get_ptr(ctx, p, s, o, NULL);
