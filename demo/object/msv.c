@@ -122,7 +122,7 @@ void Multistate_Value_Property_Lists(
 void Multistate_Value_Init(
     void)
 {
-    unsigned i, j, k;
+    unsigned i, j, k, l;
     static bool initialized = false;
     char name[64];
     const char *uciname;
@@ -135,12 +135,8 @@ void Multistate_Value_Init(
     char idx_cc[64];
     char *ucistate_default[254];
     int ucistate_n_default = 0;
-    char *ucistate[254];
-    int ucistate_n = 0;
     char *ucialarmstate_default[254];
     int ucialarmstate_n_default = 0;
-    char *ucialarmstate[254];
-    int ucialarmstate_n= 0;
     int ucinc_default;
     int ucinc;
     int ucievent_default;
@@ -168,6 +164,14 @@ void Multistate_Value_Init(
             "time_delay", -1);
     
         for (i = 0; i < MAX_MULTI_STATE_VALUES; i++) {
+            char *ucistate[254];
+            int ucistate_n = 0;
+            char *ucialarmstate[254];
+            int ucialarmstate_n = 0;
+            char *state[254];
+            int state_n = 0;
+            char *alarmstate[254];
+            int alarmstate_n = 0;
             memset(&MSV_Descr[i], 0x00, sizeof(MULTI_STATE_VALUE_DESCR));
             /* initialize all the analog output priority arrays to NULL */
             for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
@@ -202,41 +206,51 @@ void Multistate_Value_Init(
                     "value", 1);
                 MSV_Descr[i].Priority_Array[15] = ucivalue;
                 MSV_Descr[i].Relinquish_Default = 1; //TODO read uci
-    
+
                 ucistate_n = ucix_get_list(ucistate, ctx,
                     "bacnet_mv", idx_c, "state");
                 if (ucistate_n == 0) {
-                    ucistate_n = ucistate_n_default;
-                    for (j = 0; j < ucistate_n; j++) {
-                        sprintf(ucistate[j], "%s", ucistate_default[j]);
+                    state_n = ucistate_n_default;
+                    for (j = 0; j < state_n; j++) {
+                        state[j] = "";
+                        state[j] = ucistate_default[j];
+                    }
+                } else {
+                    state_n = ucistate_n;
+                    for (j = 0; j < state_n; j++) {
+                        state[j] = ucistate[j];
                     }
                 }
-                MSV_Descr[i].number_of_states = ucistate_n;
-    
+                MSV_Descr[i].number_of_states = state_n;
+
                 ucialarmstate_n = ucix_get_list(ucialarmstate, ctx,
                     "bacnet_mv", idx_c, "alarmstate");
                 if (ucialarmstate_n == 0) {
-                    ucialarmstate_n = ucialarmstate_n_default;
-                    for (j = 0; j < ucialarmstate_n; j++) {
-                        sprintf(ucialarmstate[j], "%s",
-                            ucialarmstate_default[j]);
+                    alarmstate_n = ucialarmstate_n_default;
+                    for (j = 0; j < alarmstate_n; j++) {
+                        alarmstate[j] = ucialarmstate_default[j];
+                    }
+                } else {
+                    alarmstate_n = ucialarmstate_n;
+                    for (j = 0; j < alarmstate_n; j++) {
+                        alarmstate[j] = ucialarmstate[j];
                     }
                 }
-                MSV_Descr[i].number_of_alarmstates = ucialarmstate_n;
-    
-                for (j = 0; j < ucistate_n; j++) {
-                    if (ucistate[j]) {
-                        sprintf(MSV_Descr[i].State_Text[j], "%s", ucistate[j]);
+                l = 0;
+                for (j = 0; j < state_n; j++) {
+                    if (state[j]) {
+                        sprintf(MSV_Descr[i].State_Text[j], "%s", state[j]);
                     } else {
                         sprintf(MSV_Descr[i].State_Text[j], "STATUS: %i", j);
                     }
-                    for (k = 0; k < ucialarmstate_n; k++) {
-                        if (strcmp(ucistate[j],ucialarmstate[k]) ==
-                            0) {
-                            MSV_Descr[i].Alarm_Values[k] = j+1;
+                    for (k = 0; k < alarmstate_n; k++) {
+                        if (strcmp(state[j],alarmstate[k]) == 0) {
+                            MSV_Descr[i].Alarm_Values[l] = j+1;
+                            l++;
                         }
                     }
                 }
+                MSV_Descr[i].number_of_alarmstates = l;
 #if defined(INTRINSIC_REPORTING)
                 ucinc = ucix_get_option_int(ctx, "bacnet_mv", idx_c,
                     "nc", ucinc_default);
@@ -1651,7 +1665,7 @@ int Multistate_Value_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
-    //MULTI_STATE_VALUE_DESCR *CurrentMSV;
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
