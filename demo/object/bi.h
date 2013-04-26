@@ -31,10 +31,48 @@
 #include "cov.h"
 #include "rp.h"
 #include "wp.h"
+#if defined(INTRINSIC_REPORTING)
+#include "nc.h"
+#include "alarm_ack.h"
+#include "getevent.h"
+#include "get_alarm_sum.h"
+#endif /* INTRINSIC_REPORTING */
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+int max_binary_inputs;
+
+    typedef struct binary_input_descr {
+        char Object_Name[64];
+        char Object_Description[64];
+        BACNET_BINARY_PV Present_Value;
+        unsigned Event_State:3;
+        bool Out_Of_Service;
+        bool Change_Of_Value;
+        bool Disable;
+        char Inactive_Text[64];
+        char Active_Text[64];
+        BACNET_POLARITY polarity;
+        /* Here is our Priority Array.*/
+        BACNET_BINARY_PV Priority_Array[BACNET_MAX_PRIORITY];
+        unsigned Relinquish_Default;
+#if defined(INTRINSIC_REPORTING)
+        uint32_t Time_Delay;
+        uint32_t Notification_Class;
+        BACNET_BINARY_PV Alarm_Value;
+        unsigned Event_Enable:3;
+        unsigned Notify_Type:1;
+        ACKED_INFO Acked_Transitions[MAX_BACNET_EVENT_TRANSITION];
+        BACNET_DATE_TIME Event_Time_Stamps[MAX_BACNET_EVENT_TRANSITION];
+        /* time to generate event notification */
+        uint32_t Remaining_Time_Delay;
+        /* AckNotification informations */
+        ACK_NOTIFICATION Ack_notify_data;
+#endif /* INTRINSIC_REPORTING */
+    } BINARY_INPUT_DESCR;
+
 
     void Binary_Input_Property_Lists(
         const int **pRequired,
@@ -43,51 +81,62 @@ extern "C" {
 
     bool Binary_Input_Valid_Instance(
         uint32_t object_instance);
+
     unsigned Binary_Input_Count(
         void);
+
     uint32_t Binary_Input_Index_To_Instance(
         unsigned index);
+
     unsigned Binary_Input_Instance_To_Index(
         uint32_t instance);
+
     bool Binary_Input_Object_Instance_Add(
         uint32_t instance);
 
     bool Binary_Input_Object_Name(
         uint32_t object_instance,
         BACNET_CHARACTER_STRING * object_name);
+
     bool Binary_Input_Name_Set(
         uint32_t object_instance,
         char *new_name);
 
-    char *Binary_Input_Description(
-        uint32_t instance);
     bool Binary_Input_Description_Set(
         uint32_t instance,
         char *new_name);
 
     char *Binary_Input_Inactive_Text(
         uint32_t instance);
+
     bool Binary_Input_Inactive_Text_Set(
         uint32_t instance,
         char *new_name);
+
     char *Binary_Input_Active_Text(
         uint32_t instance);
+
     bool Binary_Input_Active_Text_Set(
         uint32_t instance,
         char *new_name);
+
     BACNET_POLARITY Binary_Input_Polarity(
         uint32_t object_instance);
+
     bool Binary_Input_Polarity_Set(
         uint32_t object_instance,
         BACNET_POLARITY polarity);
+
     bool Binary_Input_Out_Of_Service(
         uint32_t object_instance);
 
     bool Binary_Input_Encode_Value_List(
         uint32_t object_instance,
         BACNET_PROPERTY_VALUE * value_list);
+
     bool Binary_Input_Change_Of_Value(
         uint32_t instance);
+
     void Binary_Input_Change_Of_Value_Clear(
         uint32_t instance);
 
@@ -96,14 +145,37 @@ extern "C" {
 
     bool Binary_Input_Write_Property(
         BACNET_WRITE_PROPERTY_DATA * wp_data);
+
     void Binary_Input_Init(
         void);
+
     BACNET_BINARY_PV Binary_Input_Present_Value(
         uint32_t object_instance);
 
     bool Binary_Input_Present_Value_Set(
         uint32_t object_instance,
-        BACNET_BINARY_PV value);
+        BACNET_BINARY_PV value,
+        uint8_t priority);
+
+    /* note: header of Intrinsic_Reporting function is required
+       even when INTRINSIC_REPORTING is not defined */
+    void Binary_Input_Intrinsic_Reporting(
+        uint32_t object_instance);
+
+#if defined(INTRINSIC_REPORTING)
+    int Binary_Input_Event_Information(
+        unsigned index,
+        BACNET_GET_EVENT_INFORMATION_DATA * getevent_data);
+
+    int Binary_Input_Alarm_Ack(
+        BACNET_ALARM_ACK_DATA * alarmack_data,
+        BACNET_ERROR_CODE * error_code);
+
+    int Binary_Input_Alarm_Summary(
+        unsigned index,
+        BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data);
+#endif
+
 
 #ifdef TEST
 #include "ctest.h"

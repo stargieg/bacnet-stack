@@ -37,6 +37,7 @@
 #include "bacenum.h"
 #include "bacapp.h"
 #include "bactext.h"
+#include "cov.h"
 #include "config.h"     /* the custom stuff */
 #include "device.h"
 #include "handlers.h"
@@ -987,6 +988,7 @@ int Multistate_Value_Read_Property(
                 apdu_len += len;
             }
             break;
+
         case PROP_TIME_DELAY:
             apdu_len =
                 encode_application_unsigned(&apdu[0], CurrentMSV->Time_Delay);
@@ -1405,10 +1407,10 @@ bool Multistate_Value_Write_Property(
 #if defined(INTRINSIC_REPORTING)
         case PROP_ACKED_TRANSITIONS:
         case PROP_EVENT_TIME_STAMPS:
-#endif
             wp_data->error_class = ERROR_CLASS_PROPERTY;
             wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
             break;
+#endif
         default:
             wp_data->error_class = ERROR_CLASS_PROPERTY;
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;

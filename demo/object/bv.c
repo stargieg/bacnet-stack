@@ -2,6 +2,8 @@
 *
 * Copyright (C) 2006 Steve Karg <skarg@users.sourceforge.net>
 *
+* Copyright (C) 2013 Patrick Grimm <patrick@lunatiki.de>
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
 * "Software"), to deal in the Software without restriction, including
@@ -28,6 +30,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
+
 #include "bacdef.h"
 #include "bacdcode.h"
 #include "bacenum.h"
@@ -37,20 +41,28 @@
 #include "rp.h"
 #include "bv.h"
 #include "handlers.h"
+#include "ucix.h"
 
+/* number of demo objects */
 #ifndef MAX_BINARY_VALUES
-#define MAX_BINARY_VALUES 10
+//#define MAX_BINARY_VALUES 65535
+#define MAX_BINARY_VALUES 4
 #endif
+unsigned max_binary_values_int = 4;
 
 /* When all the priorities are level null, the present value returns */
 /* the Relinquish Default value */
 #define RELINQUISH_DEFAULT BINARY_INACTIVE
+
 /* Here is our Priority Array.*/
 static BACNET_BINARY_PV
     Binary_Value_Level[MAX_BINARY_VALUES][BACNET_MAX_PRIORITY];
+
 /* Writable out-of-service allows others to play with our Present Value */
 /* without changing the physical output */
 static bool Binary_Value_Out_Of_Service[MAX_BINARY_VALUES];
+
+BINARY_VALUE_DESCR BV_Descr[MAX_BINARY_VALUES];
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Binary_Value_Properties_Required[] = {
@@ -93,7 +105,7 @@ void Binary_Value_Property_Lists(
 void Binary_Value_Init(
     void)
 {
-    unsigned i, j;
+    unsigned i,j;
     static bool initialized = false;
 
     if (!initialized) {

@@ -154,7 +154,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         Analog_Value_Intrinsic_Reporting},
-#if 0
     {OBJECT_BINARY_INPUT,
             Binary_Input_Init,
             Binary_Input_Count,
@@ -169,7 +168,8 @@ static object_functions_t My_Object_Table[] = {
             Binary_Input_Encode_Value_List,
             Binary_Input_Change_Of_Value,
             Binary_Input_Change_Of_Value_Clear,
-        NULL /* Intrinsic Reporting */ },
+        Binary_Input_Intrinsic_Reporting},
+#if 0
     {OBJECT_BINARY_OUTPUT,
             Binary_Output_Init,
             Binary_Output_Count,
