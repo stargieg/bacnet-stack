@@ -164,14 +164,15 @@ void Notification_Class_Init(
             }
 
             /* set the basic parameters */
-            NC_Descr[i].Ack_Required = 0;
+            NC_Descr[i].Ack_Required = 7; //TODO uci
             NC_Descr[i].Priority[TRANSITION_TO_OFFNORMAL] = 255;     /* The lowest priority for Normal message. */
             NC_Descr[i].Priority[TRANSITION_TO_FAULT] = 255; /* The lowest priority for Normal message. */
             NC_Descr[i].Priority[TRANSITION_TO_NORMAL] = 255;        /* The lowest priority for Normal message. */
             ucirecp_n = ucix_get_list(ucirecp, ctx, "bacnet_nc", idx_c,
                 "recipient");
             for (ucirecp_i = 0; ucirecp_i < ucirecp_n; ucirecp_i++) {
-                recplist[ucirecp_i].ValidDays = 127; //bit string 1,1,1,1,1,1,1 Mo,Di,Mi,Do,Fr,Sa,So
+                //BACNET_ADDRESS * src = { 0 };
+                recplist[ucirecp_i].ValidDays = 127; //TODO uci bit string 1,1,1,1,1,1,1 Mo,Di,Mi,Do,Fr,Sa,So
                 recplist[ucirecp_i].FromTime.hour = 0;
                 recplist[ucirecp_i].FromTime.min = 0;
                 recplist[ucirecp_i].FromTime.sec = 0;
@@ -180,6 +181,7 @@ void Notification_Class_Init(
                 recplist[ucirecp_i].ToTime.min = 59;
                 recplist[ucirecp_i].ToTime.sec = 59;
                 recplist[ucirecp_i].ToTime.hundredths = 99;
+                recplist[ucirecp_i].ConfirmedNotify = false;
                 recplist[ucirecp_i].Recipient.RecipientType =
                             RECIPIENT_TYPE_ADDRESS;
                 recplist[ucirecp_i].Recipient._.Address.len = 0;
@@ -189,28 +191,37 @@ void Notification_Class_Init(
                	    src_net = "65535";
                	}
                 recplist[ucirecp_i].Recipient._.Address.net = atoi(src_net);
+                fprintf(stderr,"net: %i\n", recplist[ucirecp_i].Recipient._.Address.net);
                	if (atoi(src_net) != 65535) {
                     uci_ptr = strtok(NULL, ":");
                     src_ip = uci_ptr;
                     uci_ptr = strtok(NULL, "\0");
                     src_port = atoi(uci_ptr);
+                    //src[4] = src_port;
                     src_port1 = ( src_port / 256 );
+                    //src[5] = src_port - ( src_port1 * 256 );
                     src_port2 = src_port - ( src_port1 * 256 );
                     uci_ptr_a = strtok(src_ip, ".");
-                    recplist[ucirecp_i].Recipient._.Address.adr[0] = atoi(uci_ptr_a);
+                    //src.mac[0] =  = atoi(uci_ptr_a);
+                    recplist[ucirecp_i].Recipient._.Address.mac[0] = atoi(uci_ptr_a);
                     uci_ptr_a = strtok(NULL, ".");
-                    recplist[ucirecp_i].Recipient._.Address.adr[1] = atoi(uci_ptr_a);
+                    //src.mac[1] =  = atoi(uci_ptr_a);
+                    recplist[ucirecp_i].Recipient._.Address.mac[1] = atoi(uci_ptr_a);
                     uci_ptr_a = strtok(NULL, ".");
-                    recplist[ucirecp_i].Recipient._.Address.adr[2] = atoi(uci_ptr_a);
+                    //src.mac[2] =  = atoi(uci_ptr_a);
+                    recplist[ucirecp_i].Recipient._.Address.mac[2] = atoi(uci_ptr_a);
                     uci_ptr_a = strtok(NULL, ".");
-                    recplist[ucirecp_i].Recipient._.Address.adr[3] = atoi(uci_ptr_a);
-                    recplist[ucirecp_i].Recipient._.Address.adr[4] = src_port1;
-                    recplist[ucirecp_i].Recipient._.Address.adr[5] = src_port2;
-                    recplist[ucirecp_i].Recipient._.Address.len = 6;
+                    //src.mac[3] =  = atoi(uci_ptr_a);
+                    recplist[ucirecp_i].Recipient._.Address.mac[3] = atoi(uci_ptr_a);
+                    recplist[ucirecp_i].Recipient._.Address.mac[4] = src_port1;
+                    recplist[ucirecp_i].Recipient._.Address.mac[5] = src_port2;
+                    //recplist[ucirecp_i].Recipient._.Address.mac = src;
+                    recplist[ucirecp_i].Recipient._.Address.mac_len = 6;
+                    recplist[ucirecp_i].Recipient._.Address.len = 0;
+                    recplist[ucirecp_i].ConfirmedNotify = false;
                 }
                 recplist[ucirecp_i].ProcessIdentifier = ucirecp_i;
                 recplist[ucirecp_i].Transitions = 7; //bit string 1,1,1 To Alarm,To Fault,To Normal
-                recplist[ucirecp_i].ConfirmedNotify = true;
             }
             for (ucirecp_i = 0; ucirecp_i < ucirecp_n; ucirecp_i++) {
                 BACNET_ADDRESS src = { 0 };
@@ -231,8 +242,8 @@ void Notification_Class_Init(
                 } else if (NC_Descr[i].Recipient_List[ucirecp_i].Recipient.
                     RecipientType == RECIPIENT_TYPE_ADDRESS) {
                     /* copy Address */
-                    /* src = CurrentNC->Recipient_List[idx].Recipient._.Address; */
-                    /* address_bind_request(BACNET_MAX_INSTANCE, &max_apdu, &src); */
+                    src = NC_Descr[i].Recipient_List[ucirecp_i].Recipient._.Address;
+                    address_bind_request(BACNET_MAX_INSTANCE, &max_apdu, &src);
                 }
             }
         }
@@ -987,6 +998,7 @@ bool Notification_Class_Write_Property(
                         return false;
                     }
                     /* store value */
+                    unsigned src_port,src_port1,src_port2;
                     if (TmpNotify.Recipient_List[idx].Recipient._.Address.
                         net == 0) {
                         memcpy(TmpNotify.Recipient_List[idx].Recipient._.
@@ -994,6 +1006,26 @@ bool Notification_Class_Write_Property(
                             value.type.Octet_String.length);
                         TmpNotify.Recipient_List[idx].Recipient._.Address.
                             mac_len = value.type.Octet_String.length;
+                        src_port1 = TmpNotify.Recipient_List[idx].Recipient._.
+                            Address.mac[4];
+                        src_port2 = TmpNotify.Recipient_List[idx].Recipient._.
+                            Address.mac[5];
+                        src_port = ( src_port1 * 256 ) + src_port2;
+                        sprintf(uci_str,  "%i,%i.%i.%i.%i:%i\n", TmpNotify.
+                            Recipient_List[idx].Recipient._.Address.net,
+                            TmpNotify.Recipient_List[idx].Recipient._.
+                                Address.mac[0],
+                            TmpNotify.Recipient_List[idx].Recipient._.
+                                Address.mac[1],
+                            TmpNotify.Recipient_List[idx].Recipient._.
+                                Address.mac[2],
+                            TmpNotify.Recipient_List[idx].Recipient._.
+                                Address.mac[3],
+                            src_port);
+                        if(ctx) {
+                                sprintf(ucirecp[ucirecp_n], "%s", uci_str);
+                                ucirecp_n++;
+                        }
                     } else if (TmpNotify.Recipient_List[idx].Recipient._.Address.
                         net != 65535) {
                         memcpy(TmpNotify.Recipient_List[idx].Recipient._.
@@ -1001,7 +1033,6 @@ bool Notification_Class_Write_Property(
                             value.type.Octet_String.length);
                         TmpNotify.Recipient_List[idx].Recipient._.Address.len =
                             value.type.Octet_String.length;
-                        unsigned src_port,src_port1,src_port2;
                         src_port1 = TmpNotify.Recipient_List[idx].Recipient._.
                             Address.adr[4];
                         src_port2 = TmpNotify.Recipient_List[idx].Recipient._.
@@ -1246,7 +1277,6 @@ void Notification_Class_common_reporting_function(
     uint32_t object_index;
     uint8_t index;
 
-
     object_index =
         Notification_Class_Instance_To_Index(event_data->notificationClass);
 
@@ -1254,7 +1284,6 @@ void Notification_Class_common_reporting_function(
         CurrentNC = &NC_Descr[object_index];
     else
         return;
-
 
     /* Initiating Device Identifier */
     event_data->initiatingObjectIdentifier.type = OBJECT_DEVICE;
@@ -1304,7 +1333,10 @@ void Notification_Class_common_reporting_function(
         if (IsRecipientActive(pBacDest, event_data->toState) == true) {
             BACNET_ADDRESS dest;
             uint32_t device_id;
+            //BACNET_ADDRESS dest_adr;
             unsigned max_apdu;
+            //uint8_t i = 0;
+            //uint8_t adr_len = 0;
 
             /* Process Identifier */
             event_data->processIdentifier = pBacDest->ProcessIdentifier;
@@ -1325,6 +1357,18 @@ void Notification_Class_common_reporting_function(
                 if (pBacDest->ConfirmedNotify == true) {
                     if (address_get_device_id(&dest, &device_id))
                         Send_CEvent_Notify(device_id, event_data);
+//                    dest_adr = pBacDest->Recipient._.Address;
+//                    if (address_get_device_id(&dest_adr, &device_id)) {
+//                        fprintf(stderr,"device id: %i len: %i net: %i\n",
+//                            device_id, dest_adr.len, dest_adr.net);
+//                        fprintf(stderr,"reporting dev id ConfirmedNotify\n");
+//                        Send_CEvent_Notify(device_id, event_data);
+//                        dest = pBacDest->Recipient._.Address;
+//                        Send_UEvent_Notify(Handler_Transmit_Buffer, event_data,
+//                            &dest);
+//                    } else {
+//                        fprintf(stderr,"reporting dev id ConfirmedNotify false\n");
+//                    }
                 } else {
                     dest = pBacDest->Recipient._.Address;
                     Send_UEvent_Notify(Handler_Transmit_Buffer, event_data,
