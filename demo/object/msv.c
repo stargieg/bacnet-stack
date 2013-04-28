@@ -283,6 +283,8 @@ void Multistate_Value_Init(
                 /* Set handler for GetAlarmSummary Service */
                 handler_get_alarm_summary_set(OBJECT_MULTI_STATE_VALUE,
                     Multistate_Value_Alarm_Summary);
+
+                MSV_Descr[i].Notify_Type = NOTIFY_ALARM;
 #endif
             } else {
                 MSV_Descr[i].Disable=true;
@@ -1523,20 +1525,17 @@ void Multistate_Value_Intrinsic_Reporting(
 
             switch (ToState) {
                 case EVENT_STATE_FAULT:
-                    //ExceededLimit = CurrentMSV->High_Limit;
                     characterstring_init_ansi(&msgText, "Goes to EVENT_STATE_FAULT");
                     break;
 
                 case EVENT_STATE_NORMAL:
                     if (FromState == EVENT_STATE_FAULT) {
-                        //ExceededLimit = CurrentMSV->High_Limit;
                         characterstring_init_ansi(&msgText,
                             "Back to normal state from EVENT_STATE_FAULT");
                     }
                     break;
 
                 default:
-                    //ExceededLimit = 0;
                     break;
             }   /* switch (ToState) */
 
