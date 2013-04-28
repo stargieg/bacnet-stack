@@ -660,26 +660,16 @@ bool Binary_Input_Present_Value_Set(
     BINARY_INPUT_DESCR *CurrentBI;
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
-
+    if (value > 1)
+        value = BINARY_NULL;
+    
     index = Binary_Input_Instance_To_Index(object_instance);
     if (index < max_binary_inputs) {
         CurrentBI = &BI_Descr[index];
-        if (value) {
-            CurrentBI->Present_Value = (uint8_t) value;
-            CurrentBI->Priority_Array[priority - 1] = (uint8_t) value;
-            status = true;
-            //if (priority && (priority <= BACNET_MAX_PRIORITY) &&
-                //(priority != 6 /* reserved */ )) {
-                    //CurrentMSV->Priority_Array[priority - 1] = (uint8_t) value;
-                    /* Note: you could set the physical output here to the next
-                    highest priority, or to the relinquish default if no
-                    priorities are set.
-                    However, if Out of Service is TRUE, then don't set the
-                    physical output.  This comment may apply to the
-                    main loop (i.e. check out of service before changing output) */
-                    //status = true;
-             //}
-        }
+        fprintf(stderr,"BI%i value %i\n", index, value);
+        CurrentBI->Present_Value = (uint8_t) value;
+        CurrentBI->Priority_Array[priority - 1] = (uint8_t) value;
+        status = true;
     }
     return status;
 }
@@ -1072,7 +1062,9 @@ bool Binary_Input_Write_Property(
             break;
 
         case PROP_PRESENT_VALUE:
-            if (value.tag == BACNET_APPLICATION_TAG_UNSIGNED_INT) {
+            if (value.tag == BACNET_APPLICATION_TAG_BOOLEAN || 
+                value.tag == BACNET_APPLICATION_TAG_ENUMERATED || 
+                value.tag == BACNET_APPLICATION_TAG_UNSIGNED_INT) {
                 /* Command priority 6 is reserved for use by Minimum On/Off
                    algorithm and may not be used for other purposes in any
                    object. */
