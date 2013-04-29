@@ -48,9 +48,6 @@
 #define MAX_BINARY_INPUTS 5
 #endif
 
-/* Change of Value flag */
-static bool Change_Of_Value[MAX_BINARY_INPUTS];
-
 /* Polarity of Input */
 static BACNET_POLARITY Polarity[MAX_BINARY_INPUTS];
 
@@ -369,7 +366,7 @@ static void Binary_Input_Out_Of_Service_Set(
     if (index < max_binary_inputs) {
         CurrentBI = &BI_Descr[index];
         if (CurrentBI->Out_Of_Service != value) {
-            Change_Of_Value[index] = true;
+            CurrentBI->Change_Of_Value = true;
         }
         CurrentBI->Out_Of_Service = value;
     }
