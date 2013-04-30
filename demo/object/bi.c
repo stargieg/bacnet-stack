@@ -126,6 +126,8 @@ void Binary_Input_Init(
     int ucievent;
     int ucitime_delay_default;
     int ucitime_delay;
+    int ucialarm_value_default;
+    int ucialarm_value;
     fprintf(stderr, "Binary_Input_Init\n");
 
     if (!initialized) {
@@ -146,6 +148,8 @@ void Binary_Input_Init(
             "event", -1);
         ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_bi", "default",
             "time_delay", -1);
+        ucialarm_value_default = ucix_get_option_int(ctx, "bacnet_bi", "default",
+            "alarm_value", -1);
 
         /* initialize all the values */
         for (i = 0; i < MAX_BINARY_INPUTS; i++) {
@@ -217,6 +221,9 @@ void Binary_Input_Init(
                     "event", ucievent_default);
                 ucitime_delay = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
                     "time_delay", ucitime_delay_default);
+                ucialarm_value = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
+                    "alarm_value", ucialarm_value_default);
+                BI_Descr[i].Alarm_Value = ucialarm_value;
                 BI_Descr[i].Event_State = EVENT_STATE_NORMAL;
                 /* notification class not connected */
                 if (ucinc > -1) BI_Descr[i].Notification_Class = ucinc;
