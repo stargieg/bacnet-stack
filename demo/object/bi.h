@@ -48,12 +48,13 @@ int max_binary_inputs;
         char Object_Name[64];
         char Object_Description[64];
         BACNET_BINARY_PV Present_Value;
+        BACNET_POLARITY Polarity;
         unsigned Event_State:3;
         bool Out_Of_Service;
         bool Change_Of_Value;
         bool Disable;
-        char Inactive_Text[64];
-        char Active_Text[64];
+        BACNET_CHARACTER_STRING Inactive_Text;
+        BACNET_CHARACTER_STRING Active_Text;
         BACNET_POLARITY polarity;
         /* Here is our Priority Array.*/
         BACNET_BINARY_PV Priority_Array[BACNET_MAX_PRIORITY];

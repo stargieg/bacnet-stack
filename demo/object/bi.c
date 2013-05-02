@@ -48,9 +48,6 @@
 #define MAX_BINARY_INPUTS 5
 #endif
 
-/* Polarity of Input */
-static BACNET_POLARITY Polarity[MAX_BINARY_INPUTS];
-
 BINARY_INPUT_DESCR BI_Descr[MAX_BINARY_INPUTS];
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
@@ -63,13 +60,24 @@ static const int Binary_Input_Properties_Required[] = {
     PROP_EVENT_STATE,
     PROP_OUT_OF_SERVICE,
     PROP_POLARITY,
+    PROP_PRIORITY_ARRAY,
+    PROP_RELINQUISH_DEFAULT,
     -1
 };
 
 static const int Binary_Input_Properties_Optional[] = {
     PROP_DESCRIPTION,
-    PROP_INACTIVE_TEXT,
     PROP_ACTIVE_TEXT,
+    PROP_INACTIVE_TEXT,
+#if defined(INTRINSIC_REPORTING)
+    PROP_ALARM_VALUE,
+    PROP_TIME_DELAY,
+    PROP_NOTIFICATION_CLASS,
+    PROP_EVENT_ENABLE,
+    PROP_ACKED_TRANSITIONS,
+    PROP_NOTIFY_TYPE,
+    PROP_EVENT_TIME_STAMPS,
+#endif
     -1
 };
 
@@ -128,6 +136,8 @@ void Binary_Input_Init(
     int ucitime_delay;
     int ucialarm_value_default;
     int ucialarm_value;
+    int ucipolarity_default;
+    int ucipolarity;
     fprintf(stderr, "Binary_Input_Init\n");
 
     if (!initialized) {
@@ -150,6 +160,8 @@ void Binary_Input_Init(
             "time_delay", -1);
         ucialarm_value_default = ucix_get_option_int(ctx, "bacnet_bi", "default",
             "alarm_value", -1);
+        ucipolarity_default = ucix_get_option_int(ctx, "bacnet_bi", "default",
+            "polarity", 0);
 
         /* initialize all the values */
         for (i = 0; i < MAX_BINARY_INPUTS; i++) {
@@ -188,31 +200,30 @@ void Binary_Input_Init(
                 if (uciinactive_text != 0) {
                     sprintf(inactive_text, "%s", uciinactive_text);
                 } else if (uciinactive_text_default != 0) {
-                    sprintf(inactive_text, "%s %lu", uciinactive_text_default,
-                        (unsigned long) i);
+                    sprintf(inactive_text, "%s", uciinactive_text_default);
                 } else {
                     sprintf(inactive_text, "inactive");
                 }
-                ucix_string_copy(BI_Descr[i].Inactive_Text,
-                    sizeof(BI_Descr[i].Inactive_Text), inactive_text);
+                characterstring_init_ansi(&BI_Descr[i].Inactive_Text, inactive_text);
     
                 uciactive_text = ucix_get_option(ctx, "bacnet_bi",
                     idx_c, "active");
                 if (uciactive_text != 0) {
                     sprintf(active_text, "%s", uciactive_text);
                 } else if (uciactive_text_default != 0) {
-                    sprintf(active_text, "%s %lu", uciactive_text_default,
-                        (unsigned long) i);
+                    sprintf(active_text, "%s", uciactive_text_default);
                 } else {
                     sprintf(active_text, "active");
                 }
-                ucix_string_copy(BI_Descr[i].Active_Text,
-                    sizeof(BI_Descr[i].Active_Text), active_text);
+                characterstring_init_ansi(&BI_Descr[i].Active_Text, active_text);
     
                 ucivalue = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
                     "value", 0);
                 BI_Descr[i].Priority_Array[15] = ucivalue;
                 BI_Descr[i].Relinquish_Default = 1; //TODO read uci
+                ucipolarity = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
+                    "polarity", ucipolarity_default);
+                BI_Descr[i].Alarm_Value = ucipolarity;
 
 #if defined(INTRINSIC_REPORTING)
                 ucinc = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
@@ -670,7 +681,6 @@ bool Binary_Input_Present_Value_Set(
     index = Binary_Input_Instance_To_Index(object_instance);
     if (index < max_binary_inputs) {
         CurrentBI = &BI_Descr[index];
-        fprintf(stderr,"BI%i value %i\n", index, value);
         CurrentBI->Present_Value = (uint8_t) value;
         CurrentBI->Priority_Array[priority - 1] = (uint8_t) value;
         status = true;
@@ -681,10 +691,15 @@ bool Binary_Input_Present_Value_Set(
 BACNET_POLARITY Binary_Input_Polarity(
     uint32_t object_instance)
 {
+    BINARY_INPUT_DESCR *CurrentBI;
+    unsigned index = 0; /* offset from instance lookup */
+
     BACNET_POLARITY polarity = POLARITY_NORMAL;
 
+    index = Binary_Input_Instance_To_Index(object_instance);
     if (object_instance < max_binary_inputs) {
-        polarity = Polarity[object_instance];
+        CurrentBI = &BI_Descr[index];
+        polarity = CurrentBI->Polarity;
     }
 
     return polarity;
@@ -694,10 +709,125 @@ bool Binary_Input_Polarity_Set(
     uint32_t object_instance,
     BACNET_POLARITY polarity)
 {
+    BINARY_INPUT_DESCR *CurrentBI;
+    unsigned index = 0; /* offset from instance lookup */
     bool status = false;
+    const char *idx_c;
+    char idx_cc[64];
 
+    index = Binary_Input_Instance_To_Index(object_instance);
     if (object_instance < max_binary_inputs) {
-        Polarity[object_instance] = polarity;
+        CurrentBI = &BI_Descr[index];
+        CurrentBI->Polarity=polarity;
+        sprintf(idx_cc,"%d",index);
+        idx_c = idx_cc;
+        if(ctx) {
+            ucix_add_option_int(ctx, "bacnet_bi", idx_c,
+                "polarity", polarity);
+        } else {
+            fprintf(stderr,
+                "Failed to open config file bacnet_bi\n");
+        }
+    }
+
+    return status;
+}
+
+static bool Binary_Input_Active_Text_Write(
+    uint32_t object_instance,
+    BACNET_CHARACTER_STRING *char_string,
+    BACNET_ERROR_CLASS *error_class,
+    BACNET_ERROR_CODE *error_code)
+{
+    BINARY_INPUT_DESCR *CurrentBI;
+    unsigned index = 0; /* offset from instance lookup */
+    size_t length = 0;
+    uint8_t encoding = 0;
+    bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
+
+    index = Binary_Input_Instance_To_Index(object_instance);
+    if (index < max_binary_inputs) {
+        CurrentBI = &BI_Descr[index];
+        length = characterstring_length(char_string);
+        if (length <= sizeof(CurrentBI->Active_Text)) {
+            encoding = characterstring_encoding(char_string);
+            if (encoding == CHARACTER_UTF8) {
+                status = characterstring_copy(
+                    &CurrentBI->Active_Text, char_string);
+                if (!status) {
+                    *error_class = ERROR_CLASS_PROPERTY;
+                    *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
+                } else {
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
+                    if(ctx) {
+                        ucix_add_option(ctx, "bacnet_bi", idx_c,
+                            "active", char_string->value);
+                    } else {
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_bi\n");
+                    }
+                }
+            } else {
+                *error_class = ERROR_CLASS_PROPERTY;
+                *error_code = ERROR_CODE_CHARACTER_SET_NOT_SUPPORTED;
+            }
+        } else {
+            *error_class = ERROR_CLASS_PROPERTY;
+            *error_code = ERROR_CODE_NO_SPACE_TO_WRITE_PROPERTY;
+        }
+    }
+
+    return status;
+}
+
+static bool Binary_Input_Inactive_Text_Write(
+    uint32_t object_instance,
+    BACNET_CHARACTER_STRING *char_string,
+    BACNET_ERROR_CLASS *error_class,
+    BACNET_ERROR_CODE *error_code)
+{
+    BINARY_INPUT_DESCR *CurrentBI;
+    unsigned index = 0; /* offset from instance lookup */
+    size_t length = 0;
+    uint8_t encoding = 0;
+    bool status = false;        /* return value */
+    const char *idx_c;
+    char idx_cc[64];
+
+    index = Binary_Input_Instance_To_Index(object_instance);
+    if (index < max_binary_inputs) {
+        CurrentBI = &BI_Descr[index];
+        length = characterstring_length(char_string);
+        if (length <= sizeof(CurrentBI->Inactive_Text)) {
+            encoding = characterstring_encoding(char_string);
+            if (encoding == CHARACTER_UTF8) {
+                status = characterstring_copy(
+                    &CurrentBI->Inactive_Text, char_string);
+                if (!status) {
+                    *error_class = ERROR_CLASS_PROPERTY;
+                    *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
+                } else {
+                    sprintf(idx_cc,"%d",index);
+                    idx_c = idx_cc;
+                    if(ctx) {
+                        ucix_add_option(ctx, "bacnet_bi", idx_c,
+                            "inactive", char_string->value);
+                    } else {
+                        fprintf(stderr,
+                            "Failed to open config file bacnet_bi\n");
+                    }
+                }
+            } else {
+                *error_class = ERROR_CLASS_PROPERTY;
+                *error_code = ERROR_CODE_CHARACTER_SET_NOT_SUPPORTED;
+            }
+        } else {
+            *error_class = ERROR_CLASS_PROPERTY;
+            *error_code = ERROR_CODE_NO_SPACE_TO_WRITE_PROPERTY;
+        }
     }
 
     return status;
@@ -723,6 +853,7 @@ int Binary_Input_Read_Property(
         return 0;
     }
     apdu = rpdata->application_data;
+    
     object_index = Binary_Input_Instance_To_Index(rpdata->object_instance);
     if (object_index < max_binary_inputs)
         CurrentBI = &BI_Descr[object_index];
@@ -795,12 +926,14 @@ int Binary_Input_Read_Property(
             apdu_len =
                 encode_application_enumerated(&apdu[0], EVENT_STATE_NORMAL);
 #endif
+            break;
 
         case PROP_OUT_OF_SERVICE:
             apdu_len =
                 encode_application_boolean(&apdu[0],
                 Binary_Input_Out_Of_Service(rpdata->object_instance));
             break;
+
         case PROP_PRIORITY_ARRAY:
             /* Array element zero is the number of elements in the array */
             if (rpdata->array_index == 0) {
@@ -866,6 +999,7 @@ int Binary_Input_Read_Property(
                 CurrentBI->Alarm_Value);
                 apdu_len += len;
             break;
+
         case PROP_TIME_DELAY:
             apdu_len =
                 encode_application_unsigned(&apdu[0], CurrentBI->Time_Delay);
@@ -962,6 +1096,14 @@ int Binary_Input_Read_Property(
             }
             break;
 #endif
+        case PROP_ACTIVE_TEXT:
+            apdu_len =
+                encode_application_character_string(&apdu[0], &CurrentBI->Active_Text);
+            break;
+        case PROP_INACTIVE_TEXT:
+            apdu_len =
+                encode_application_character_string(&apdu[0], &CurrentBI->Inactive_Text);
+            break;
 
         default:
             rpdata->error_class = ERROR_CLASS_PROPERTY;
@@ -970,7 +1112,9 @@ int Binary_Input_Read_Property(
             break;
     }
     /*  only array properties can have array options */
-    if ((apdu_len >= 0) && (rpdata->array_index != BACNET_ARRAY_ALL)) {
+    if ((apdu_len >= 0) && (rpdata->object_property != PROP_PRIORITY_ARRAY) &&
+        (rpdata->object_property != PROP_EVENT_TIME_STAMPS) &&
+        (rpdata->array_index != BACNET_ARRAY_ALL)) {
         rpdata->error_class = ERROR_CLASS_PROPERTY;
         rpdata->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         apdu_len = BACNET_STATUS_ERROR;
@@ -1215,6 +1359,32 @@ bool Binary_Input_Write_Property(
             }
             break;
 #endif
+        case PROP_ACTIVE_TEXT:
+            if (value.tag == BACNET_APPLICATION_TAG_CHARACTER_STRING) {
+                status = Binary_Input_Active_Text_Write(
+                    wp_data->object_instance,
+                    &value.type.Character_String,
+                    &wp_data->error_class,
+                    &wp_data->error_code);
+            } else {
+                wp_data->error_class = ERROR_CLASS_PROPERTY;
+                wp_data->error_code = ERROR_CODE_INVALID_DATA_TYPE;
+            }
+            break;
+
+        case PROP_INACTIVE_TEXT:
+            if (value.tag == BACNET_APPLICATION_TAG_CHARACTER_STRING) {
+                status = Binary_Input_Inactive_Text_Write(
+                    wp_data->object_instance,
+                    &value.type.Character_String,
+                    &wp_data->error_class,
+                    &wp_data->error_code);
+            } else {
+                wp_data->error_class = ERROR_CLASS_PROPERTY;
+                wp_data->error_code = ERROR_CODE_INVALID_DATA_TYPE;
+            }
+            break;
+
         case PROP_OBJECT_IDENTIFIER:
         case PROP_OBJECT_TYPE:
         case PROP_STATUS_FLAGS:
