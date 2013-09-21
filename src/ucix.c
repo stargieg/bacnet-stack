@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <sys/stat.h>
 
 #include <uci_config.h>
 #include <uci.h>
@@ -240,4 +242,57 @@ bool ucix_string_copy(char *dest, size_t j, char *src)
     }
     return false;
 }
+
+/* Check if given uci file was updated */
+time_t check_uci_update(const char *config, time_t mtime)
+{
+	struct stat s;
+	char path[128];
+	time_t f_mtime = 0;
+
+	snprintf(path, sizeof(path), "/var/state/%s", config);
+	if( stat(path, &s) > -1 )
+		f_mtime = s.st_mtime;
+
+	snprintf(path, sizeof(path), "/etc/config/%s", config);
+	if( stat(path, &s) > -1 ) {
+		if( (f_mtime == 0) || (s.st_mtime > f_mtime) ) {
+			f_mtime = s.st_mtime;
+		}
+	}
+
+	snprintf(path, sizeof(path), "/tmp/.uci/%s", config);
+	if( stat(path, &s) > -1 ) {
+		if( (f_mtime == 0) || (s.st_mtime > f_mtime) ) {
+			f_mtime = s.st_mtime;
+		}
+	}
+	if( (mtime == 0) || (f_mtime > mtime) ) {
+		return f_mtime;
+	} else {
+		f_mtime = 0;
+	}
+	return f_mtime;
+}
+
+/* Add tuple */
+void load_value(const char *sec_idx, struct uci_itr_ctx *itr)
+{
+	value_tuple_t *t;
+
+	if (!strcmp(sec_idx, "default"))
+		return;
+
+	const char *value;
+	value = ucix_get_option(itr->ctx, itr->section, sec_idx, "value");
+		if( (t = (value_tuple_t *)malloc(sizeof(value_tuple_t))) != NULL ) {
+			strncpy(t->idx, sec_idx, sizeof(t->idx));
+			if ( value != NULL ) {
+				strncpy(t->value, value, sizeof(t->value));
+			}
+			t->next = itr->list;
+			itr->list = t;
+		}
+}
+
 

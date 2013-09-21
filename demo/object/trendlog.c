@@ -227,7 +227,7 @@ void Trend_Log_Init(
             if ((uciname != 0) && (ucidisable == 0)) {
                 TL_Descr[i].Disable=false;
                 max_trend_logs_int = i+1;
-                sprintf(name, "%s", uciname);
+                sprintf(name, "TL_%s", uciname);
                 ucix_string_copy(TL_Descr[i].Object_Name,
                     sizeof(TL_Descr[i].Object_Name), name);
                 ucidescription = ucix_get_option(ctxd, uciobject_s,

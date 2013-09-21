@@ -862,6 +862,7 @@ int Binary_Input_Read_Property(
     if (CurrentBI->Disable)
         return BACNET_STATUS_ERROR;
 
+    fprintf(stderr,"object_property: %i\n", rpdata->object_property);
     switch (rpdata->object_property) {
         case PROP_OBJECT_IDENTIFIER:
             apdu_len =

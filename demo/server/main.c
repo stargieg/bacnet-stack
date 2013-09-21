@@ -60,7 +60,8 @@
 #include "bacfile.h"
 #endif /* defined(BACFILE) */
 #include "ucix.h"
-
+#include "av.h"
+#include "bi.h"
 
 /** @file server/main.c  Example server application using the BACnet Stack. */
 
@@ -160,7 +161,15 @@ int main(
     uint32_t address_binding_tmr = 0;
     uint32_t recipient_scan_tmr = 0;
     int uci_id = 0;
+    float val_f, pval_f;
+    int val_i, pval_i;
     struct uci_context *ctx;
+    time_t chk_mtime = 0;
+    time_t ucimodtime_bacnet_bi = 0;
+    time_t ucimodtime_bacnet_av = 0;
+    int uci_idx = 0;
+    char *section;
+    char *type;
 
     ctx = ucix_init("bacnet_dev");
     if(!ctx)
@@ -234,6 +243,83 @@ int main(
         }
 #endif
         /* output */
+
+        /* update Analog Value from uci */
+        section = "bacnet_av";
+        type = "av";
+        chk_mtime = 0;
+        chk_mtime = check_uci_update(section, ucimodtime_bacnet_av);
+        if(chk_mtime != 0) {
+            ucimodtime_bacnet_av = chk_mtime;
+            printf("Config changed, reloading %s\n",section);
+            ctx = ucix_init(section);
+            struct uci_itr_ctx itr;
+            value_tuple_t *cur;
+            itr.list = NULL;
+            itr.section = section;
+            itr.ctx = ctx;
+            ucix_for_each_section_type(ctx, section, type,
+                (void *)load_value, &itr);
+            for( cur = itr.list; cur; cur = cur->next ) {
+                printf("section %s idx %s \n", section, cur->idx);
+                val_f = strtof(cur->value,NULL);
+                uci_idx = atoi(cur->idx);
+                if (val_f || !strcmp(cur->value, "0")) {
+                    printf("idx %s ",cur->idx);
+                    printf("value %s\n",cur->value);
+                    pval_f = Analog_Value_Present_Value(uci_idx);
+                    if ( val_f != pval_f ) {
+                        Analog_Value_Present_Value_Set(uci_idx,val_f,16);
+                    }
+                    if (Analog_Value_Out_Of_Service(uci_idx))
+                        Analog_Value_Out_Of_Service_Set(uci_idx,0);
+                    if (Analog_Value_Reliability(uci_idx))
+                        Analog_Value_Reliability_Set(uci_idx,
+                            RELIABILITY_NO_FAULT_DETECTED);
+                } else {
+                    printf("idx %s ",cur->idx);
+                    printf("Out_Of_Service\n");
+                    Analog_Value_Out_Of_Service_Set(uci_idx,1);
+                    Analog_Value_Reliability_Set(uci_idx,
+                        RELIABILITY_COMMUNICATION_FAILURE);
+                }
+            }
+            ucix_cleanup(ctx);
+        }
+        /* update end */
+
+        /* update Binary Input from uci */
+        section = "bacnet_bi";
+        type = "bi";
+        chk_mtime = 0;
+        chk_mtime = check_uci_update(section, ucimodtime_bacnet_bi);
+        if(chk_mtime != 0) {
+            ucimodtime_bacnet_bi = chk_mtime;
+            printf("Config changed, reloading %s\n",section);
+            ctx = ucix_init(section);
+            struct uci_itr_ctx itr;
+            value_tuple_t *cur;
+            itr.list = NULL;
+            itr.section = section;
+            itr.ctx = ctx;
+            ucix_for_each_section_type(ctx, section, type,
+                (void *)load_value, &itr);
+            for( cur = itr.list; cur; cur = cur->next ) {
+                printf("section %s idx %s \n", section, cur->idx);
+                if (cur->value) {
+                    printf("idx %s ",cur->idx);
+                    printf("value %s\n",cur->value);
+                    val_i = atoi(cur->value);
+                    uci_idx = atoi(cur->idx);
+                    pval_i = Binary_Input_Present_Value(uci_idx);
+                    if ( val_i != pval_i ) {
+                        Binary_Input_Present_Value_Set(uci_idx,val_i,16);
+                    }
+                }
+            }
+            ucix_cleanup(ctx);
+        }
+        /* update end */
 
         /* blink LEDs, Turn on or off outputs, etc */
     }

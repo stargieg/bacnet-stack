@@ -29,7 +29,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bacdef.h"
-#include "bacerror.h"
+#include "bacerror.h" //TODO rm ?
+#include "cov.h"
 #include "wp.h"
 #include "rp.h"
 #if defined(INTRINSIC_REPORTING)
@@ -46,11 +47,14 @@ extern "C" {
 int max_analog_values;
 
     typedef struct analog_value_descr {
+        unsigned Object_ID;
         char Object_Name[64];
         char Object_Description[64];
-        uint8_t Present_Value;
+        //uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        uint8_t Reliability;
+        bool Change_Of_Value;
         bool Disable;
         uint8_t Units;
         /* Here is our Priority Array.  They are supposed to be Real, but */
@@ -126,6 +130,23 @@ int max_analog_values;
     void Analog_Value_Out_Of_Service_Set(
         uint32_t object_instance,
         bool value);
+
+    uint8_t Analog_Value_Reliability(
+        uint32_t object_instance);
+
+    void Analog_Value_Reliability_Set(
+        uint32_t object_instance,
+        uint8_t value);
+
+    bool Analog_Value_Encode_Value_List(
+        uint32_t object_instance,
+        BACNET_PROPERTY_VALUE * value_list);
+
+    bool Analog_Value_Change_Of_Value(
+        uint32_t instance);
+
+    void Analog_Value_Change_Of_Value_Clear(
+        uint32_t instance);
 
     bool Analog_Value_Description_Set(
         uint32_t object_instance,

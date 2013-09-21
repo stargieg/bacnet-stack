@@ -107,7 +107,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#if 0
     {OBJECT_ANALOG_INPUT,
             Analog_Input_Init,
             Analog_Input_Count,
@@ -138,7 +137,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#endif
     {OBJECT_ANALOG_VALUE,
             Analog_Value_Init,
             Analog_Value_Count,
@@ -150,9 +148,9 @@ static object_functions_t My_Object_Table[] = {
             Analog_Value_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
+            Analog_Value_Encode_Value_List ,
+            Analog_Value_Change_Of_Value,
+            Analog_Value_Change_Of_Value_Clear,
         Analog_Value_Intrinsic_Reporting},
     {OBJECT_BINARY_INPUT,
             Binary_Input_Init,
@@ -169,7 +167,6 @@ static object_functions_t My_Object_Table[] = {
             Binary_Input_Change_Of_Value,
             Binary_Input_Change_Of_Value_Clear,
         Binary_Input_Intrinsic_Reporting},
-#if 0
     {OBJECT_BINARY_OUTPUT,
             Binary_Output_Init,
             Binary_Output_Count,
@@ -215,8 +212,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#endif
-#if defined(INTRINSIC_REPORTING)
+//#endif
+//#if defined(INTRINSIC_REPORTING)
     {OBJECT_NOTIFICATION_CLASS,
             Notification_Class_Init,
             Notification_Class_Count,
@@ -232,8 +229,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#endif
-#if 0
+//#endif
+//#if 0
     {OBJECT_LIFE_SAFETY_POINT,
             Life_Safety_Point_Init,
             Life_Safety_Point_Count,
@@ -294,7 +291,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#endif
+//#endif
     {OBJECT_MULTI_STATE_VALUE,
             Multistate_Value_Init,
             Multistate_Value_Count,
@@ -325,7 +322,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#if defined(BACFILE)
+//#if defined(BACFILE)
     {OBJECT_FILE,
             bacfile_init,
             bacfile_count,
@@ -341,7 +338,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#endif
     {MAX_BACNET_OBJECT_TYPE,
             NULL /* Init */ ,
             NULL /* Count */ ,

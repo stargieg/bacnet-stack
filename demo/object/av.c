@@ -94,6 +94,7 @@ static const int Analog_Value_Properties_Optional[] = {
     PROP_NOTIFY_TYPE,
     PROP_EVENT_TIME_STAMPS,
 #endif
+    PROP_RELIABILITY,
     -1
 };
 
@@ -149,42 +150,43 @@ void Analog_Value_Init(
     const char *ucilow_limit;
     const char *ucidead_limit_default;
     const char *ucidead_limit;
+    const char *sec = "bacnet_av";
     fprintf(stderr, "Analog_Value_Init\n");
     if (!initialized) {
         initialized = true;
-        ctx = ucix_init("bacnet_av");
+        ctx = ucix_init(sec);
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
-    
-        ucidescription_default = ucix_get_option(ctx, "bacnet_av", "default",
+            fprintf(stderr, "Failed to load config file\n");
+
+        ucidescription_default = ucix_get_option(ctx, sec, "default",
             "description");
-        uciunit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+        uciunit_default = ucix_get_option_int(ctx, sec, "default",
             "si_unit", 0);
-        ucivalue_default = ucix_get_option(ctx, "bacnet_av", "default",
+        ucivalue_default = ucix_get_option(ctx, sec, "default",
             "value");
-        ucinc_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+        ucinc_default = ucix_get_option_int(ctx, sec, "default",
             "nc", -1);
-        ucievent_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+        ucievent_default = ucix_get_option_int(ctx, sec, "default",
             "event", -1);
-        ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+        ucitime_delay_default = ucix_get_option_int(ctx, sec, "default",
             "time_delay", -1);
-        ucilimit_default = ucix_get_option_int(ctx, "bacnet_av", "default",
+        ucilimit_default = ucix_get_option_int(ctx, sec, "default",
             "limit", -1);
-        ucihigh_limit_default = ucix_get_option(ctx, "bacnet_av", "default",
+        ucihigh_limit_default = ucix_get_option(ctx, sec, "default",
             "high_limit");
-        ucilow_limit_default = ucix_get_option(ctx, "bacnet_av", "default",
+        ucilow_limit_default = ucix_get_option(ctx, sec, "default",
             "low_limit");
-        ucidead_limit_default = ucix_get_option(ctx, "bacnet_av", "default",
+        ucidead_limit_default = ucix_get_option(ctx, sec, "default",
             "dead_limit");
-    
+
         for (i = 0; i < MAX_ANALOG_VALUES; i++) {
             memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
             /* initialize all the analog output priority arrays to NULL */
             for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
                 AV_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
             }
-    	    sprintf(idx_cc,"%d",i);
-    	    idx_c = idx_cc;
+            sprintf(idx_cc,"%d",i);
+            idx_c = idx_cc;
             uciname = ucix_get_option(ctx, "bacnet_av", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_av", idx_c,
                 "disable", 0);
@@ -216,7 +218,7 @@ void Analog_Value_Init(
                 } else {
                     AV_Descr[i].Units = UNITS_PERCENT;
                 }
-     
+
                 ucivalue = ucix_get_option(ctx, "bacnet_av", idx_c,
                     "value");
                 if (ucivalue == NULL) {
@@ -224,14 +226,16 @@ void Analog_Value_Init(
                         ucivalue = 0;
                     } else {
                         ucivalue = ucivalue_default;
+                        AV_Descr[i].Reliability = 
+                            RELIABILITY_COMMUNICATION_FAILURE;
                     }
                 }
                 AV_Descr[i].Priority_Array[15] = strtof(ucivalue,
                     (char **) NULL);
 
                 AV_Descr[i].Relinquish_Default = 0; //TODO read uci
-    
-    #if defined(INTRINSIC_REPORTING)
+
+#if defined(INTRINSIC_REPORTING)
                 ucinc = ucix_get_option_int(ctx, "bacnet_av", idx_c,
                     "nc", ucinc_default);
                 ucievent = ucix_get_option_int(ctx, "bacnet_av", idx_c,
@@ -280,14 +284,14 @@ void Analog_Value_Init(
                 AV_Descr[i].High_Limit = strtof(ucihigh_limit, (char **) NULL);
                 AV_Descr[i].Low_Limit = strtof(ucilow_limit, (char **) NULL);
                 AV_Descr[i].Deadband = strtof(ucidead_limit, (char **) NULL);
-                
+
                 /* initialize Event time stamps using wildcards
                    and set Acked_transitions */
                 for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
                     datetime_wildcard_set(&AV_Descr[i].Event_Time_Stamps[j]);
                     AV_Descr[i].Acked_Transitions[j].bIsAcked = true;
                 }
-        
+
                 /* Set handler for GetEventInformation function */
                 handler_get_event_information_set(OBJECT_ANALOG_VALUE,
                     Analog_Value_Event_Information);
@@ -296,7 +300,7 @@ void Analog_Value_Init(
                 /* Set handler for GetAlarmSummary Service */
                 handler_get_alarm_summary_set(OBJECT_ANALOG_VALUE,
                     Analog_Value_Alarm_Summary);
-    #endif
+#endif
             } else {
                 AV_Descr[i].Disable=true;
             }
@@ -369,6 +373,81 @@ bool Analog_Value_Valid_Instance(
     return false;
 }
 
+bool Analog_Value_Change_Of_Value(
+    uint32_t object_instance)
+{
+    ANALOG_VALUE_DESCR *CurrentAV;
+    bool status = false;
+    unsigned index;
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < max_analog_values_int) {
+        CurrentAV = &AV_Descr[index];
+        status = CurrentAV->Change_Of_Value;
+    }
+
+    return status;
+}
+
+void Analog_Value_Change_Of_Value_Clear(
+    uint32_t object_instance)
+{
+    ANALOG_VALUE_DESCR *CurrentAV;
+    unsigned index;
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < max_analog_values_int) {
+        CurrentAV = &AV_Descr[index];
+        CurrentAV->Change_Of_Value = false;
+    }
+
+    return;
+}
+
+
+/* returns true if value has changed */
+bool Analog_Value_Encode_Value_List(
+    uint32_t object_instance,
+    BACNET_PROPERTY_VALUE * value_list)
+{
+    bool status = false;
+
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_PRESENT_VALUE;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+        value_list->value.type.Enumerated =
+            Analog_Value_Present_Value(object_instance);
+        value_list->priority = BACNET_NO_PRIORITY;
+        value_list = value_list->next;
+    }
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_STATUS_FLAGS;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
+        bitstring_init(&value_list->value.type.Bit_String);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_IN_ALARM, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_FAULT, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_OVERRIDDEN, false);
+        if (Analog_Value_Out_Of_Service(object_instance)) {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, true);
+        } else {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, false);
+        }
+        value_list->priority = BACNET_NO_PRIORITY;
+    }
+    status = Analog_Value_Change_Of_Value(object_instance);
+
+    return status;
+}
+
 float Analog_Value_Present_Value(
     uint32_t object_instance)
 {
@@ -407,10 +486,9 @@ bool Analog_Value_Present_Value_Set(
     if (index < max_analog_values_int) {
         CurrentAV = &AV_Descr[index];
         if (priority && (priority <= BACNET_MAX_PRIORITY) &&
-            (priority != 6 /* reserved */ ) &&
-            (value >= 0.0) && (value <= 100.0)) {
-            CurrentAV->Present_Value = (uint8_t) value;
-            CurrentAV->Priority_Array[priority - 1] = (uint8_t) value;
+            (priority != 6 /* reserved */ ) ) {
+            //CurrentAV->Present_Value = value;
+            CurrentAV->Priority_Array[priority - 1] = value;
             /* Note: you could set the physical output here to the next
                highest priority, or to the relinquish default if no
                priorities are set.
@@ -439,6 +517,38 @@ bool Analog_Value_Out_Of_Service(
     return value;
 }
 
+void Analog_Value_Reliability_Set(
+    uint32_t object_instance,
+    uint8_t value)
+{
+    ANALOG_VALUE_DESCR *CurrentAV;
+    unsigned index = 0;
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < max_analog_values_int) {
+        CurrentAV = &AV_Descr[index];
+        CurrentAV->Reliability = value;
+    }
+
+    return;
+}
+
+uint8_t Analog_Value_Reliability(
+    uint32_t object_instance)
+{
+    ANALOG_VALUE_DESCR *CurrentAV;
+    unsigned index = 0; /* offset from instance lookup */
+    uint8_t value = 0;
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < max_analog_values_int) {
+        CurrentAV = &AV_Descr[index];
+        value = CurrentAV->Reliability;
+    }
+
+    return value;
+}
+
 void Analog_Value_Out_Of_Service_Set(
     uint32_t object_instance,
     bool value)
@@ -454,7 +564,6 @@ void Analog_Value_Out_Of_Service_Set(
 
     return;
 }
-
 
 
 static char *Analog_Value_Description(
@@ -714,6 +823,12 @@ int Analog_Value_Read_Property(
         case PROP_OUT_OF_SERVICE:
             state = CurrentAV->Out_Of_Service;
             apdu_len = encode_application_boolean(&apdu[0], state);
+            break;
+
+        case PROP_RELIABILITY:
+        case PROP_STATE_RELIABILITY:
+            apdu_len = encode_application_boolean(&apdu[0], 
+                CurrentAV->Reliability);
             break;
 
         case PROP_UNITS:
@@ -1047,6 +1162,15 @@ bool Analog_Value_Write_Property(
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
                 CurrentAV->Out_Of_Service = value.type.Boolean;
+            }
+            break;
+
+        case PROP_RELIABILITY:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
+                &wp_data->error_class, &wp_data->error_code);
+            if (status) {
+                CurrentAV->Reliability = value.type.Enumerated;
             }
             break;
 
