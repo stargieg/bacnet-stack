@@ -50,6 +50,7 @@ int max_multi_state_values;
         uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        uint8_t Reliability;
         bool Disable;
         uint8_t Units;
         char State_Text[254][64];
@@ -125,6 +126,13 @@ int max_multi_state_values;
     void Multistate_Value_Out_Of_Service_Set(
         uint32_t object_instance,
         bool value);
+
+    uint8_t Multistate_Value_Reliability(
+        uint32_t object_instance);
+
+    void Multistate_Value_Reliability_Set(
+        uint32_t object_instance,
+        uint8_t value);
 
     bool Multistate_Value_Description_Set(
         uint32_t object_instance,

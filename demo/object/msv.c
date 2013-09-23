@@ -93,6 +93,7 @@ static const int Multistate_Value_Properties_Optional[] = {
     PROP_NOTIFY_TYPE,
     PROP_EVENT_TIME_STAMPS,
 #endif
+    PROP_RELIABILITY,
     -1
 };
 
@@ -445,6 +446,38 @@ void Multistate_Value_Out_Of_Service_Set(
     }
 
     return;
+}
+
+void Multistate_Value_Reliability_Set(
+    uint32_t object_instance,
+    uint8_t value)
+{
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
+    unsigned index = 0;
+
+    index = Multistate_Value_Instance_To_Index(object_instance);
+    if (index < max_multi_state_values_int) {
+        CurrentMSV = &MSV_Descr[index];
+        CurrentMSV->Reliability = value;
+    }
+
+    return;
+}
+
+uint8_t Multistate_Value_Reliability(
+    uint32_t object_instance)
+{
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
+    unsigned index = 0; /* offset from instance lookup */
+    uint8_t value = 0;
+
+    index = Multistate_Value_Instance_To_Index(object_instance);
+    if (index < max_multi_state_values_int) {
+        CurrentMSV = &MSV_Descr[index];
+        value = CurrentMSV->Reliability;
+    }
+
+    return value;
 }
 
 static char *Multistate_Value_Description(

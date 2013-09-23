@@ -62,6 +62,7 @@
 #include "ucix.h"
 #include "av.h"
 #include "bi.h"
+#include "msv.h"
 
 /** @file server/main.c  Example server application using the BACnet Stack. */
 
@@ -167,6 +168,7 @@ int main(
     time_t chk_mtime = 0;
     time_t ucimodtime_bacnet_bi = 0;
     time_t ucimodtime_bacnet_av = 0;
+    time_t ucimodtime_bacnet_mv = 0;
     int uci_idx = 0;
     char *section;
     char *type;
@@ -281,6 +283,50 @@ int main(
                     printf("Out_Of_Service\n");
                     Analog_Value_Out_Of_Service_Set(uci_idx,1);
                     Analog_Value_Reliability_Set(uci_idx,
+                        RELIABILITY_COMMUNICATION_FAILURE);
+                }
+            }
+            ucix_cleanup(ctx);
+        }
+        /* update end */
+
+        /* update Multistate Value from uci */
+        section = "bacnet_mv";
+        type = "mv";
+        chk_mtime = 0;
+        chk_mtime = check_uci_update(section, ucimodtime_bacnet_mv);
+        if(chk_mtime != 0) {
+            ucimodtime_bacnet_mv = chk_mtime;
+            printf("Config changed, reloading %s\n",section);
+            ctx = ucix_init(section);
+            struct uci_itr_ctx itr;
+            value_tuple_t *cur;
+            itr.list = NULL;
+            itr.section = section;
+            itr.ctx = ctx;
+            ucix_for_each_section_type(ctx, section, type,
+                (void *)load_value, &itr);
+            for( cur = itr.list; cur; cur = cur->next ) {
+                printf("section %s idx %s \n", section, cur->idx);
+                val_f = strtof(cur->value,NULL);
+                uci_idx = atoi(cur->idx);
+                if (val_f || !strcmp(cur->value, "0")) {
+                    printf("idx %s ",cur->idx);
+                    printf("value %s\n",cur->value);
+                    pval_f = Multistate_Value_Present_Value(uci_idx);
+                    if ( val_f != pval_f ) {
+                        Multistate_Value_Present_Value_Set(uci_idx,val_f,16);
+                    }
+                    if (Multistate_Value_Out_Of_Service(uci_idx))
+                        Multistate_Value_Out_Of_Service_Set(uci_idx,0);
+                    if (Multistate_Value_Reliability(uci_idx))
+                        Multistate_Value_Reliability_Set(uci_idx,
+                            RELIABILITY_NO_FAULT_DETECTED);
+                } else {
+                    printf("idx %s ",cur->idx);
+                    printf("Out_Of_Service\n");
+                    Multistate_Value_Out_Of_Service_Set(uci_idx,1);
+                    Multistate_Value_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
                 }
             }

@@ -517,6 +517,22 @@ bool Analog_Value_Out_Of_Service(
     return value;
 }
 
+void Analog_Value_Out_Of_Service_Set(
+    uint32_t object_instance,
+    bool value)
+{
+    ANALOG_VALUE_DESCR *CurrentAV;
+    unsigned index = 0;
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < max_analog_values_int) {
+        CurrentAV = &AV_Descr[index];
+        CurrentAV->Out_Of_Service = value;
+    }
+
+    return;
+}
+
 void Analog_Value_Reliability_Set(
     uint32_t object_instance,
     uint8_t value)
@@ -538,7 +554,7 @@ uint8_t Analog_Value_Reliability(
 {
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned index = 0; /* offset from instance lookup */
-    uint8_t value = 0;
+    uint8_t value;
 
     index = Analog_Value_Instance_To_Index(object_instance);
     if (index < max_analog_values_int) {
@@ -548,23 +564,6 @@ uint8_t Analog_Value_Reliability(
 
     return value;
 }
-
-void Analog_Value_Out_Of_Service_Set(
-    uint32_t object_instance,
-    bool value)
-{
-    ANALOG_VALUE_DESCR *CurrentAV;
-    unsigned index = 0;
-
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
-        CurrentAV = &AV_Descr[index];
-        CurrentAV->Out_Of_Service = value;
-    }
-
-    return;
-}
-
 
 static char *Analog_Value_Description(
     uint32_t object_instance)
@@ -826,7 +825,6 @@ int Analog_Value_Read_Property(
             break;
 
         case PROP_RELIABILITY:
-        case PROP_STATE_RELIABILITY:
             apdu_len = encode_application_boolean(&apdu[0], 
                 CurrentAV->Reliability);
             break;
