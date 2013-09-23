@@ -489,7 +489,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\object\ms-input.c"
+				RelativePath="..\..\object\msi.c"
 				>
 			</File>
 			<File
@@ -911,7 +911,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\include\ms-input.h"
+				RelativePath="..\..\..\include\msi.h"
 				>
 			</File>
 			<File

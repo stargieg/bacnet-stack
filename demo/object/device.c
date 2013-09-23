@@ -57,7 +57,7 @@
 #include "csv.h"
 #include "lc.h"
 #include "lsp.h"
-#include "ms-input.h"
+#include "msi.h"
 #include "mso.h"
 #include "msv.h"
 #include "trendlog.h"
@@ -275,7 +275,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* Value_Lists */ ,
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+        Multistate_Input_Intrinsic_Reporting },
     {OBJECT_MULTI_STATE_OUTPUT,
             Multistate_Output_Init,
             Multistate_Output_Count,
@@ -290,7 +290,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* Value_Lists */ ,
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+        Multistate_Output_Intrinsic_Reporting },
 //#endif
     {OBJECT_MULTI_STATE_VALUE,
             Multistate_Value_Init,

@@ -53,7 +53,7 @@
 #include "lc.h"
 #include "lsp.h"
 #include "mso.h"
-#include "ms-input.h"
+#include "msi.h"
 #include "trendlog.h"
 #if defined(BACFILE)
 #include "bacfile.h"    /* object list dependency */

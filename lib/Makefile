@@ -126,7 +126,7 @@ OBJECT_SRC = \
 	$(BACNET_OBJECT)/csv.c \
 	$(BACNET_OBJECT)/lc.c \
 	$(BACNET_OBJECT)/lsp.c \
-	$(BACNET_OBJECT)/ms-input.c \
+	$(BACNET_OBJECT)/msi.c \
 	$(BACNET_OBJECT)/mso.c \
 	$(BACNET_OBJECT)/msv.c \
 	$(BACNET_OBJECT)/nc.c  \
