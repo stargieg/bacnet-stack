@@ -1936,9 +1936,9 @@ int main(
     Test *pTest;
     bool rc;
 
-    pTest = ct_create("BACnet Multi-state Input", NULL);
+    pTest = ct_create("BACnet Multi-state Value", NULL);
     /* individual tests */
-    rc = ct_addTestFunction(pTest, testMultistateInput);
+    rc = ct_addTestFunction(pTest, testMultistateValue);
     assert(rc);
 
     ct_setStream(pTest, stdout);
