@@ -150,6 +150,8 @@ void Analog_Value_Init(
     const char *ucilow_limit;
     const char *ucidead_limit_default;
     const char *ucidead_limit;
+    const char *ucicov_increment;
+    const char *ucicov_increment_default;
     const char *sec = "bacnet_av";
     fprintf(stderr, "Analog_Value_Init\n");
     if (!initialized) {
@@ -178,6 +180,8 @@ void Analog_Value_Init(
             "low_limit");
         ucidead_limit_default = ucix_get_option(ctx, sec, "default",
             "dead_limit");
+        ucicov_increment_default = ucix_get_option(ctx, sec, "default",
+            "cov_increment");
 
         for (i = 0; i < MAX_ANALOG_VALUES; i++) {
             memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
@@ -234,6 +238,18 @@ void Analog_Value_Init(
                     (char **) NULL);
 
                 AV_Descr[i].Relinquish_Default = 0; //TODO read uci
+
+                ucicov_increment = ucix_get_option(ctx, "bacnet_av", idx_c,
+                    "cov_increment");
+                if (ucicov_increment == NULL) {
+                    if (ucicov_increment_default == NULL) {
+                        ucicov_increment = 0;
+                    } else {
+                        ucicov_increment = ucicov_increment_default;
+                    }
+                }
+                AV_Descr[i].COV_Increment = strtof(ucicov_increment,
+                    (char **) NULL);
 
 #if defined(INTRINSIC_REPORTING)
                 ucinc = ucix_get_option_int(ctx, "bacnet_av", idx_c,
@@ -743,7 +759,7 @@ int Analog_Value_Read_Property(
     int apdu_len = 0;   /* return value */
     BACNET_BIT_STRING bit_string;
     BACNET_CHARACTER_STRING char_string;
-    float real_value = (float) 1.414;
+    float present_value = 0;
     unsigned object_index = 0;
     unsigned i = 0;
     bool state = false;
@@ -788,8 +804,8 @@ int Analog_Value_Read_Property(
             break;
 
         case PROP_PRESENT_VALUE:
-            real_value = Analog_Value_Present_Value(rpdata->object_instance);
-            apdu_len = encode_application_real(&apdu[0], real_value);
+            present_value = Analog_Value_Present_Value(rpdata->object_instance);
+            apdu_len = encode_application_real(&apdu[0], present_value);
             break;
 
         case PROP_STATUS_FLAGS:
@@ -802,8 +818,15 @@ int Analog_Value_Read_Property(
 #endif
             bitstring_set_bit(&bit_string, STATUS_FLAG_FAULT, false);
             bitstring_set_bit(&bit_string, STATUS_FLAG_OVERRIDDEN, false);
-            bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
-                CurrentAV->Out_Of_Service);
+//            bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
+//                CurrentAV->Out_Of_Service);
+            if (Analog_Value_Out_Of_Service(rpdata->object_instance)) {
+                bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
+                    CurrentAV->Out_Of_Service);
+            } else {
+                bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
+                    false);
+            }
 
             apdu_len = encode_application_bitstring(&apdu[0], &bit_string);
             break;
@@ -825,8 +848,13 @@ int Analog_Value_Read_Property(
             break;
 
         case PROP_RELIABILITY:
-            apdu_len = encode_application_boolean(&apdu[0], 
+            apdu_len = encode_application_enumerated(&apdu[0], 
                 CurrentAV->Reliability);
+            break;
+
+        case PROP_COV_INCREMENT:
+            apdu_len = encode_application_real(&apdu[0], 
+                CurrentAV->COV_Increment);
             break;
 
         case PROP_UNITS:
@@ -847,10 +875,10 @@ int Analog_Value_Read_Property(
                     if (CurrentAV->Priority_Array[i] == ANALOG_LEVEL_NULL)
                         len = encode_application_null(&apdu[apdu_len]);
                     else {
-                        real_value = CurrentAV->Priority_Array[i];
+                        present_value = CurrentAV->Priority_Array[i];
                         len =
                             encode_application_real(&apdu[apdu_len],
-                            real_value);
+                            present_value);
                     }
                     /* add it if we have room */
                     if ((apdu_len + len) < MAX_APDU)
@@ -868,10 +896,10 @@ int Analog_Value_Read_Property(
                         == ANALOG_LEVEL_NULL)
                         apdu_len = encode_application_null(&apdu[0]);
                     else {
-                        real_value =
+                        present_value =
                             CurrentAV->Priority_Array[rpdata->array_index - 1];
                         apdu_len =
-                            encode_application_real(&apdu[0], real_value);
+                            encode_application_real(&apdu[0], present_value);
                     }
                 } else {
                     rpdata->error_class = ERROR_CLASS_PROPERTY;
@@ -882,8 +910,8 @@ int Analog_Value_Read_Property(
             break;
 
         case PROP_RELINQUISH_DEFAULT:
-            real_value = CurrentAV->Relinquish_Default;
-            apdu_len = encode_application_real(&apdu[0], real_value);
+            present_value = CurrentAV->Relinquish_Default;
+            apdu_len = encode_application_real(&apdu[0], present_value);
             break;
 
 #if defined(INTRINSIC_REPORTING)
@@ -1169,6 +1197,15 @@ bool Analog_Value_Write_Property(
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
                 CurrentAV->Reliability = value.type.Enumerated;
+            }
+            break;
+
+        case PROP_COV_INCREMENT:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
+                &wp_data->error_class, &wp_data->error_code);
+            if (status) {
+                CurrentAV->COV_Increment = value.type.Real;
             }
             break;
 

@@ -2,6 +2,7 @@
 *
 * Copyright (C) 2006 Steve Karg <skarg@users.sourceforge.net>
 * Copyright (C) 2011 Krzysztof Malorny <malornykrzysztof@gmail.com>
+* Copyright (C) 2013 Patrick Grimm <patrick@lunatiki.de>
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -29,7 +30,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bacdef.h"
-#include "bacerror.h" //TODO rm ?
 #include "cov.h"
 #include "wp.h"
 #include "rp.h"
@@ -53,8 +53,9 @@ int max_analog_values;
         //uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
-        uint8_t Reliability;
         bool Change_Of_Value;
+        uint8_t Reliability;
+        float COV_Increment;
         bool Disable;
         uint8_t Units;
         /* Here is our Priority Array.  They are supposed to be Real, but */

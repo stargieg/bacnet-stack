@@ -2,6 +2,8 @@
 *
 * Copyright (C) 2006 Steve Karg <skarg@users.sourceforge.net>
 *
+* Copyright (C) 2013 Patrick Grimm <patrick@lunatiki.de>
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
 * "Software"), to deal in the Software without restriction, including
@@ -52,13 +54,13 @@ int max_binary_inputs;
         unsigned Event_State:3;
         bool Out_Of_Service;
         bool Change_Of_Value;
+        uint8_t Reliability;
         bool Disable;
         BACNET_CHARACTER_STRING Inactive_Text;
         BACNET_CHARACTER_STRING Active_Text;
-        BACNET_POLARITY polarity;
         /* Here is our Priority Array.*/
         BACNET_BINARY_PV Priority_Array[BACNET_MAX_PRIORITY];
-        unsigned Relinquish_Default;
+        BACNET_BINARY_PV Relinquish_Default;
 #if defined(INTRINSIC_REPORTING)
         uint32_t Time_Delay;
         uint32_t Notification_Class;
@@ -131,6 +133,17 @@ int max_binary_inputs;
     bool Binary_Input_Out_Of_Service(
         uint32_t object_instance);
 
+    void Binary_Input_Out_Of_Service_Set(
+        uint32_t object_instance,
+        bool value);
+
+    uint8_t Binary_Input_Reliability(
+        uint32_t object_instance);
+
+    void Binary_Input_Reliability_Set(
+        uint32_t object_instance,
+        uint8_t value);
+
     bool Binary_Input_Encode_Value_List(
         uint32_t object_instance,
         BACNET_PROPERTY_VALUE * value_list);
@@ -146,9 +159,6 @@ int max_binary_inputs;
 
     bool Binary_Input_Write_Property(
         BACNET_WRITE_PROPERTY_DATA * wp_data);
-
-    void Binary_Input_Init(
-        void);
 
     BACNET_BINARY_PV Binary_Input_Present_Value(
         uint32_t object_instance);
@@ -177,6 +187,8 @@ int max_binary_inputs;
         BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data);
 #endif
 
+    void Binary_Input_Init(
+        void);
 
 #ifdef TEST
 #include "ctest.h"

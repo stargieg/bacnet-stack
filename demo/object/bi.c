@@ -78,6 +78,7 @@ static const int Binary_Input_Properties_Optional[] = {
     PROP_NOTIFY_TYPE,
     PROP_EVENT_TIME_STAMPS,
 #endif
+    PROP_RELIABILITY,
     -1
 };
 
@@ -166,8 +167,8 @@ void Binary_Input_Init(
         /* initialize all the values */
         for (i = 0; i < MAX_BINARY_INPUTS; i++) {
             memset(&BI_Descr[i], 0x00, sizeof(BINARY_INPUT_DESCR));
-    	    sprintf(idx_cc,"%d",i);
-    	    idx_c = idx_cc;
+            sprintf(idx_cc,"%d",i);
+            idx_c = idx_cc;
             uciname = ucix_get_option(ctx, "bacnet_bi", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
                 "disable", 0);
@@ -205,7 +206,7 @@ void Binary_Input_Init(
                     sprintf(inactive_text, "inactive");
                 }
                 characterstring_init_ansi(&BI_Descr[i].Inactive_Text, inactive_text);
-    
+
                 uciactive_text = ucix_get_option(ctx, "bacnet_bi",
                     idx_c, "active");
                 if (uciactive_text != 0) {
@@ -216,14 +217,18 @@ void Binary_Input_Init(
                     sprintf(active_text, "active");
                 }
                 characterstring_init_ansi(&BI_Descr[i].Active_Text, active_text);
-    
+   
                 ucivalue = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
                     "value", 0);
                 BI_Descr[i].Priority_Array[15] = ucivalue;
-                BI_Descr[i].Relinquish_Default = 1; //TODO read uci
+
+                BI_Descr[i].Relinquish_Default = 0; //TODO read uci
+
                 ucipolarity = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
                     "polarity", ucipolarity_default);
-                BI_Descr[i].Alarm_Value = ucipolarity;
+
+                BI_Descr[i].Polarity = ucipolarity;
+
 
 #if defined(INTRINSIC_REPORTING)
                 ucinc = ucix_get_option_int(ctx, "bacnet_bi", idx_c,
@@ -373,7 +378,7 @@ bool Binary_Input_Out_Of_Service(
     return value;
 }
 
-static void Binary_Input_Out_Of_Service_Set(
+void Binary_Input_Out_Of_Service_Set(
     uint32_t object_instance,
     bool value)
 {
@@ -909,7 +914,7 @@ int Binary_Input_Read_Property(
             bitstring_set_bit(&bit_string, STATUS_FLAG_OVERRIDDEN, false);
             if (Binary_Input_Out_Of_Service(rpdata->object_instance)) {
                 bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
-                    true);
+                    CurrentBI->Out_Of_Service);
             } else {
                 bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
                     false);
@@ -933,6 +938,11 @@ int Binary_Input_Read_Property(
             apdu_len =
                 encode_application_boolean(&apdu[0],
                 Binary_Input_Out_Of_Service(rpdata->object_instance));
+            break;
+
+        case PROP_RELIABILITY:
+            apdu_len = encode_application_enumerated(&apdu[0], 
+                CurrentBI->Reliability);
             break;
 
         case PROP_PRIORITY_ARRAY:
@@ -1262,6 +1272,24 @@ bool Binary_Input_Write_Property(
             if (status) {
                 Binary_Input_Out_Of_Service_Set(wp_data->object_instance,
                     value.type.Boolean);
+            }
+            break;
+
+        case PROP_RELIABILITY:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
+                &wp_data->error_class, &wp_data->error_code);
+            if (status) {
+                CurrentBI->Reliability = value.type.Enumerated;
+            }
+            break;
+
+        case PROP_RELINQUISH_DEFAULT:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_BOOLEAN,
+                &wp_data->error_class, &wp_data->error_code);
+            if (status) {
+                CurrentBI->Relinquish_Default = value.type.Boolean;
             }
             break;
 

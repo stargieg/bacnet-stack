@@ -913,6 +913,12 @@ int Multistate_Value_Read_Property(
             apdu_len = encode_application_boolean(&apdu[0], state);
             break;
 
+        case PROP_RELIABILITY:
+            apdu_len = encode_application_enumerated(&apdu[0], 
+                CurrentMSV->Reliability);
+            break;
+
+
         case PROP_PRIORITY_ARRAY:
             /* Array element zero is the number of elements in the array */
             if (rpdata->array_index == 0) {
@@ -1271,6 +1277,16 @@ bool Multistate_Value_Write_Property(
             if (status) {
                 Multistate_Value_Out_Of_Service_Set(wp_data->object_instance,
                     value.type.Boolean);
+            }
+            break;
+
+        case PROP_RELIABILITY:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
+                &wp_data->error_class, &wp_data->error_code);
+            if (status) {
+                CurrentMSV->Reliability = value.type.Enumerated;
+                fprintf(stderr,"PROP_RELIABILITY %i\n",value.type.Enumerated);
             }
             break;
 
