@@ -747,9 +747,9 @@ bool Trend_Log_Write_Property(
     BACNET_DATE TempDate;       /* build here in case of error in time half of datetime */
     BACNET_DEVICE_OBJECT_PROPERTY_REFERENCE TempSource;
     bool bEffectiveEnable;
-    ctx = ucix_init("bacnet_tl");
-    const char *idx_c;
-    char idx_cc[64];
+    //ctx = ucix_init("bacnet_tl");
+    //const char *idx_c;
+    //char idx_cc[64];
 
 
     /* decode the some of the request */
@@ -773,8 +773,8 @@ bool Trend_Log_Write_Property(
     object_index = Trend_Log_Instance_To_Index(wp_data->object_instance);
     if (object_index < max_trend_logs_int) {
         CurrentTL = &TL_Descr[object_index];
-        sprintf(idx_cc, "%d", object_index);
-        idx_c = idx_cc;
+        //sprintf(idx_cc, "%d", object_index);
+        //idx_c = idx_cc;
     } else
         return false;
 
@@ -1213,8 +1213,8 @@ bool Trend_Log_Write_Property(
             wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
             break;
     }
-    ucix_commit(ctx, "bacnet_tl");
-    ucix_cleanup(ctx);
+    //ucix_commit(ctx, "bacnet_tl");
+    //ucix_cleanup(ctx);
     return status;
 }
 
