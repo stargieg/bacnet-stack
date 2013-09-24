@@ -762,7 +762,6 @@ int Analog_Value_Read_Property(
     float present_value = 0;
     unsigned object_index = 0;
     unsigned i = 0;
-    bool state = false;
     uint8_t *apdu = NULL;
 
     if ((rpdata == NULL) || (rpdata->application_data == NULL) ||
@@ -818,11 +817,9 @@ int Analog_Value_Read_Property(
 #endif
             bitstring_set_bit(&bit_string, STATUS_FLAG_FAULT, false);
             bitstring_set_bit(&bit_string, STATUS_FLAG_OVERRIDDEN, false);
-//            bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
-//                CurrentAV->Out_Of_Service);
             if (Analog_Value_Out_Of_Service(rpdata->object_instance)) {
                 bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
-                    CurrentAV->Out_Of_Service);
+                    true);
             } else {
                 bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
                     false);
@@ -843,8 +840,9 @@ int Analog_Value_Read_Property(
             break;
 
         case PROP_OUT_OF_SERVICE:
-            state = CurrentAV->Out_Of_Service;
-            apdu_len = encode_application_boolean(&apdu[0], state);
+            apdu_len =
+                encode_application_boolean(&apdu[0],
+                Analog_Value_Out_Of_Service(rpdata->object_instance));
             break;
 
         case PROP_RELIABILITY:

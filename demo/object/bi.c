@@ -914,7 +914,7 @@ int Binary_Input_Read_Property(
             bitstring_set_bit(&bit_string, STATUS_FLAG_OVERRIDDEN, false);
             if (Binary_Input_Out_Of_Service(rpdata->object_instance)) {
                 bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
-                    CurrentBI->Out_Of_Service);
+                    true);
             } else {
                 bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
                     false);
