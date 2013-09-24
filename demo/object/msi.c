@@ -1666,7 +1666,7 @@ int Multistate_Input_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
-    MULTI_STATE_INPUT_DESCR *CurrentMSI;
+    //MULTI_STATE_INPUT_DESCR *CurrentMSI;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
@@ -1674,7 +1674,7 @@ int Multistate_Input_Event_Information(
 
     /* check index */
     if (index < max_multi_state_inputs_int) {
-        CurrentMSI = &MSI_Descr[index];
+        //CurrentMSI = &MSI_Descr[index];
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (MSI_Descr[index].Event_State != EVENT_STATE_NORMAL);
 

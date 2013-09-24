@@ -570,7 +570,7 @@ uint8_t Analog_Value_Reliability(
 {
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned index = 0; /* offset from instance lookup */
-    uint8_t value;
+    uint8_t value = 0;
 
     index = Analog_Value_Instance_To_Index(object_instance);
     if (index < max_analog_values_int) {

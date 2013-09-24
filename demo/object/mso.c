@@ -1666,7 +1666,7 @@ int Multistate_Output_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
-    MULTI_STATE_OUTPUT_DESCR *CurrentMSO;
+    //MULTI_STATE_OUTPUT_DESCR *CurrentMSO;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
@@ -1674,7 +1674,7 @@ int Multistate_Output_Event_Information(
 
     /* check index */
     if (index < max_multi_state_outputs_int) {
-        CurrentMSO = &MSO_Descr[index];
+        //CurrentMSO = &MSO_Descr[index];
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (MSO_Descr[index].Event_State != EVENT_STATE_NORMAL);
 

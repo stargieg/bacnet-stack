@@ -1715,7 +1715,7 @@ int Multistate_Value_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
-    MULTI_STATE_VALUE_DESCR *CurrentMSV;
+    //MULTI_STATE_VALUE_DESCR *CurrentMSV;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
@@ -1723,7 +1723,7 @@ int Multistate_Value_Event_Information(
 
     /* check index */
     if (index < max_multi_state_values_int) {
-        CurrentMSV = &MSV_Descr[index];
+        //CurrentMSV = &MSV_Descr[index];
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (MSV_Descr[index].Event_State != EVENT_STATE_NORMAL);
 

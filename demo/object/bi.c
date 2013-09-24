@@ -1675,7 +1675,7 @@ int Binary_Input_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
-    BINARY_INPUT_DESCR *CurrentBI;
+    //BINARY_INPUT_DESCR *CurrentBI;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
@@ -1683,7 +1683,7 @@ int Binary_Input_Event_Information(
 
     /* check index */
     if (index < max_binary_inputs) {
-        CurrentBI = &BI_Descr[index];
+        //CurrentBI = &BI_Descr[index];
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (BI_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
