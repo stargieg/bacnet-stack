@@ -172,11 +172,13 @@ int main(
     int uci_idx = 0;
     char *section;
     char *type;
+    char *pEnv = NULL;
 
+    pEnv = getenv("UCI_SECTION");
     ctx = ucix_init("bacnet_dev");
     if(!ctx)
         fprintf(stderr,  "Failed to load config file bacnet_dev\n");
-    uci_id = ucix_get_option_int(ctx, "bacnet_dev", "0", "id", 0);
+    uci_id = ucix_get_option_int(ctx, "bacnet_dev", pEnv, "id", 0);
     if (uci_id != 0) {
         Device_Set_Object_Instance_Number(uci_id);
     } else {
