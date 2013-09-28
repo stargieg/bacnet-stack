@@ -1855,28 +1855,32 @@ void Device_Init(
     const char *uci_description;
     const char *uci_modelname;
     const char *uci_app_ver;
+    char *pEnv = NULL;
+
+    pEnv = getenv("UCI_SECTION");
+
     fprintf(stderr, "Device_Init\n");
     ctx = ucix_init("bacnet_dev");
     if(!ctx)
         fprintf(stderr,  "Failed to load config file bacnet_dev\n");
 
-    uci_name = ucix_get_option(ctx, "bacnet_dev", "0", "name");
+    uci_name = ucix_get_option(ctx, "bacnet_dev", pEnv, "name");
     if (uci_name != 0)
         characterstring_init_ansi(&My_Object_Name, uci_name);
 
-    uci_location = ucix_get_option(ctx, "bacnet_dev", "0", "location");
+    uci_location = ucix_get_option(ctx, "bacnet_dev", pEnv, "location");
     if (uci_location != 0)
         sprintf(Location, "%s", uci_location);
 
-    uci_description = ucix_get_option(ctx, "bacnet_dev", "0", "description");
+    uci_description = ucix_get_option(ctx, "bacnet_dev", pEnv, "description");
     if (uci_description != 0)
         sprintf(Description, "%s", uci_description);
 
-    uci_modelname = ucix_get_option(ctx, "bacnet_dev", "0", "modelname");
+    uci_modelname = ucix_get_option(ctx, "bacnet_dev", pEnv, "modelname");
     if (uci_modelname != 0)
         sprintf(Model_Name, "%s", uci_modelname);
 
-    uci_app_ver = ucix_get_option(ctx, "bacnet_dev", "0", "app_ver");
+    uci_app_ver = ucix_get_option(ctx, "bacnet_dev", pEnv, "app_ver");
     if (uci_app_ver != 0)
         sprintf(Application_Software_Version, "%s", uci_app_ver);
 
