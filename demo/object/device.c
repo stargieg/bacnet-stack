@@ -479,12 +479,15 @@ bool Device_Reinitialize(
     bool status = false;
     const char *uci_password;
     bool enable_pw = false;
+    char *pEnv = NULL;
+
+    pEnv = getenv("UCI_SECTION");
     ctx = ucix_init("bacnet_dev");
     if(ctx) {
-        enable_pw = ucix_get_option_int(ctx, "bacnet_dev", "0",
+        enable_pw = ucix_get_option_int(ctx, "bacnet_dev", pEnv,
             "enable_pw", false);
         if (enable_pw) {
-            uci_password = ucix_get_option(ctx, "bacnet_dev", "0", "password");
+            uci_password = ucix_get_option(ctx, "bacnet_dev", pEnv, "password");
         }
     } else {
         fprintf(stderr,  "Failed to open config file bacnet_dev\n");
@@ -699,14 +702,16 @@ bool Device_Set_Object_Name(
     BACNET_CHARACTER_STRING * object_name)
 {
     bool status = false;        /*return value */
+    char *pEnv = NULL;
 
+    pEnv = getenv("UCI_SECTION");
     if (!characterstring_same(&My_Object_Name, object_name)) {
         /* Make the change and update the database revision */
         status = characterstring_copy(&My_Object_Name, object_name);
         Device_Inc_Database_Revision();
         ctx = ucix_init("bacnet_dev");
         if(ctx) {
-            ucix_add_option(ctx, "bacnet_dev", "0", "name", object_name->value);
+            ucix_add_option(ctx, "bacnet_dev", pEnv, "name", object_name->value);
             ucix_commit(ctx, "bacnet_dev");
             ucix_cleanup(ctx);
         } else {
@@ -869,13 +874,15 @@ bool Device_Set_Description(
     size_t length)
 {
     bool status = false;        /*return value */
+    char *pEnv = NULL;
 
+    pEnv = getenv("UCI_SECTION");
     if (length < sizeof(Description)) {
         memmove(Description, name, length);
         Description[length] = 0;
         ctx = ucix_init("bacnet_dev");
         if(ctx) {
-            ucix_add_option(ctx, "bacnet_dev", "0", "description", name);
+            ucix_add_option(ctx, "bacnet_dev", pEnv, "description", name);
             ucix_commit(ctx, "bacnet_dev");
             ucix_cleanup(ctx);
         } else {
@@ -898,13 +905,15 @@ bool Device_Set_Location(
     size_t length)
 {
     bool status = false;        /*return value */
+    char *pEnv = NULL;
 
+    pEnv = getenv("UCI_SECTION");
     if (length < sizeof(Location)) {
         memmove(Location, name, length);
         Location[length] = 0;
         ctx = ucix_init("bacnet_dev");
         if(ctx) {
-            ucix_add_option(ctx, "bacnet_dev", "0", "location", name);
+            ucix_add_option(ctx, "bacnet_dev", pEnv, "location", name);
             ucix_commit(ctx, "bacnet_dev");
             ucix_cleanup(ctx);
         } else {
