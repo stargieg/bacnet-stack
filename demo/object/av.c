@@ -128,6 +128,7 @@ void Analog_Value_Init(
     const char *uciname;
     int ucidisable;
     const char *ucivalue;
+    int Out_Of_Service;
     char description[64];
     const char *ucidescription;
     const char *ucidescription_default;
@@ -221,6 +222,15 @@ void Analog_Value_Init(
                     AV_Descr[i].Units = uciunit_default;
                 } else {
                     AV_Descr[i].Units = UNITS_PERCENT;
+                }
+                Out_Of_Service = ucix_get_option_int(ctx, "bacnet_av", idx_c,
+                    "Out_Of_Service", 1);
+                if (Out_Of_Service == 0) {
+                    AV_Descr[i].Reliability = RELIABILITY_NO_FAULT_DETECTED;
+                    AV_Descr[i].Out_Of_Service = 0;
+                } else {
+                    AV_Descr[i].Reliability = RELIABILITY_COMMUNICATION_FAILURE;
+                    AV_Descr[i].Out_Of_Service = 1;
                 }
 
                 ucivalue = ucix_get_option(ctx, "bacnet_av", idx_c,
@@ -1068,6 +1078,10 @@ bool Analog_Value_Write_Property(
     BACNET_APPLICATION_DATA_VALUE value;
     ctx = ucix_init("bacnet_av");
     const char *idx_c;
+    char cur_value[16];
+    float pvalue;
+    int i;
+    time_t cur_value_time;
     char idx_cc[64];
     
 
@@ -1145,6 +1159,14 @@ bool Analog_Value_Write_Property(
                 if (Analog_Value_Present_Value_Set(wp_data->object_instance,
                         value.type.Real, wp_data->priority)) {
                     status = true;
+                    sprintf(cur_value,"%f",value.type.Real);
+                    ucix_add_option(ctx, "bacnet_av", idx_c, "value",
+                        cur_value);
+                    cur_value_time = time(NULL);
+                    ucix_add_option_int(ctx, "bacnet_av", idx_c, "value_time",
+                        cur_value_time);
+                    ucix_add_option_int(ctx, "bacnet_av", idx_c, "write",
+                        1);
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1171,6 +1193,21 @@ bool Analog_Value_Write_Property(
                            However, if Out of Service is TRUE, then don't set the
                            physical output.  This comment may apply to the
                            main loop (i.e. check out of service before changing output) */
+                        pvalue = CurrentAV->Relinquish_Default;
+                        for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
+                            if (CurrentAV->Priority_Array[i] != ANALOG_LEVEL_NULL) {
+                                pvalue = CurrentAV->Priority_Array[i];
+                                break;
+                            }
+                        }
+                        sprintf(cur_value,"%f",pvalue);
+                        ucix_add_option(ctx, "bacnet_av", idx_c, "value",
+                            cur_value);
+                        cur_value_time = time(NULL);
+                        ucix_add_option_int(ctx, "bacnet_av", idx_c, "value_time",
+                            cur_value_time);
+                        ucix_add_option_int(ctx, "bacnet_av", idx_c, "write",
+                            1);
                     } else {
                         status = false;
                         wp_data->error_class = ERROR_CLASS_PROPERTY;

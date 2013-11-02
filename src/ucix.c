@@ -261,12 +261,12 @@ time_t check_uci_update(const char *config, time_t mtime)
 		}
 	}
 
-	snprintf(path, sizeof(path), "/tmp/.uci/%s", config);
+/*	snprintf(path, sizeof(path), "/tmp/.uci/%s", config);
 	if( stat(path, &s) > -1 ) {
 		if( (f_mtime == 0) || (s.st_mtime > f_mtime) ) {
 			f_mtime = s.st_mtime;
 		}
-	}
+	} */
 	if( (mtime == 0) || (f_mtime > mtime) ) {
 		return f_mtime;
 	} else {
@@ -284,15 +284,23 @@ void load_value(const char *sec_idx, struct uci_itr_ctx *itr)
 		return;
 
 	const char *value;
+	time_t value_time;
+	int Out_Of_Service;
 	value = ucix_get_option(itr->ctx, itr->section, sec_idx, "value");
-		if( (t = (value_tuple_t *)malloc(sizeof(value_tuple_t))) != NULL ) {
-			strncpy(t->idx, sec_idx, sizeof(t->idx));
-			if ( value != NULL ) {
-				strncpy(t->value, value, sizeof(t->value));
-			}
-			t->next = itr->list;
-			itr->list = t;
+	value_time = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+		"value_time",0);
+	Out_Of_Service = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+		"Out_Of_Service",1);
+	if( (t = (value_tuple_t *)malloc(sizeof(value_tuple_t))) != NULL ) {
+		strncpy(t->idx, sec_idx, sizeof(t->idx));
+		if ( value != NULL ) {
+			strncpy(t->value, value, sizeof(t->value));
 		}
+		t->value_time=value_time;
+		t->Out_Of_Service=Out_Of_Service;
+		t->next = itr->list;
+		itr->list = t;
+	}
 }
 
 

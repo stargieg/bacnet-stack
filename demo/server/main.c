@@ -254,6 +254,7 @@ int main(
         chk_mtime = 0;
         chk_mtime = check_uci_update(section, ucimodtime_bacnet_av);
         if(chk_mtime != 0) {
+            sleep(1);
             ucimodtime_bacnet_av = chk_mtime;
             printf("Config changed, reloading %s\n",section);
             ctx = ucix_init(section);
@@ -268,13 +269,13 @@ int main(
                 printf("section %s idx %s \n", section, cur->idx);
                 val_f = strtof(cur->value,NULL);
                 uci_idx = atoi(cur->idx);
-                if (val_f || !strcmp(cur->value, "0")) {
-                    printf("idx %s ",cur->idx);
-                    printf("value %s\n",cur->value);
-                    pval_f = Analog_Value_Present_Value(uci_idx);
-                    if ( val_f != pval_f ) {
-                        Analog_Value_Present_Value_Set(uci_idx,val_f,16);
-                    }
+                printf("idx %s ",cur->idx);
+                printf("value %s\n",cur->value);
+                pval_f = Analog_Value_Present_Value(uci_idx);
+                if ( val_f != pval_f ) {
+                    Analog_Value_Present_Value_Set(uci_idx,val_f,16);
+                }
+                if (cur->Out_Of_Service == 0) {
                     if (Analog_Value_Out_Of_Service(uci_idx))
                         Analog_Value_Out_Of_Service_Set(uci_idx,0);
                     if (Analog_Value_Reliability(uci_idx))

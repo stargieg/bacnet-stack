@@ -27,6 +27,8 @@ struct uci_context* ucix_init_path(const char *path, const char *config_file);
 /* value/name tuples */
 struct value_tuple {
 	char value[16];
+	time_t value_time;
+	int Out_Of_Service;
 	char idx[18];
 	struct value_tuple *next;
 };
