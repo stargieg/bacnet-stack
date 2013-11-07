@@ -499,6 +499,28 @@ float Analog_Value_Present_Value(
     return value;
 }
 
+unsigned Analog_Value_Present_Value_Priority(
+    uint32_t object_instance)
+{
+    ANALOG_VALUE_DESCR *CurrentAV;
+    unsigned index = 0; /* instance to index conversion */
+    unsigned i = 0;     /* loop counter */
+    unsigned priority = 0;      /* return value */
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < max_analog_values_int) {
+        CurrentAV = &AV_Descr[index];
+        for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
+            if (CurrentAV->Priority_Array[priority] != ANALOG_LEVEL_NULL) {
+                priority = i + 1;
+                break;
+            }
+        }
+    }
+
+    return priority;
+}
+
 bool Analog_Value_Present_Value_Set(
     uint32_t object_instance,
     float value,
@@ -521,9 +543,39 @@ bool Analog_Value_Present_Value_Set(
                However, if Out of Service is TRUE, then don't set the
                physical output.  This comment may apply to the
                main loop (i.e. check out of service before changing output) */
+            if (priority == 8) {
+                CurrentAV->Priority_Array[15] = value;
+            }
             status = true;
         }
     }
+    return status;
+}
+
+bool Analog_Value_Present_Value_Relinquish(
+    uint32_t object_instance,
+    unsigned priority)
+{
+    ANALOG_VALUE_DESCR *CurrentAV;
+    unsigned index = 0;
+    bool status = false;
+
+    index = Analog_Value_Instance_To_Index(object_instance);
+    if (index < max_analog_values_int) {
+        CurrentAV = &AV_Descr[index];
+        if (priority && (priority <= BACNET_MAX_PRIORITY) &&
+            (priority != 6 /* reserved */ )) {
+            CurrentAV->Priority_Array[priority - 1] = ANALOG_LEVEL_NULL;
+            /* Note: you could set the physical output here to the next
+               highest priority, or to the relinquish default if no
+               priorities are set.
+               However, if Out of Service is TRUE, then don't set the
+               physical output.  This comment may apply to the
+               main loop (i.e. check out of service before changing output) */
+            status = true;
+        }
+    }
+
     return status;
 }
 

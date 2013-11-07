@@ -61,6 +61,7 @@
 #endif /* defined(BACFILE) */
 #include "ucix.h"
 #include "av.h"
+#include "ao.h"
 #include "bi.h"
 #include "msv.h"
 
@@ -168,6 +169,7 @@ int main(
     time_t chk_mtime = 0;
     time_t ucimodtime_bacnet_bi = 0;
     time_t ucimodtime_bacnet_av = 0;
+    time_t ucimodtime_bacnet_ao = 0;
     time_t ucimodtime_bacnet_mv = 0;
     int uci_idx = 0;
     char *section;
@@ -286,6 +288,50 @@ int main(
                     printf("Out_Of_Service\n");
                     Analog_Value_Out_Of_Service_Set(uci_idx,1);
                     Analog_Value_Reliability_Set(uci_idx,
+                        RELIABILITY_COMMUNICATION_FAILURE);
+                }
+            }
+            ucix_cleanup(ctx);
+        }
+        /* update end */
+        /* update Analog Value from uci */
+        section = "bacnet_ao";
+        type = "ao";
+        chk_mtime = 0;
+        chk_mtime = check_uci_update(section, ucimodtime_bacnet_ao);
+        if(chk_mtime != 0) {
+            sleep(1);
+            ucimodtime_bacnet_ao = chk_mtime;
+            printf("Config changed, reloading %s\n",section);
+            ctx = ucix_init(section);
+            struct uci_itr_ctx itr;
+            value_tuple_t *cur;
+            itr.list = NULL;
+            itr.section = section;
+            itr.ctx = ctx;
+            ucix_for_each_section_type(ctx, section, type,
+                (void *)load_value, &itr);
+            for( cur = itr.list; cur; cur = cur->next ) {
+                printf("section %s idx %s \n", section, cur->idx);
+                val_f = strtof(cur->value,NULL);
+                uci_idx = atoi(cur->idx);
+                printf("idx %s ",cur->idx);
+                printf("value %s\n",cur->value);
+                pval_f = Analog_Output_Present_Value(uci_idx);
+                if ( val_f != pval_f ) {
+                    Analog_Output_Present_Value_Set(uci_idx,val_f,16);
+                }
+                if (cur->Out_Of_Service == 0) {
+                    if (Analog_Output_Out_Of_Service(uci_idx))
+                        Analog_Output_Out_Of_Service_Set(uci_idx,0);
+                    if (Analog_Output_Reliability(uci_idx))
+                        Analog_Output_Reliability_Set(uci_idx,
+                            RELIABILITY_NO_FAULT_DETECTED);
+                } else {
+                    printf("idx %s ",cur->idx);
+                    printf("Out_Of_Service\n");
+                    Analog_Output_Out_Of_Service_Set(uci_idx,1);
+                    Analog_Output_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
                 }
             }
