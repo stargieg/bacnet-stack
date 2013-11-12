@@ -45,7 +45,7 @@
 #include "ucix.h"
 
 #ifndef MAX_BINARY_INPUTS
-#define MAX_BINARY_INPUTS 5
+#define MAX_BINARY_INPUTS 512
 #endif
 
 BINARY_INPUT_DESCR BI_Descr[MAX_BINARY_INPUTS];
@@ -392,6 +392,38 @@ void Binary_Input_Out_Of_Service_Set(
             CurrentBI->Change_Of_Value = true;
         }
         CurrentBI->Out_Of_Service = value;
+    }
+
+    return;
+}
+
+uint8_t Binary_Input_Reliability(
+    uint32_t object_instance)
+{
+    BINARY_INPUT_DESCR *CurrentBI;
+    unsigned index = 0; /* offset from instance lookup */
+    uint8_t value = 0;
+
+    index = Binary_Input_Instance_To_Index(object_instance);
+    if (index < max_binary_inputs) {
+        CurrentBI = &BI_Descr[index];
+        value = CurrentBI->Reliability;
+    }
+
+    return value;
+}
+
+void Binary_Input_Reliability_Set(
+    uint32_t object_instance,
+    uint8_t value)
+{
+    BINARY_INPUT_DESCR *CurrentBI;
+    unsigned index = 0;
+
+    index = Binary_Input_Instance_To_Index(object_instance);
+    if (index < max_binary_inputs) {
+        CurrentBI = &BI_Descr[index];
+        CurrentBI->Reliability = value;
     }
 
     return;

@@ -175,6 +175,7 @@ int main(
     char *section;
     char *type;
     char *pEnv = NULL;
+    int rewrite;
 
     pEnv = getenv("UCI_SECTION");
     ctx = ucix_init("bacnet_dev");
@@ -249,12 +250,20 @@ int main(
         }
 #endif
         /* output */
-
+        rewrite++;
+        if (rewrite>10000) {
+            rewrite=0;
+            printf("rewrite %i\n", rewrite);
+        }
         /* update Analog Value from uci */
         section = "bacnet_av";
         type = "av";
         chk_mtime = 0;
         chk_mtime = check_uci_update(section, ucimodtime_bacnet_av);
+        if ( rewrite == 0) {
+            chk_mtime = ucimodtime_bacnet_av;
+            printf("rewrite %i\n", rewrite);
+        }
         if(chk_mtime != 0) {
             sleep(1);
             ucimodtime_bacnet_av = chk_mtime;
@@ -299,6 +308,9 @@ int main(
         type = "ao";
         chk_mtime = 0;
         chk_mtime = check_uci_update(section, ucimodtime_bacnet_ao);
+        if ( rewrite == 0) {
+            chk_mtime = ucimodtime_bacnet_ao;
+        }
         if(chk_mtime != 0) {
             sleep(1);
             ucimodtime_bacnet_ao = chk_mtime;
@@ -344,6 +356,9 @@ int main(
         type = "mv";
         chk_mtime = 0;
         chk_mtime = check_uci_update(section, ucimodtime_bacnet_mv);
+        if ( rewrite == 0) {
+            chk_mtime = ucimodtime_bacnet_mv;
+        }
         if(chk_mtime != 0) {
             ucimodtime_bacnet_mv = chk_mtime;
             printf("Config changed, reloading %s\n",section);
@@ -378,6 +393,19 @@ int main(
                     Multistate_Value_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
                 }
+                if (cur->Out_Of_Service == 0) {
+                    if (Multistate_Value_Out_Of_Service(uci_idx))
+                        Multistate_Value_Out_Of_Service_Set(uci_idx,0);
+                    if (Multistate_Value_Reliability(uci_idx))
+                        Multistate_Value_Reliability_Set(uci_idx,
+                            RELIABILITY_NO_FAULT_DETECTED);
+                } else {
+                    printf("idx %s ",cur->idx);
+                    printf("Out_Of_Service\n");
+                    Multistate_Value_Out_Of_Service_Set(uci_idx,1);
+                    Multistate_Value_Reliability_Set(uci_idx,
+                        RELIABILITY_COMMUNICATION_FAILURE);
+                }
             }
             ucix_cleanup(ctx);
         }
@@ -388,6 +416,9 @@ int main(
         type = "bi";
         chk_mtime = 0;
         chk_mtime = check_uci_update(section, ucimodtime_bacnet_bi);
+        if ( rewrite == 0) {
+            chk_mtime = ucimodtime_bacnet_bi;
+        }
         if(chk_mtime != 0) {
             ucimodtime_bacnet_bi = chk_mtime;
             printf("Config changed, reloading %s\n",section);
@@ -410,6 +441,19 @@ int main(
                     if ( val_i != pval_i ) {
                         Binary_Input_Present_Value_Set(uci_idx,val_i,16);
                     }
+                }
+                if (cur->Out_Of_Service == 0) {
+                    if (Binary_Input_Out_Of_Service(uci_idx))
+                        Binary_Input_Out_Of_Service_Set(uci_idx,0);
+                    if (Binary_Input_Reliability(uci_idx))
+                        Binary_Input_Reliability_Set(uci_idx,
+                            RELIABILITY_NO_FAULT_DETECTED);
+                } else {
+                    printf("idx %s ",cur->idx);
+                    printf("Out_Of_Service\n");
+                    Binary_Input_Out_Of_Service_Set(uci_idx,1);
+                    Binary_Input_Reliability_Set(uci_idx,
+                        RELIABILITY_COMMUNICATION_FAILURE);
                 }
             }
             ucix_cleanup(ctx);
