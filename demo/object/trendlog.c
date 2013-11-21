@@ -169,7 +169,7 @@ void Trend_Log_Init(
         ucidevice_type_default = ucix_get_option_int(ctx, "bacnet_tl",
             i_string, "device_type", OBJECT_DEVICE);
         uciobject_type_default = ucix_get_option_int(ctx, "bacnet_tl",
-            i_string, "object_type", OBJECT_ANALOG_VALUE);
+            i_string, "object_type", 255);
 
         /* initialize all the values */
 

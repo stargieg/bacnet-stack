@@ -248,7 +248,8 @@ void Notification_Class_Init(
             }
         }
         fprintf(stderr, "max_notificaton_classes: %i\n", max_notificaton_classes_int);
-        ucix_cleanup(ctx);
+        if(ctx)
+            ucix_cleanup(ctx);
     }
 
     return;

@@ -291,7 +291,8 @@ void Multistate_Output_Init(
             }
         }
         fprintf(stderr, "max_multi_state_outputs: %i\n", max_multi_state_outputs_int);
-        ucix_cleanup(ctx);
+        if(ctx)
+            ucix_cleanup(ctx);
     }
     return;
 }

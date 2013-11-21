@@ -1893,7 +1893,8 @@ void Device_Init(
     if (uci_app_ver != 0)
         sprintf(Application_Software_Version, "%s", uci_app_ver);
 
-    ucix_cleanup(ctx);
+    if(ctx)
+        ucix_cleanup(ctx);
 
     if (object_table) {
         Object_Table = object_table;

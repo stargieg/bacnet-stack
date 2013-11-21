@@ -189,7 +189,8 @@ int main(
         if (argc > 1)
             Device_Set_Object_Instance_Number(strtol(argv[1], NULL, 0));
     }
-    ucix_cleanup(ctx);
+    if(ctx)
+        ucix_cleanup(ctx);
 
     printf("BACnet Server Demo\n" "BACnet Stack Version %s\n"
         "BACnet Device ID: %u\n" "Max APDU: %d\n", BACnet_Version,

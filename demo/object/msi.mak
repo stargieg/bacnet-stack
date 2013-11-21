@@ -7,7 +7,7 @@ DEFINES = -DBIG_ENDIAN=0 -DTEST -DBACAPP_ALL -DTEST_MULTISTATE_INPUT
 
 CFLAGS  = -Wall $(INCLUDES) $(DEFINES) -g
 
-SRCS = ms-input.c \
+SRCS = msi.c \
 	$(SRC_DIR)/bacdcode.c \
 	$(SRC_DIR)/bacint.c \
 	$(SRC_DIR)/bacstr.c \

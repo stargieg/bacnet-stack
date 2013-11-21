@@ -332,7 +332,8 @@ void Analog_Value_Init(
             }
         }
         fprintf(stderr, "max_analog_values %i\n", max_analog_values_int);
-        ucix_cleanup(ctx);
+        if(ctx)
+            ucix_cleanup(ctx);
     }
     return;
 }
