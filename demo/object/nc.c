@@ -127,7 +127,7 @@ void Notification_Class_Init(
         initialized = true;
         ctx = ucix_init("bacnet_nc");
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
+            fprintf(stderr,  "Failed to load config file bacnet_nc\n");
 
         ucidescription_default = ucix_get_option(ctx, "bacnet_nc", "default",
             "description");
