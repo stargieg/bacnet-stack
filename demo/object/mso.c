@@ -49,7 +49,7 @@
 //#define MAX_MULTI_STATE_OUTPUTS 65535
 #define MAX_MULTI_STATE_OUTPUTS 512
 #endif
-unsigned max_multi_state_outputs_int = 512;
+unsigned max_multi_state_outputs_int = 0;
 
 /* When all the priorities are level null, the present value returns */
 /* the Relinquish Default value */
@@ -149,7 +149,7 @@ void Multistate_Output_Init(
         initialized = true;
         ctx = ucix_init("bacnet_mo");
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
+            fprintf(stderr,  "Failed to load config file bacnet_mo\n");
     
         ucidescription_default = ucix_get_option(ctx, "bacnet_mo", "default",
             "description");

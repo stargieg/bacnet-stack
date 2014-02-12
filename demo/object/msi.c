@@ -49,7 +49,7 @@
 //#define MAX_MULTI_STATE_INPUTS 65535
 #define MAX_MULTI_STATE_INPUTS 512
 #endif
-unsigned max_multi_state_inputs_int = 512;
+unsigned max_multi_state_inputs_int = 0;
 
 /* When all the priorities are level null, the present value returns */
 /* the Relinquish Default value */
@@ -149,7 +149,7 @@ void Multistate_Input_Init(
         initialized = true;
         ctx = ucix_init("bacnet_mi");
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
+            fprintf(stderr,  "Failed to load config file bacnet_mi\n");
     
         ucidescription_default = ucix_get_option(ctx, "bacnet_mi", "default",
             "description");

@@ -145,7 +145,7 @@ void Binary_Input_Init(
         initialized = true;
         ctx = ucix_init("bacnet_bi");
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
+            fprintf(stderr,  "Failed to load config file bacnet_bi\n");
     
         ucidescription_default = ucix_get_option(ctx, "bacnet_bi", "default",
             "description");
@@ -269,6 +269,9 @@ void Binary_Input_Init(
                 BI_Descr[i].Disable=true;
             }
         }
+        fprintf(stderr, "max_binary_inputs %i\n", max_binary_inputs);
+        if(ctx)
+            ucix_cleanup(ctx);
     }
 
     return;

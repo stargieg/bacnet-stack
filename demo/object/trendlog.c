@@ -160,7 +160,7 @@ void Trend_Log_Init(
         fprintf(stderr, "Trend_Log_Init\n");
         ctx = ucix_init("bacnet_tl");
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
+            fprintf(stderr,  "Failed to load config file bacnet_tl\n");
 
         ucidescription_default = ucix_get_option(ctx, "bacnet_tl", "default",
             "description");
@@ -204,22 +204,36 @@ void Trend_Log_Init(
             } */
             switch (uciobject_type) {
                 case OBJECT_ANALOG_INPUT:
-                    uciobject_s = "bacnet_ai";
+                    if (strcmp(uciobject_s,"bacnet_ai") != 0) {
+                        uciobject_s = "bacnet_ai";
+                        ctxd = ucix_init(uciobject_s);
+                    }
                     break;
                 case OBJECT_ANALOG_OUTPUT:
-                    uciobject_s = "bacnet_ao";
+                    if (strcmp(uciobject_s,"bacnet_ao") != 0) {
+                        uciobject_s = "bacnet_ao";
+                        ctxd = ucix_init(uciobject_s);
+                    }
                     break;
                 case OBJECT_ANALOG_VALUE:
-                    uciobject_s = "bacnet_av";
+                    if (strcmp(uciobject_s,"bacnet_av") != 0) {
+                        uciobject_s = "bacnet_av";
+                        ctxd = ucix_init(uciobject_s);
+                    }
                     break;
                 case OBJECT_MULTI_STATE_VALUE:
-                    uciobject_s = "bacnet_mv";
+                    if (strcmp(uciobject_s,"bacnet_mv") != 0) {
+                        uciobject_s = "bacnet_mv";
+                        ctxd = ucix_init(uciobject_s);
+                    }
                     break;
                 default:
-                    uciobject_s = "bacnet_tl";
+                    if (strcmp(uciobject_s,"bacnet_tl") != 0) {
+                        uciobject_s = "bacnet_tl";
+                        ctxd = ucix_init(uciobject_s);
+                    }
                     break;
             }
-            ctxd = ucix_init(uciobject_s);
             uciname = ucix_get_option(ctxd, uciobject_s,
                 i_instance_string, "name");
             ucidisable = ucix_get_option_int(ctxd, uciobject_s,
@@ -308,6 +322,9 @@ void Trend_Log_Init(
                 TL_Descr[i].Disable=true;
             }
         }
+        fprintf(stderr, "max_trend_logs %i\n", max_trend_logs_int);
+        if(ctx)
+            ucix_cleanup(ctx);
     }
 
     return;

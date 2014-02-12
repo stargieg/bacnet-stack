@@ -145,7 +145,7 @@ void Binary_Output_Init(
         initialized = true;
         ctx = ucix_init("bacnet_bo");
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
+            fprintf(stderr,  "Failed to load config file bacnet_bo\n");
     
         ucidescription_default = ucix_get_option(ctx, "bacnet_bo", "default",
             "description");
@@ -269,6 +269,9 @@ void Binary_Output_Init(
                 BO_Descr[i].Disable=true;
             }
         }
+        fprintf(stderr, "max_binary_outputs %i\n", max_binary_outputs);
+        if(ctx)
+            ucix_cleanup(ctx);
     }
 
     return;

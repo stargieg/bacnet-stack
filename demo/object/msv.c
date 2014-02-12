@@ -49,7 +49,7 @@
 //#define MAX_MULTI_STATE_VALUES 65535
 #define MAX_MULTI_STATE_VALUES 512
 #endif
-unsigned max_multi_state_values_int = 512;
+unsigned max_multi_state_values_int = 0;
 
 /* When all the priorities are level null, the present value returns */
 /* the Relinquish Default value */
@@ -150,7 +150,7 @@ void Multistate_Value_Init(
         initialized = true;
         ctx = ucix_init("bacnet_mv");
         if(!ctx)
-            fprintf(stderr,  "Failed to load config file");
+            fprintf(stderr,  "Failed to load config file bacnet_mv\n");
     
         ucidescription_default = ucix_get_option(ctx, "bacnet_mv", "default",
             "description");
