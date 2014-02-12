@@ -125,6 +125,13 @@ int max_analog_values;
     float Analog_Value_Present_Value(
         uint32_t object_instance);
 
+    unsigned Analog_Value_Present_Value_Priority(
+        uint32_t object_instance);
+
+    bool Analog_Value_Present_Value_Relinquish(
+        uint32_t object_instance,
+        unsigned priority);
+
     bool Analog_Value_Out_Of_Service(
         uint32_t object_instance);
 
