@@ -145,12 +145,16 @@ void Analog_Output_Init(
     int ucitime_delay;
     int ucilimit_default;
     int ucilimit;
+    char high_limit[64];
     const char *ucihigh_limit_default;
     const char *ucihigh_limit;
+    char low_limit[64];
     const char *ucilow_limit_default;
     const char *ucilow_limit;
+    char dead_limit[64];
     const char *ucidead_limit_default;
     const char *ucidead_limit;
+    char cov_increment[64];
     const char *ucicov_increment;
     const char *ucicov_increment_default;
     const char *sec = "bacnet_ao";
@@ -159,7 +163,7 @@ void Analog_Output_Init(
         initialized = true;
         ctx = ucix_init(sec);
         if(!ctx)
-            fprintf(stderr, "Failed to load config file\n");
+            fprintf(stderr, "Failed to load config file bacnet_ao\n");
 
         ucidescription_default = ucix_get_option(ctx, sec, "default",
             "description");
@@ -251,14 +255,16 @@ void Analog_Output_Init(
 
                 ucicov_increment = ucix_get_option(ctx, "bacnet_ao", idx_c,
                     "cov_increment");
-                if (ucicov_increment == NULL) {
-                    if (ucicov_increment_default == NULL) {
-                        ucicov_increment = 0;
+                if (ucicov_increment != 0) {
+                    sprintf(cov_increment, "%s", ucicov_increment);
+                } else {
+                    if (ucicov_increment_default != 0) {
+                        sprintf(cov_increment, "%s", ucicov_increment_default);
                     } else {
-                        ucicov_increment = ucicov_increment_default;
+                        sprintf(cov_increment, "%s", "0");
                     }
                 }
-                AO_Descr[i].COV_Increment = strtof(ucicov_increment,
+                AO_Descr[i].COV_Increment = strtof(cov_increment,
                     (char **) NULL);
 
 #if defined(INTRINSIC_REPORTING)
@@ -272,29 +278,35 @@ void Analog_Output_Init(
                     "limit", ucilimit_default);
                 ucihigh_limit = ucix_get_option(ctx, "bacnet_ao", idx_c,
                     "high_limit");
-                if (ucihigh_limit == NULL) {
-                    if (ucihigh_limit_default == NULL) {
-                        ucihigh_limit = 0;
+                if (ucihigh_limit != 0) {
+                    sprintf(high_limit, "%s", ucihigh_limit);
+                } else {
+                    if (ucihigh_limit_default != 0) {
+                        sprintf(high_limit, "%s", ucihigh_limit_default);
                     } else {
-                        ucihigh_limit = ucihigh_limit_default;
+                        sprintf(high_limit, "%s", "0");
                     }
                 }
                 ucilow_limit = ucix_get_option(ctx, "bacnet_ao", idx_c,
                     "low_limit");
-                if (ucilow_limit == NULL) {
-                    if (ucilow_limit_default == NULL) {
-                        ucilow_limit = 0;
+                if (ucilow_limit != 0) {
+                    sprintf(low_limit, "%s", ucilow_limit);
+                } else {
+                    if (ucilow_limit_default != 0) {
+                        sprintf(low_limit, "%s", ucilow_limit_default);
                     } else {
-                        ucilow_limit = ucilow_limit_default;
+                        sprintf(low_limit, "%s", "0");
                     }
                 }
                 ucidead_limit = ucix_get_option(ctx, "bacnet_ao", idx_c,
                     "dead_limit");
-                if (ucidead_limit == NULL) {
-                    if (ucidead_limit_default == NULL) {
-                        ucidead_limit = 0;
+                if (ucidead_limit != 0) {
+                    sprintf(dead_limit, "%s", ucidead_limit);
+                } else {
+                    if (ucidead_limit_default != 0) {
+                        sprintf(dead_limit, "%s", ucidead_limit_default);
                     } else {
-                        ucidead_limit = ucidead_limit_default;
+                        sprintf(dead_limit, "%s", "0");
                     }
                 }
                 AO_Descr[i].Event_State = EVENT_STATE_NORMAL;
@@ -307,9 +319,9 @@ void Analog_Output_Init(
                 else AO_Descr[i].Time_Delay = 0;
                 if (ucilimit > -1) AO_Descr[i].Limit_Enable = ucilimit;
                 else AO_Descr[i].Limit_Enable = 0;
-                AO_Descr[i].High_Limit = strtof(ucihigh_limit, (char **) NULL);
-                AO_Descr[i].Low_Limit = strtof(ucilow_limit, (char **) NULL);
-                AO_Descr[i].Deadband = strtof(ucidead_limit, (char **) NULL);
+                AO_Descr[i].High_Limit = strtof(high_limit, (char **) NULL);
+                AO_Descr[i].Low_Limit = strtof(low_limit, (char **) NULL);
+                AO_Descr[i].Deadband = strtof(dead_limit, (char **) NULL);
 
                 /* initialize Event time stamps using wildcards
                    and set Acked_transitions */
