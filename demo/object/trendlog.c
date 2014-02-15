@@ -145,7 +145,7 @@ void Trend_Log_Init(
     int ucidevice_type_default;
     int uciobject_type;
     int uciobject_type_default;
-    const char *uciobject_s;
+    const char *uciobject_s = "";
     int uciobject_instance;
     int uciinterval;
     int uciinterval_default;
@@ -239,6 +239,7 @@ void Trend_Log_Init(
             ucidisable = ucix_get_option_int(ctxd, uciobject_s,
                 i_instance_string, "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
+                fprintf(stderr, "Trend_Log %s\n",uciname);
                 TL_Descr[i].Disable=false;
                 max_trend_logs_int = i+1;
                 sprintf(name, "TL_%s", uciname);
@@ -338,9 +339,8 @@ unsigned Trend_Log_Instance_To_Index(
 {
     unsigned index = max_trend_logs_int;
 
-    if (object_instance < max_trend_logs_int) {
+    if (object_instance < max_trend_logs_int)
         index = object_instance;
-    }
 
     return index;
 }
@@ -403,7 +403,9 @@ static char *Trend_Log_Description(
     index = Trend_Log_Instance_To_Index(object_instance);
     if (index < max_trend_logs_int) {
         CurrentTL = &TL_Descr[index];
-        pName = CurrentTL->Object_Description;
+        if (CurrentTL->Disable == false) {
+            pName = CurrentTL->Object_Description;
+        }
     }
 
     return pName;
@@ -505,7 +507,9 @@ bool Trend_Log_Object_Name(
 
     if (index < max_trend_logs_int) {
         CurrentTL = &TL_Descr[index];
-        status = characterstring_init_ansi(object_name, CurrentTL->Object_Name);
+        if (CurrentTL->Disable == false) {
+            status = characterstring_init_ansi(object_name, CurrentTL->Object_Name);
+        }
     }
 
     return status;
@@ -588,6 +592,9 @@ int Trend_Log_Read_Property(
     if (object_index < max_trend_logs_int)
         CurrentTL = &TL_Descr[object_index];
     else
+        return BACNET_STATUS_ERROR;
+
+    if (CurrentTL->Disable == true)
         return BACNET_STATUS_ERROR;
 
     switch (rpdata->object_property) {
