@@ -65,6 +65,22 @@ unsigned max_analog_values_int = 0;
 ANALOG_VALUE_DESCR AV_Descr[MAX_ANALOG_VALUES];
 
 
+/* value/name tuples */
+struct inst_tuple {
+	char idx[18];
+	struct inst_tuple *next;
+};
+
+typedef struct inst_tuple inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct inst_itr_ctx {
+	struct inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Analog_Value_Properties_Required[] = {
     PROP_OBJECT_IDENTIFIER,
@@ -119,6 +135,24 @@ void Analog_Value_Property_Lists(
     return;
 }
 
+void load_inst(const char *sec_idx, struct inst_itr_ctx *itr)
+{
+	inst_tuple_t *t = malloc(sizeof (inst_tuple_t));
+	bool disable;
+	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+	"disable", 0);
+	if (strcmp(sec_idx,"default") == 0)
+		return;
+	if (disable)
+		return;
+	if( (t = (inst_tuple_t *)malloc(sizeof(inst_tuple_t))) != NULL ) {
+		strncpy(t->idx, sec_idx, sizeof(t->idx));
+		t->next = itr->list;
+		itr->list = t;
+	}
+}
+
+
 void Analog_Value_Init(
     void)
 {
@@ -158,12 +192,31 @@ void Analog_Value_Init(
     const char *ucicov_increment;
     const char *ucicov_increment_default;
     const char *sec = "bacnet_av";
+
+	char *section;
+	char *type;
+	char idx[18];
+	struct inst_itr_ctx itr_m;
+	section = "bacnet_av";
+	inst_tuple_t *cur = malloc(sizeof (inst_tuple_t));
+
+#if PRINT_ENABLED
     fprintf(stderr, "Analog_Value_Init\n");
+#endif
     if (!initialized) {
         initialized = true;
         ctx = ucix_init(sec);
+#if PRINT_ENABLED
         if(!ctx)
             fprintf(stderr, "Failed to load config file bacnet_av\n");
+#endif
+		type = "av";
+		inst_tuple_t *cur = malloc(sizeof (inst_tuple_t));
+		itr_m.list = NULL;
+		itr_m.section = section;
+		itr_m.ctx = ctx;
+		ucix_for_each_section_type(ctx, section, type,
+			(void *)load_inst, &itr_m);
 
         ucidescription_default = ucix_get_option(ctx, sec, "default",
             "description");
@@ -187,21 +240,21 @@ void Analog_Value_Init(
             "dead_limit");
         ucicov_increment_default = ucix_get_option(ctx, sec, "default",
             "cov_increment");
-
-        for (i = 0; i < MAX_ANALOG_VALUES; i++) {
+        i = 0;
+		for( cur = itr_m.list; cur; cur = cur->next ) {
             memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
             /* initialize all the analog output priority arrays to NULL */
             for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
                 AV_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
             }
-            sprintf(idx_cc,"%d",i);
+			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
             idx_c = idx_cc;
+            AV_Descr[i].Instance=atoi(idx_cc);
             uciname = ucix_get_option(ctx, "bacnet_av", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_av", idx_c,
                 "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
                 AV_Descr[i].Disable=false;
-                max_analog_values_int = i+1;
                 sprintf(name, "%s", uciname);
                 ucix_string_copy(AV_Descr[i].Object_Name,
                     sizeof(AV_Descr[i].Object_Name), name);
@@ -340,10 +393,17 @@ void Analog_Value_Init(
                     Analog_Value_Alarm_Summary);
 #endif
             } else {
+#if PRINT_ENABLED
+        		fprintf(stderr, "Disable %i\n", AV_Descr[i].Instance);
+#endif
                 AV_Descr[i].Disable=true;
             }
+            i++;
+            max_analog_values_int = i;
         }
+#if PRINT_ENABLED
         fprintf(stderr, "max_analog_values %i\n", max_analog_values_int);
+#endif
         if(ctx)
             ucix_cleanup(ctx);
     }
@@ -356,12 +416,17 @@ void Analog_Value_Init(
 unsigned Analog_Value_Instance_To_Index(
     uint32_t object_instance)
 {
-    unsigned index = max_analog_values_int;
-
-    if (object_instance < max_analog_values_int)
-        index = object_instance;
-
-    return index;
+    ANALOG_VALUE_DESCR *CurrentAV;
+    int index,instance,i;
+    index = max_analog_values_int;
+    for (i = 0; i < index; i++) {
+    	CurrentAV = &AV_Descr[i];
+    	instance = CurrentAV->Instance;
+    	if (CurrentAV->Instance == object_instance) {
+    		return i;
+    	}
+    }
+    return 0;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -371,16 +436,10 @@ uint32_t Analog_Value_Index_To_Instance(
     unsigned index)
 {
     ANALOG_VALUE_DESCR *CurrentAV;
-    if (index < max_analog_values_int) {
-        CurrentAV = &AV_Descr[index];
-        if (CurrentAV->Disable == false) {
-            return index;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
+    uint32_t instance;
+	CurrentAV = &AV_Descr[index];
+	instance = CurrentAV->Instance;
+	return instance;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -400,14 +459,13 @@ bool Analog_Value_Valid_Instance(
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned index = 0; /* offset from instance lookup */
     index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
-        CurrentAV = &AV_Descr[index];
-        if (CurrentAV->Disable == false) {
-            return true;
-        } else {
-            return false;
-        }
+    if (index == MAX_ANALOG_VALUES) {
+        printf("Analog_Value_Valid_Instance %i invalid\n",object_instance);
+    	return false;
     }
+    CurrentAV = &AV_Descr[index];
+    if (CurrentAV->Disable == false)
+            return true;
 
     return false;
 }
@@ -419,8 +477,8 @@ bool Analog_Value_Change_Of_Value(
     bool status = false;
     unsigned index;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         status = CurrentAV->Change_Of_Value;
     }
@@ -434,8 +492,8 @@ void Analog_Value_Change_Of_Value_Clear(
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned index;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         CurrentAV->Change_Of_Value = false;
     }
@@ -495,8 +553,8 @@ float Analog_Value_Present_Value(
     unsigned index = 0; /* offset from instance lookup */
     unsigned i = 0;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         /* When all the priorities are level null, the present value returns */
         /* the Relinquish Default value */
@@ -520,8 +578,8 @@ unsigned Analog_Value_Present_Value_Priority(
     unsigned i = 0;     /* loop counter */
     unsigned priority = 0;      /* return value */
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
             if (CurrentAV->Priority_Array[priority] != ANALOG_LEVEL_NULL) {
@@ -543,8 +601,8 @@ bool Analog_Value_Present_Value_Set(
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         if (priority && (priority <= BACNET_MAX_PRIORITY) &&
             (priority != 6 /* reserved */ ) ) {
@@ -573,8 +631,8 @@ bool Analog_Value_Present_Value_Relinquish(
     unsigned index = 0;
     bool status = false;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         if (priority && (priority <= BACNET_MAX_PRIORITY) &&
             (priority != 6 /* reserved */ )) {
@@ -599,8 +657,8 @@ bool Analog_Value_Out_Of_Service(
     unsigned index = 0; /* offset from instance lookup */
     bool value = false;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         value = CurrentAV->Out_Of_Service;
     }
@@ -615,8 +673,8 @@ void Analog_Value_Out_Of_Service_Set(
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned index = 0;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         CurrentAV->Out_Of_Service = value;
     }
@@ -631,8 +689,8 @@ void Analog_Value_Reliability_Set(
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned index = 0;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         CurrentAV->Reliability = value;
     }
@@ -647,8 +705,8 @@ uint8_t Analog_Value_Reliability(
     unsigned index = 0; /* offset from instance lookup */
     uint8_t value = 0;
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         value = CurrentAV->Reliability;
     }
@@ -663,8 +721,8 @@ static char *Analog_Value_Description(
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         pName = CurrentAV->Object_Description;
     }
@@ -681,8 +739,8 @@ bool Analog_Value_Description_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         status = true;
         if (new_name) {
@@ -716,8 +774,8 @@ static bool Analog_Value_Description_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentAV->Object_Description)) {
@@ -762,10 +820,8 @@ bool Analog_Value_Object_Name(
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
-
-    index = Analog_Value_Instance_To_Index(object_instance);
-
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         status = characterstring_init_ansi(object_name, CurrentAV->Object_Name);
     }
@@ -787,8 +843,8 @@ static bool Analog_Value_Object_Name_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Analog_Value_Instance_To_Index(object_instance);
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentAV->Object_Name)) {
@@ -846,10 +902,11 @@ int Analog_Value_Read_Property(
 
     apdu = rpdata->application_data;
 
-    object_index = Analog_Value_Instance_To_Index(rpdata->object_instance);
-    if (object_index < max_analog_values_int)
+	printf(stderr,"Analog_Value_Read_Property %i\n",rpdata->object_instance);
+    if (Analog_Value_Valid_Instance(rpdata->object_instance)) {
+        object_index = Analog_Value_Instance_To_Index(rpdata->object_instance);
         CurrentAV = &AV_Descr[object_index];
-    else
+    } else
         return BACNET_STATUS_ERROR;
 
     switch (rpdata->object_property) {
@@ -1169,8 +1226,8 @@ bool Analog_Value_Write_Property(
         wp_data->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         return false;
     }
-    object_index = Analog_Value_Instance_To_Index(wp_data->object_instance);
-    if (object_index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(wp_data->object_instance)) {
+        object_index = Analog_Value_Instance_To_Index(wp_data->object_instance);
         CurrentAV = &AV_Descr[object_index];
         sprintf(idx_cc,"%d",object_index);
         idx_c = idx_cc;
@@ -1487,11 +1544,12 @@ void Analog_Value_Intrinsic_Reporting(
     float PresentVal = 0.0f;
     bool SendNotify = false;
 
-
-    object_index = Analog_Value_Instance_To_Index(object_instance);
-    if (object_index < max_analog_values_int)
+    if (Analog_Value_Valid_Instance(object_instance)) {
+        object_index = Analog_Value_Instance_To_Index(object_instance);
+		printf(stderr,"Analog_Value_Intrinsic_Reporting %i\n",
+			object_index);
         CurrentAV = &AV_Descr[object_index];
-    else
+    } else
         return;
 
     /* check limits */
@@ -1783,7 +1841,7 @@ int Analog_Value_Event_Information(
 
 
     /* check index */
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(index)) {
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (AV_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
@@ -1853,14 +1911,13 @@ int Analog_Value_Alarm_Ack(
     ANALOG_VALUE_DESCR *CurrentAV;
     unsigned int object_index;
 
-
+    if (Analog_Value_Valid_Instance(alarmack_data->eventObjectIdentifier.
+        instance)) {
     object_index =
         Analog_Value_Instance_To_Index(alarmack_data->eventObjectIdentifier.
         instance);
-
-    if (object_index < max_analog_values_int)
         CurrentAV = &AV_Descr[object_index];
-    else {
+    } else {
         *error_code = ERROR_CODE_UNKNOWN_OBJECT;
         return -1;
     }
@@ -1956,7 +2013,7 @@ int Analog_Value_Alarm_Summary(
     //ANALOG_VALUE_DESCR *CurrentAV;
 
     /* check index */
-    if (index < max_analog_values_int) {
+    if (Analog_Value_Valid_Instance(index)) {
         /* Event_State is not equal to NORMAL  and
            Notify_Type property value is ALARM */
         if ((AV_Descr[index].Event_State != EVENT_STATE_NORMAL) &&

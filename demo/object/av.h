@@ -47,7 +47,7 @@ extern "C" {
 int max_analog_values;
 
     typedef struct analog_value_descr {
-        unsigned Object_ID;
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         //uint8_t Present_Value;
