@@ -52,7 +52,7 @@
 #ifndef MAX_NOTIFICATION_CLASSES
 #define MAX_NOTIFICATION_CLASSES 16
 #endif
-unsigned max_notificaton_classes_int = 0;
+//unsigned max_notificaton_classes_int = 0;
 
 
 #if defined(INTRINSIC_REPORTING)
@@ -95,6 +95,25 @@ void Notification_Class_Property_Lists(
     return;
 }
 
+void Notification_Class_Load_UCI_List(const char *sec_idx,
+	struct nc_inst_itr_ctx *itr)
+{
+	nc_inst_tuple_t *t = malloc(sizeof(nc_inst_tuple_t));
+	bool disable;
+	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+	"disable", 0);
+	if (strcmp(sec_idx,"default") == 0)
+		return;
+	if (disable)
+		return;
+	if( (t = (nc_inst_tuple_t *)malloc(sizeof(nc_inst_tuple_t))) != NULL ) {
+		strncpy(t->idx, sec_idx, sizeof(t->idx));
+		t->next = itr->list;
+		itr->list = t;
+	}
+    return;
+}
+
 /*
  * Things to do when starting up the stack for Notification Class.
  * Should be called whenever we reset the device or power it up
@@ -102,7 +121,7 @@ void Notification_Class_Property_Lists(
 void Notification_Class_Init(
     void)
 {
-    int i = 0;
+    unsigned i;
     static bool initialized = false;
     char name[64];
     const char *uciname;
@@ -122,31 +141,51 @@ void Notification_Class_Init(
     char *src_ip;
     const char *src_net;
     unsigned src_port, src_port1, src_port2;
+    const char *sec = "bacnet_nc";
+
+	char *section;
+	char *type;
+	struct nc_inst_itr_ctx itr_m;
+	section = "bacnet_nc";
+
+#if PRINT_ENABLED
     fprintf(stderr, "Notification_Class_Init\n");
+#endif
     if (!initialized) {
         initialized = true;
-        ctx = ucix_init("bacnet_nc");
+        ctx = ucix_init(sec);
+#if PRINT_ENABLED
         if(!ctx)
             fprintf(stderr,  "Failed to load config file bacnet_nc\n");
+#endif
+		type = "nc";
+		nc_inst_tuple_t *cur = malloc(sizeof(nc_inst_tuple_t));
+		itr_m.list = NULL;
+		itr_m.section = section;
+		itr_m.ctx = ctx;
+		ucix_for_each_section_type(ctx, section, type,
+			(void *)Notification_Class_Load_UCI_List, &itr_m);
 
-        ucidescription_default = ucix_get_option(ctx, "bacnet_nc", "default",
+        ucidescription_default = ucix_get_option(ctx, sec, "default",
             "description");
         /* initialize all the analog output priority arrays to NULL */
-        for (i = 0; i < MAX_NOTIFICATION_CLASSES; i++) {
+        i = 0;
+		for( cur = itr_m.list; cur; cur = cur->next ) {
             /* init with zeros */
             memset(&NC_Descr[i], 0x00, sizeof(NOTIFICATION_CLASS_DESCR));
+			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
     	    sprintf(idx_cc,"%d",i);
     	    idx_c = idx_cc;
-            uciname = ucix_get_option(ctx, "bacnet_nc", idx_c, "name");
-            ucidisable = ucix_get_option_int(ctx, "bacnet_nc", idx_c,
+            NC_Descr[i].Instance=atoi(idx_cc);
+            uciname = ucix_get_option(ctx, sec, idx_c, "name");
+            ucidisable = ucix_get_option_int(ctx, sec, idx_c,
             "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
                 NC_Descr[i].Disable=false;
-                max_notificaton_classes_int = i+1;
                 sprintf(name, "%s", uciname);
                 ucix_string_copy(NC_Descr[i].Object_Name,
                     sizeof(NC_Descr[i].Object_Name), name);
-                ucidescription = ucix_get_option(ctx, "bacnet_nc", idx_c,
+                ucidescription = ucix_get_option(ctx, sec, idx_c,
                     "description");
                 if (ucidescription != 0) {
                     sprintf(description, "%s", ucidescription);
@@ -246,12 +285,15 @@ void Notification_Class_Init(
                     address_bind_request(BACNET_MAX_INSTANCE, &max_apdu, &src);
                 }
             }
+            i++;
+            max_notificaton_classes_int = i;
         }
+#if PRINT_ENABLED
         fprintf(stderr, "max_notificaton_classes: %i\n", max_notificaton_classes_int);
+#endif
         if(ctx)
             ucix_cleanup(ctx);
     }
-
     return;
 }
 
@@ -262,12 +304,18 @@ void Notification_Class_Init(
 unsigned Notification_Class_Instance_To_Index(
     uint32_t object_instance)
 {
-    unsigned index = max_notificaton_classes_int;
+    NOTIFICATION_CLASS_DESCR *CurrentNC;
+    int index,instance,i;
+    index = max_notificaton_classes_int;
+    for (i = 0; i < index; i++) {
+    	CurrentNC = &NC_Descr[i];
+    	instance = CurrentNC->Instance;
+    	if (CurrentNC->Instance == object_instance) {
+    		return i;
+    	}
+    }
+    return 0;
 
-    if (object_instance < max_notificaton_classes_int)
-        index = object_instance;
-
-    return index;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -277,16 +325,10 @@ uint32_t Notification_Class_Index_To_Instance(
     unsigned index)
 {
     NOTIFICATION_CLASS_DESCR *CurrentNC;
-    if (index < max_notificaton_classes_int) {
-        CurrentNC = &NC_Descr[index];
-        if (CurrentNC->Disable == false) {
-            return index;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
+    uint32_t instance;
+	CurrentNC = &NC_Descr[index];
+	instance = CurrentNC->Instance;
+	return instance;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -306,14 +348,15 @@ bool Notification_Class_Valid_Instance(
     NOTIFICATION_CLASS_DESCR *CurrentNC;
     unsigned index = 0; /* offset from instance lookup */
     index = Notification_Class_Instance_To_Index(object_instance);
-    if (index < max_notificaton_classes_int) {
-        CurrentNC = &NC_Descr[index];
-        if (CurrentNC->Disable == false) {
-            return true;
-        } else {
-            return false;
-        }
+    if (index == MAX_NOTIFICATION_CLASSES) {
+#if PRINT_ENABLED
+        fprintf(stderr, "Notification_Class_Valid_Instance %i invalid\n",object_instance);
+#endif
+    	return false;
     }
+    CurrentNC = &NC_Descr[index];
+    if (CurrentNC->Disable == false)
+        return true;
 
     return false;
 }
@@ -325,8 +368,8 @@ static char *Notification_Class_Description(
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
-    index = Notification_Class_Instance_To_Index(object_instance);
-    if (index < max_notificaton_classes_int) {
+    if (Notification_Class_Valid_Instance(object_instance)) {
+        index = Notification_Class_Instance_To_Index(object_instance);
         CurrentNC = &NC_Descr[index];
         pName = CurrentNC->Object_Description;
     }
@@ -421,11 +464,11 @@ bool Notification_Class_Object_Name(
     BACNET_CHARACTER_STRING *object_name)
 {
     NOTIFICATION_CLASS_DESCR *CurrentNC;
-    unsigned int index;
+    unsigned index = 0;
     bool status = false;
 
-    index = Notification_Class_Instance_To_Index(object_instance);
-    if (index < max_notificaton_classes_int) {
+    if (Notification_Class_Valid_Instance(object_instance)) {
+        index = Notification_Class_Instance_To_Index(object_instance);
         CurrentNC = &NC_Descr[index];
         status = characterstring_init_ansi(object_name, CurrentNC->Object_Name);
     }
@@ -529,7 +572,7 @@ int Notification_Class_Read_Property(
     uint8_t *apdu = NULL;
     uint8_t u8Val;
     int idx;
-    unsigned object_index = 0;
+    unsigned index = 0;
     int apdu_len = 0;   /* return value */
 
 
@@ -540,13 +583,12 @@ int Notification_Class_Read_Property(
 
     apdu = rpdata->application_data;
 
-    object_index = Notification_Class_Instance_To_Index(rpdata->object_instance);
-    if (object_index < max_notificaton_classes_int)
-        CurrentNC = &NC_Descr[object_index];
-    else
+    if (Notification_Class_Valid_Instance(rpdata->object_instance)) {
+        index = Notification_Class_Instance_To_Index(rpdata->object_instance);
+        CurrentNC = &NC_Descr[index];
+    } else
         return BACNET_STATUS_ERROR;
-    if (CurrentNC->Disable)
-        return BACNET_STATUS_ERROR;
+
 
     switch (rpdata->object_property) {
         case PROP_OBJECT_IDENTIFIER:
@@ -758,7 +800,7 @@ bool Notification_Class_Write_Property(
     int iOffset = 0;
     uint8_t idx = 0;
     int len = 0;
-    unsigned object_index = 0;
+    unsigned index = 0;
     int object_type = 0;
     uint32_t object_instance = 0;
     ctx = ucix_init("bacnet_nc");
@@ -783,10 +825,10 @@ bool Notification_Class_Write_Property(
         return false;
     }
 
-    object_index = Notification_Class_Instance_To_Index(wp_data->object_instance);
-    if (object_index < max_notificaton_classes_int) {
-        CurrentNC = &NC_Descr[object_index];
-        sprintf(idx_cc,"%d",object_index);
+    if (Notification_Class_Valid_Instance(wp_data->object_instance)) {
+        index = Notification_Class_Instance_To_Index(wp_data->object_instance);
+        CurrentNC = &NC_Descr[index];
+        sprintf(idx_cc,"%d",index);
         idx_c = idx_cc;
     } else
         return false;
@@ -1198,18 +1240,17 @@ bool Notification_Class_Write_Property(
 
 
 void Notification_Class_Get_Priorities(
-    uint32_t Object_Instance,
+    uint32_t object_instance,
     uint32_t * pPriorityArray)
 {
     NOTIFICATION_CLASS_DESCR *CurrentNC;
-    uint32_t object_index;
+    unsigned index = 0;
     int i;
 
-    object_index = Notification_Class_Instance_To_Index(Object_Instance);
-
-    if (object_index < max_notificaton_classes_int)
-        CurrentNC = &NC_Descr[object_index];
-    else {
+    if (Notification_Class_Valid_Instance(object_instance)) {
+        index = Notification_Class_Instance_To_Index(object_instance);
+        CurrentNC = &NC_Descr[index];
+    } else {
         for (i = 0; i < 3; i++)
             pPriorityArray[i] = 255;
         return; /* unknown object */
@@ -1275,15 +1316,13 @@ void Notification_Class_common_reporting_function(
 
     NOTIFICATION_CLASS_DESCR *CurrentNC;
     BACNET_DESTINATION *pBacDest;
-    uint32_t object_index;
-    uint8_t index;
+    unsigned index = 0;
+    uint8_t recp_index;
 
-    object_index =
-        Notification_Class_Instance_To_Index(event_data->notificationClass);
-
-    if (object_index < max_notificaton_classes_int)
-        CurrentNC = &NC_Descr[object_index];
-    else
+    if (Notification_Class_Valid_Instance(event_data->notificationClass)) {
+        index = Notification_Class_Instance_To_Index(event_data->notificationClass);
+        CurrentNC = &NC_Descr[index];
+    } else
         return;
 
     /* Initiating Device Identifier */
@@ -1326,7 +1365,7 @@ void Notification_Class_common_reporting_function(
     /* send notifications for active recipients */
     /* pointer to first recipient */
     pBacDest = &CurrentNC->Recipient_List[0];
-    for (index = 0; index < NC_MAX_RECIPIENTS; index++, pBacDest++) {
+    for (recp_index = 0; recp_index < NC_MAX_RECIPIENTS; recp_index++, pBacDest++) {
         /* check if recipient is defined */
         if (pBacDest->Recipient.RecipientType == RECIPIENT_TYPE_NOTINITIALIZED)
             break;      /* recipient doesn't defined - end of list */
@@ -1389,16 +1428,17 @@ void Notification_Class_find_recipient(
     BACNET_DESTINATION *pBacDest;
     BACNET_ADDRESS src = { 0 };
     unsigned max_apdu = 0;
-    uint32_t object_index;
+    unsigned index = 0;
     uint32_t DeviceID;
     uint8_t idx;
 
 
-    for (object_index = 0; object_index < max_notificaton_classes_int;
-        object_index++) {
+    for (index = 0; index < max_notificaton_classes_int;
+        index++) {
         /* pointer to current notification */
         CurrentNC =
-            &NC_Descr[Notification_Class_Instance_To_Index(object_index)];
+            &NC_Descr[index];
+//            &NC_Descr[Notification_Class_Instance_To_Index(index)];
         /* pointer to first recipient */
         pBacDest = &CurrentNC->Recipient_List[0];
         for (idx = 0; idx < NC_MAX_RECIPIENTS; idx++, pBacDest++) {

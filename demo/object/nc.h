@@ -44,6 +44,7 @@ extern "C" {
         RECIPIENT_TYPE_ADDRESS = 2
     } NC_RECIPIENT_TYPE;
 
+int max_notificaton_classes_int;
 
 #if defined(INTRINSIC_REPORTING)
 /* BACnetRecipient structure */
@@ -76,6 +77,7 @@ BACnetRecipient ::= CHOICE {
 
 /* Structure containing configuration for a Notification Class */
     typedef struct notification_class_descr {
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         bool Disable;
@@ -97,6 +99,27 @@ BACnetRecipient ::= CHOICE {
         bool bSendAckNotify;    /* true if need to send AckNotification */
         uint8_t EventState;
     } ACK_NOTIFICATION;
+
+
+/* value/name tuples */
+struct nc_inst_tuple {
+	char idx[18];
+	struct nc_inst_tuple *next;
+};
+
+typedef struct nc_inst_tuple nc_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct nc_inst_itr_ctx {
+	struct nc_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Notification_Class_Load_UCI_List(
+		const char *sec_idx,
+		struct nc_inst_itr_ctx *itr);
 
 
 
