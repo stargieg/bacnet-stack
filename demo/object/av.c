@@ -65,22 +65,6 @@ unsigned max_analog_values_int = 0;
 ANALOG_VALUE_DESCR AV_Descr[MAX_ANALOG_VALUES];
 
 
-/* value/name tuples */
-struct inst_tuple {
-	char idx[18];
-	struct inst_tuple *next;
-};
-
-typedef struct inst_tuple inst_tuple_t;
-
-/* structure to hold tuple-list and uci context during iteration */
-struct inst_itr_ctx {
-	struct inst_tuple *list;
-	struct uci_context *ctx;
-	char *section;
-};
-
-
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Analog_Value_Properties_Required[] = {
     PROP_OBJECT_IDENTIFIER,
@@ -135,9 +119,10 @@ void Analog_Value_Property_Lists(
     return;
 }
 
-void load_inst(const char *sec_idx, struct inst_itr_ctx *itr)
+void Analog_Value_Load_UCI_List(const char *sec_idx,
+	struct av_inst_itr_ctx *itr)
 {
-	inst_tuple_t *t = malloc(sizeof (inst_tuple_t));
+	av_inst_tuple_t *t = malloc(sizeof(av_inst_tuple_t));
 	bool disable;
 	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
 	"disable", 0);
@@ -145,11 +130,12 @@ void load_inst(const char *sec_idx, struct inst_itr_ctx *itr)
 		return;
 	if (disable)
 		return;
-	if( (t = (inst_tuple_t *)malloc(sizeof(inst_tuple_t))) != NULL ) {
+	if( (t = (av_inst_tuple_t *)malloc(sizeof(av_inst_tuple_t))) != NULL ) {
 		strncpy(t->idx, sec_idx, sizeof(t->idx));
 		t->next = itr->list;
 		itr->list = t;
 	}
+    return;
 }
 
 
@@ -195,10 +181,8 @@ void Analog_Value_Init(
 
 	char *section;
 	char *type;
-	char idx[18];
-	struct inst_itr_ctx itr_m;
+	struct av_inst_itr_ctx itr_m;
 	section = "bacnet_av";
-	inst_tuple_t *cur = malloc(sizeof (inst_tuple_t));
 
 #if PRINT_ENABLED
     fprintf(stderr, "Analog_Value_Init\n");
@@ -211,12 +195,12 @@ void Analog_Value_Init(
             fprintf(stderr, "Failed to load config file bacnet_av\n");
 #endif
 		type = "av";
-		inst_tuple_t *cur = malloc(sizeof (inst_tuple_t));
+		av_inst_tuple_t *cur = malloc(sizeof (av_inst_tuple_t));
 		itr_m.list = NULL;
 		itr_m.section = section;
 		itr_m.ctx = ctx;
 		ucix_for_each_section_type(ctx, section, type,
-			(void *)load_inst, &itr_m);
+			(void *)Analog_Value_Load_UCI_List, &itr_m);
 
         ucidescription_default = ucix_get_option(ctx, sec, "default",
             "description");
@@ -365,7 +349,7 @@ void Analog_Value_Init(
                 AV_Descr[i].Event_State = EVENT_STATE_NORMAL;
                 /* notification class not connected */
                 if (ucinc > -1) AV_Descr[i].Notification_Class = ucinc;
-                else AV_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
+                else AV_Descr[i].Notification_Class = 0;
                 if (ucievent > -1) AV_Descr[i].Event_Enable = ucievent;
                 else AV_Descr[i].Event_Enable = 0;
                 if (ucitime_delay > -1) AV_Descr[i].Time_Delay = ucitime_delay;
@@ -460,7 +444,9 @@ bool Analog_Value_Valid_Instance(
     unsigned index = 0; /* offset from instance lookup */
     index = Analog_Value_Instance_To_Index(object_instance);
     if (index == MAX_ANALOG_VALUES) {
-        printf("Analog_Value_Valid_Instance %i invalid\n",object_instance);
+#if PRINT_ENABLED
+        fprintf(stderr, "Analog_Value_Valid_Instance %i invalid\n",object_instance);
+#endif
     	return false;
     }
     CurrentAV = &AV_Descr[index];
@@ -475,7 +461,7 @@ bool Analog_Value_Change_Of_Value(
 {
     ANALOG_VALUE_DESCR *CurrentAV;
     bool status = false;
-    unsigned index;
+    unsigned index = 0;
 
     if (Analog_Value_Valid_Instance(object_instance)) {
         index = Analog_Value_Instance_To_Index(object_instance);
@@ -490,7 +476,7 @@ void Analog_Value_Change_Of_Value_Clear(
     uint32_t object_instance)
 {
     ANALOG_VALUE_DESCR *CurrentAV;
-    unsigned index;
+    unsigned index = 0;
 
     if (Analog_Value_Valid_Instance(object_instance)) {
         index = Analog_Value_Instance_To_Index(object_instance);
@@ -891,7 +877,7 @@ int Analog_Value_Read_Property(
     BACNET_BIT_STRING bit_string;
     BACNET_CHARACTER_STRING char_string;
     float present_value = 0;
-    unsigned object_index = 0;
+    unsigned index = 0;
     unsigned i = 0;
     uint8_t *apdu = NULL;
 
@@ -902,10 +888,9 @@ int Analog_Value_Read_Property(
 
     apdu = rpdata->application_data;
 
-	printf(stderr,"Analog_Value_Read_Property %i\n",rpdata->object_instance);
     if (Analog_Value_Valid_Instance(rpdata->object_instance)) {
-        object_index = Analog_Value_Instance_To_Index(rpdata->object_instance);
-        CurrentAV = &AV_Descr[object_index];
+        index = Analog_Value_Instance_To_Index(rpdata->object_instance);
+        CurrentAV = &AV_Descr[index];
     } else
         return BACNET_STATUS_ERROR;
 
@@ -1191,7 +1176,7 @@ bool Analog_Value_Write_Property(
 {
     ANALOG_VALUE_DESCR *CurrentAV;
     bool status = false;        /* return value */
-    unsigned int object_index = 0;
+    unsigned index = 0;
     int object_type = 0;
     uint32_t object_instance = 0;
     unsigned int priority = 0;
@@ -1227,9 +1212,9 @@ bool Analog_Value_Write_Property(
         return false;
     }
     if (Analog_Value_Valid_Instance(wp_data->object_instance)) {
-        object_index = Analog_Value_Instance_To_Index(wp_data->object_instance);
-        CurrentAV = &AV_Descr[object_index];
-        sprintf(idx_cc,"%d",object_index);
+        index = Analog_Value_Instance_To_Index(wp_data->object_instance);
+        CurrentAV = &AV_Descr[index];
+        sprintf(idx_cc,"%d",index);
         idx_c = idx_cc;
     } else
         return false;
@@ -1537,7 +1522,7 @@ void Analog_Value_Intrinsic_Reporting(
     ANALOG_VALUE_DESCR *CurrentAV;
     BACNET_EVENT_NOTIFICATION_DATA event_data;
     BACNET_CHARACTER_STRING msgText;
-    unsigned int object_index;
+    unsigned index = 0;
     uint8_t FromState = 0;
     uint8_t ToState;
     float ExceededLimit = 0.0f;
@@ -1545,10 +1530,8 @@ void Analog_Value_Intrinsic_Reporting(
     bool SendNotify = false;
 
     if (Analog_Value_Valid_Instance(object_instance)) {
-        object_index = Analog_Value_Instance_To_Index(object_instance);
-		printf(stderr,"Analog_Value_Intrinsic_Reporting %i\n",
-			object_index);
-        CurrentAV = &AV_Descr[object_index];
+        index = Analog_Value_Instance_To_Index(object_instance);
+        CurrentAV = &AV_Descr[index];
     } else
         return;
 
@@ -1909,14 +1892,14 @@ int Analog_Value_Alarm_Ack(
     BACNET_ERROR_CODE * error_code)
 {
     ANALOG_VALUE_DESCR *CurrentAV;
-    unsigned int object_index;
+    unsigned index = 0;
 
     if (Analog_Value_Valid_Instance(alarmack_data->eventObjectIdentifier.
         instance)) {
-    object_index =
-        Analog_Value_Instance_To_Index(alarmack_data->eventObjectIdentifier.
-        instance);
-        CurrentAV = &AV_Descr[object_index];
+        index =
+            Analog_Value_Instance_To_Index(alarmack_data->eventObjectIdentifier.
+            instance);
+        CurrentAV = &AV_Descr[index];
     } else {
         *error_code = ERROR_CODE_UNKNOWN_OBJECT;
         return -1;

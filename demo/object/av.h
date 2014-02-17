@@ -81,6 +81,25 @@ int max_analog_values;
 #endif /* INTRINSIC_REPORTING */
     } ANALOG_VALUE_DESCR;
 
+/* value/name tuples */
+struct av_inst_tuple {
+	char idx[18];
+	struct av_inst_tuple *next;
+};
+
+typedef struct av_inst_tuple av_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct av_inst_itr_ctx {
+	struct av_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Analog_Value_Load_UCI_List(
+		const char *sec_idx,
+		struct av_inst_itr_ctx *itr);
 
     void Analog_Value_Property_Lists(
         const int **pRequired,
