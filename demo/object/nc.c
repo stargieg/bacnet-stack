@@ -50,9 +50,9 @@
 
 /* number of demo objects */
 #ifndef MAX_NOTIFICATION_CLASSES
-#define MAX_NOTIFICATION_CLASSES 16
+#define MAX_NOTIFICATION_CLASSES 65535
 #endif
-//unsigned max_notificaton_classes_int = 0;
+unsigned max_notificaton_classes_int = 0;
 
 
 #if defined(INTRINSIC_REPORTING)
@@ -135,7 +135,6 @@ void Notification_Class_Init(
     BACNET_DESTINATION recplist[NC_MAX_RECIPIENTS];
     int ucirecp_n = 0;
     int ucirecp_i = 0;
-    struct uci_context *ctx;
     char *uci_ptr;
     char *uci_ptr_a;
     char *src_ip;
@@ -174,7 +173,6 @@ void Notification_Class_Init(
             /* init with zeros */
             memset(&NC_Descr[i], 0x00, sizeof(NOTIFICATION_CLASS_DESCR));
 			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
-    	    sprintf(idx_cc,"%d",i);
     	    idx_c = idx_cc;
             NC_Descr[i].Instance=atoi(idx_cc);
             uciname = ucix_get_option(ctx, sec, idx_c, "name");
@@ -912,8 +910,6 @@ bool Notification_Class_Write_Property(
         case PROP_RECIPIENT_LIST:
 
             memset(&TmpNotify, 0x00, sizeof(NOTIFICATION_CLASS_DESCR));
-            struct uci_context *ctx;
-            ctx = ucix_init("bacnet_nc");
             char ucirecp[NC_MAX_RECIPIENTS][64];
             int ucirecp_n = 0;
             char uci_str[64];
