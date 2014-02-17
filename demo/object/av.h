@@ -44,8 +44,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int max_analog_values;
-
     typedef struct analog_value_descr {
         uint32_t Instance;
         char Object_Name[64];
