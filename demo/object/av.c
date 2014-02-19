@@ -404,7 +404,7 @@ unsigned Analog_Value_Instance_To_Index(
     		return i;
     	}
     }
-    return 0;
+    return MAX_ANALOG_VALUES;
 }
 
 /* we simply have 0-n object instances.  Yours might be */

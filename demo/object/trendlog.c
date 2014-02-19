@@ -225,9 +225,8 @@ void Trend_Log_Init(
              * may have caused us to miss readings.
              */
             /* init with zeros */
-			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
-    	    idx_c = idx_cc;
-
+            strncpy(idx_cc, cur->idx, sizeof(idx_cc));
+            idx_c = idx_cc;
             sprintf(i_string,"%d",i);
             ucidevice_type = ucix_get_option_int(ctx, sec,
                 idx_c, "device_type", ucidevice_type_default);
@@ -237,14 +236,6 @@ void Trend_Log_Init(
                 idx_c, "object_instance", i);
             sprintf(i_instance_string, "%lu",
                 (unsigned long) uciobject_instance);
-/*            switch (ucidevice_type) {
-                case OBJECT_DEVICE:
-                    printf("local");
-                    break;
-                default:
-                    printf("default external");
-                    break;
-            } */
             switch (uciobject_type) {
                 case OBJECT_ANALOG_INPUT:
                     if (strcmp(uciobject_s,"bacnet_ai") != 0) {
@@ -268,8 +259,6 @@ void Trend_Log_Init(
                     if (strcmp(uciobject_s,"bacnet_mv") != 0) {
                         uciobject_s = "bacnet_mv";
                         ctxd = ucix_init(uciobject_s);
-						fprintf(stderr, "Trend_Log_Init %s %i %s %s\n",
-							idx_cc,i,i_instance_string,uciobject_s);
                     }
                     break;
                 default:
@@ -284,10 +273,8 @@ void Trend_Log_Init(
             ucidisable = ucix_get_option_int(ctxd, uciobject_s,
                 i_instance_string, "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
-            	memset(&TL_Descr[i], 0x00, sizeof(TREND_LOG_DESCR));
-            	TL_Descr[i].Instance=atoi(idx_cc);
-				fprintf(stderr, "Trend_Log_Init name %s \n",
-					uciname);
+                memset(&TL_Descr[i], 0x00, sizeof(TREND_LOG_DESCR));
+                TL_Descr[i].Instance=atoi(idx_cc);
                 TL_Descr[i].Disable=false;
                 sprintf(name, "%s_TL", uciname);
                 ucix_string_copy(TL_Descr[i].Object_Name,
@@ -395,7 +382,7 @@ unsigned Trend_Log_Instance_To_Index(
     		return i;
     	}
     }
-    return 0;
+    return MAX_TREND_LOGS;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -465,9 +452,8 @@ bool Trend_Log_Description_Set(
     unsigned index = 0; /* offset from instance lookup */
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
-
-    index = Trend_Log_Instance_To_Index(object_instance);
-    if (index < max_trend_logs_int) {
+    if (Trend_Log_Valid_Instance(object_instance)) {
+        index = Trend_Log_Instance_To_Index(object_instance);
         CurrentTL = &TL_Descr[index];
         status = true;
         if (new_name) {
@@ -501,8 +487,8 @@ static bool Trend_Log_Description_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Trend_Log_Instance_To_Index(object_instance);
-    if (index < max_trend_logs_int) {
+    if (Trend_Log_Valid_Instance(object_instance)) {
+        index = Trend_Log_Instance_To_Index(object_instance);
         CurrentTL = &TL_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentTL->Object_Description)) {
@@ -521,9 +507,11 @@ static bool Trend_Log_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_tl", idx_c,
                             "description", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_tl\n");
+#endif
                     }
                 }
             } else {
@@ -549,9 +537,8 @@ bool Trend_Log_Object_Name(
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
-    index = Trend_Log_Instance_To_Index(object_instance);
-
-    if (index < max_trend_logs_int) {
+    if (Trend_Log_Valid_Instance(object_instance)) {
+        index = Trend_Log_Instance_To_Index(object_instance);
         CurrentTL = &TL_Descr[index];
         if (CurrentTL->Disable == false) {
             status = characterstring_init_ansi(object_name, CurrentTL->Object_Name);
@@ -571,8 +558,8 @@ bool Trend_Log_Object_Name_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Trend_Log_Instance_To_Index(object_instance);
-    if (index < max_trend_logs_int) {
+    if (Trend_Log_Valid_Instance(object_instance)) {
+        index = Trend_Log_Instance_To_Index(object_instance);
         CurrentTL = &TL_Descr[index];
         status = true;
         /* FIXME: check to see if there is a matching name */
@@ -607,8 +594,8 @@ static bool Trend_Log_Object_Name_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Trend_Log_Instance_To_Index(object_instance);
-    if (index < max_trend_logs_int) {
+    if (Trend_Log_Valid_Instance(object_instance)) {
+        index = Trend_Log_Instance_To_Index(object_instance);
         CurrentTL = &TL_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentTL->Object_Name)) {
@@ -627,9 +614,11 @@ static bool Trend_Log_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_tl", idx_c,
                             "name", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_tl\n");
+#endif
                     }
                 }
             } else {
@@ -870,8 +859,8 @@ bool Trend_Log_Write_Property(
         wp_data->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         return false;
     }
-    index = Trend_Log_Instance_To_Index(wp_data->object_instance);
-    if (index < max_trend_logs_int) {
+    if (Trend_Log_Valid_Instance(wp_data->object_instance)) {
+        index = Trend_Log_Instance_To_Index(wp_data->object_instance);
         CurrentTL = &TL_Descr[index];
         sprintf(idx_cc, "%d", index);
         idx_c = idx_cc;
@@ -1328,8 +1317,8 @@ bool TrendLogGetRRInfo(
 {       /* Where to put the information */
     unsigned index;
 
-    index = Trend_Log_Instance_To_Index(pRequest->object_instance);
-    if (index >= MAX_TREND_LOGS) {
+    if (Trend_Log_Valid_Instance(pRequest->object_instance)) {
+        index = Trend_Log_Instance_To_Index(pRequest->object_instance);
         pRequest->error_class = ERROR_CLASS_OBJECT;
         pRequest->error_code = ERROR_CODE_UNKNOWN_OBJECT;
     } else if (pRequest->object_property == PROP_LOG_BUFFER) {
@@ -1407,12 +1396,6 @@ bool TL_Is_Enabled(
 
     bStatus = true;
     CurrentTL = &TL_Descr[i];
-#if 0
-    printf("\nFlags - %u, Start - %u, Stop - %u\n",
-        (unsigned int) CurrentTL->ucTimeFlags,
-        (unsigned int) CurrentTL->tStartTime,
-        (unsigned int) CurrentTL->tStopTime);
-#endif
     if (CurrentTL->bEnable == false) {
         /* Not enabled so time is irrelevant */
         bStatus = false;
@@ -1423,33 +1406,24 @@ bool TL_Is_Enabled(
     } else if (CurrentTL->ucTimeFlags != (TL_T_START_WILD | TL_T_STOP_WILD)) {
         /* enabled and either 1 wild card or none */
         tNow = time(NULL);
-#if 0
-        printf("\nFlags - %u, Current - %u, Start - %u, Stop - %u\n",
-            (unsigned int) CurrentTL->ucTimeFlags, (unsigned int) Now,
-            (unsigned int) CurrentTL->tStartTime,
-            (unsigned int) CurrentTL->tStopTime);
-#endif
         if ((CurrentTL->ucTimeFlags & TL_T_START_WILD) != 0) {
             /* wild card start time */
-            if (tNow > CurrentTL->tStopTime)
+            if (tNow > CurrentTL->tStopTime) {
                 bStatus = false;
+            }
         } else if ((CurrentTL->ucTimeFlags & TL_T_STOP_WILD) != 0) {
             /* wild card stop time */
-            if (tNow < CurrentTL->tStartTime)
+            if (tNow < CurrentTL->tStartTime) {
                 bStatus = false;
+            }
         } else {
-#if 0
-            printf("\nCurrent - %u, Start - %u, Stop - %u\n",
-                (unsigned int) Now, (unsigned int) CurrentTL->tStartTime,
-                (unsigned int) CurrentTL->tStopTime);
-#endif
             /* No wildcards so use both times */
             if ((tNow < CurrentTL->tStartTime) ||
-                (tNow > CurrentTL->tStopTime))
+                (tNow > CurrentTL->tStopTime)) {
                 bStatus = false;
+                }
         }
     }
-
     return (bStatus);
 }
 
@@ -2240,7 +2214,7 @@ void trend_log_timer(
     uSeconds = uSeconds;
     /* use OS to get the current time */
     tNow = time(NULL);
-    for (iCount = 0; iCount < MAX_TREND_LOGS; iCount++) {
+    for (iCount = 0; iCount < max_trend_logs_int; iCount++) {
         CurrentTL = &TL_Descr[iCount];
         if (TL_Is_Enabled(iCount)) {
             if (CurrentTL->LoggingType == LOGGING_TYPE_POLLED) {
