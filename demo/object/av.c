@@ -59,10 +59,7 @@ unsigned max_analog_values_int = 0;
 /* will be relinquished (i.e. set to the NULL level). */
 #define ANALOG_LEVEL_NULL 255
 
-
-
 ANALOG_VALUE_DESCR AV_Descr[MAX_ANALOG_VALUES];
-
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Analog_Value_Properties_Required[] = {
@@ -603,33 +600,6 @@ bool Analog_Value_Present_Value_Set(
     return status;
 }
 
-bool Analog_Value_Present_Value_Relinquish(
-    uint32_t object_instance,
-    unsigned priority)
-{
-    ANALOG_VALUE_DESCR *CurrentAV;
-    unsigned index = 0;
-    bool status = false;
-
-    if (Analog_Value_Valid_Instance(object_instance)) {
-        index = Analog_Value_Instance_To_Index(object_instance);
-        CurrentAV = &AV_Descr[index];
-        if (priority && (priority <= BACNET_MAX_PRIORITY) &&
-            (priority != 6 /* reserved */ )) {
-            CurrentAV->Priority_Array[priority - 1] = ANALOG_LEVEL_NULL;
-            /* Note: you could set the physical output here to the next
-               highest priority, or to the relinquish default if no
-               priorities are set.
-               However, if Out of Service is TRUE, then don't set the
-               physical output.  This comment may apply to the
-               main loop (i.e. check out of service before changing output) */
-            status = true;
-        }
-    }
-
-    return status;
-}
-
 bool Analog_Value_Out_Of_Service(
     uint32_t object_instance)
 {
@@ -769,14 +739,16 @@ static bool Analog_Value_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentAV->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_av", idx_c,
                             "description", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_av\n");
+#endif
                     }
                 }
             } else {
@@ -838,14 +810,16 @@ static bool Analog_Value_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentAV->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_av", idx_c,
                             "name", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_av\n");
+#endif
                     }
                 }
             } else {
@@ -1208,7 +1182,7 @@ bool Analog_Value_Write_Property(
     if (Analog_Value_Valid_Instance(wp_data->object_instance)) {
         index = Analog_Value_Instance_To_Index(wp_data->object_instance);
         CurrentAV = &AV_Descr[index];
-        sprintf(idx_cc,"%d",index);
+        sprintf(idx_cc,"%d",CurrentAV->Instance);
         idx_c = idx_cc;
     } else
         return false;
@@ -1990,7 +1964,7 @@ int Analog_Value_Alarm_Summary(
     //ANALOG_VALUE_DESCR *CurrentAV;
 
     /* check index */
-    if (Analog_Value_Valid_Instance(index)) {
+    if (index < max_analog_values_int) {
         /* Event_State is not equal to NORMAL  and
            Notify_Type property value is ALARM */
         if ((AV_Descr[index].Event_State != EVENT_STATE_NORMAL) &&

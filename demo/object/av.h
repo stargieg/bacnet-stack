@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include "bacdef.h"
 #include "cov.h"
+#include "bacerror.h"
 #include "wp.h"
 #include "rp.h"
 #if defined(INTRINSIC_REPORTING)
@@ -144,10 +145,6 @@ struct av_inst_itr_ctx {
 
     unsigned Analog_Value_Present_Value_Priority(
         uint32_t object_instance);
-
-    bool Analog_Value_Present_Value_Relinquish(
-        uint32_t object_instance,
-        unsigned priority);
 
     bool Analog_Value_Out_Of_Service(
         uint32_t object_instance);
