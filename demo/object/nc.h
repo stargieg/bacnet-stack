@@ -44,8 +44,6 @@ extern "C" {
         RECIPIENT_TYPE_ADDRESS = 2
     } NC_RECIPIENT_TYPE;
 
-int max_notificaton_classes_int;
-
 #if defined(INTRINSIC_REPORTING)
 /* BACnetRecipient structure */
 /*
