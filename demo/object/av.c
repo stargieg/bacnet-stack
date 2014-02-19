@@ -225,18 +225,18 @@ void Analog_Value_Init(
             "cov_increment");
         i = 0;
 		for( cur = itr_m.list; cur; cur = cur->next ) {
-            memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
-            /* initialize all the analog output priority arrays to NULL */
-            for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
-                AV_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
-            }
 			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
             idx_c = idx_cc;
-            AV_Descr[i].Instance=atoi(idx_cc);
             uciname = ucix_get_option(ctx, "bacnet_av", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_av", idx_c,
                 "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
+                memset(&AV_Descr[i], 0x00, sizeof(ANALOG_VALUE_DESCR));
+                /* initialize all the analog output priority arrays to NULL */
+                for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
+                    AV_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
+                }
+                AV_Descr[i].Instance=atoi(idx_cc);
                 AV_Descr[i].Disable=false;
                 sprintf(name, "%s", uciname);
                 ucix_string_copy(AV_Descr[i].Object_Name,
@@ -375,14 +375,9 @@ void Analog_Value_Init(
                 handler_get_alarm_summary_set(OBJECT_ANALOG_VALUE,
                     Analog_Value_Alarm_Summary);
 #endif
-            } else {
-#if PRINT_ENABLED
-        		fprintf(stderr, "Disable %i\n", AV_Descr[i].Instance);
-#endif
-                AV_Descr[i].Disable=true;
+                i++;
+                max_analog_values_int = i;
             }
-            i++;
-            max_analog_values_int = i;
         }
 #if PRINT_ENABLED
         fprintf(stderr, "max_analog_values %i\n", max_analog_values_int);
