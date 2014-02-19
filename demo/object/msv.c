@@ -602,9 +602,11 @@ static bool Multistate_Value_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mv", idx_c,
                             "description", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_mv\n");
+#endif
                     }
                 }
             } else {
@@ -704,9 +706,11 @@ static bool Multistate_Value_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mv", idx_c,
                             "name", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_mv\n");
+#endif
                     }
                 }
             } else {
@@ -1315,7 +1319,6 @@ bool Multistate_Value_Write_Property(
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
                 CurrentMSV->Reliability = value.type.Enumerated;
-                fprintf(stderr,"PROP_RELIABILITY %i\n",value.type.Enumerated);
             }
             break;
 
@@ -1821,8 +1824,6 @@ int Multistate_Value_Alarm_Ack(
 {
     MULTI_STATE_VALUE_DESCR *CurrentMSV;
     unsigned index;
-
-
 
     if (Multistate_Value_Valid_Instance(alarmack_data->
         eventObjectIdentifier.instance)) {
