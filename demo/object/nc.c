@@ -255,7 +255,7 @@ void Notification_Class_Init(
 						recplist[ucirecp_i].Recipient._.Address.mac_len = 6;
 						recplist[ucirecp_i].Recipient._.Address.len = 0;
 						recplist[ucirecp_i].ConfirmedNotify = false;
-						fprintf(stderr,"recp: %i.%i.%i.%i:%i%i\n", 
+						fprintf(stderr,"recp: %i.%i.%i.%i:%i%i\n",
 							recplist[ucirecp_i].Recipient._.Address.mac[0],
 							recplist[ucirecp_i].Recipient._.Address.mac[1],
 							recplist[ucirecp_i].Recipient._.Address.mac[2],
@@ -274,7 +274,7 @@ void Notification_Class_Init(
 	
 					NC_Descr[i].Recipient_List[ucirecp_i] =
 						recplist[ucirecp_i];
-	
+
 					if (NC_Descr[i].Recipient_List[ucirecp_i].Recipient.
 						RecipientType == RECIPIENT_TYPE_DEVICE) {
 						/* copy Device_ID */
@@ -282,10 +282,10 @@ void Notification_Class_Init(
 							NC_Descr[i].Recipient_List[ucirecp_i].Recipient._.
 							DeviceIdentifier;
 						address_bind_request(DeviceID, &max_apdu, &src);
-	
+
 					} else if (NC_Descr[i].Recipient_List[ucirecp_i].Recipient.
 						RecipientType == RECIPIENT_TYPE_ADDRESS) {
-						fprintf(stderr,"recp cp: %i.%i.%i.%i:%i%i\n", 
+						fprintf(stderr,"recp cp: %i.%i.%i.%i:%i%i\n",
 							NC_Descr[i].Recipient_List[ucirecp_i].Recipient._.Address.mac[0],
 							NC_Descr[i].Recipient_List[ucirecp_i].Recipient._.Address.mac[1],
 							NC_Descr[i].Recipient_List[ucirecp_i].Recipient._.Address.mac[2],
