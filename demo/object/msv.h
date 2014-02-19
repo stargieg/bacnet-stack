@@ -45,6 +45,7 @@ extern "C" {
 int max_multi_state_values;
 
     typedef struct multistate_value_descr {
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         uint8_t Present_Value;
@@ -76,6 +77,26 @@ int max_multi_state_values;
 #endif /* INTRINSIC_REPORTING */
     } MULTI_STATE_VALUE_DESCR;
 
+
+/* value/name tuples */
+struct mv_inst_tuple {
+	char idx[18];
+	struct mv_inst_tuple *next;
+};
+
+typedef struct mv_inst_tuple mv_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct mv_inst_itr_ctx {
+	struct mv_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Multistate_Value_Load_UCI_List(
+		const char *sec_idx,
+		struct mv_inst_itr_ctx *itr);
 
     void Multistate_Value_Property_Lists(
         const int **pRequired,
