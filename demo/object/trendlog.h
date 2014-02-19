@@ -86,6 +86,7 @@ extern "C" {
 /* Structure containing config and status info for a Trend Log */
 
     typedef struct trend_log_descr {
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         bool Disable;
@@ -127,6 +128,26 @@ extern "C" {
 #define TL_TYPE_ERROR   8
 #define TL_TYPE_DELTA   9
 #define TL_TYPE_ANY     10      /* We don't support this particular can of worms! */
+
+/* value/name tuples */
+struct tl_inst_tuple {
+	char idx[18];
+	struct tl_inst_tuple *next;
+};
+
+typedef struct tl_inst_tuple tl_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct tl_inst_itr_ctx {
+	struct tl_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Trend_Log_Load_UCI_List(
+		const char *sec_idx,
+		struct tl_inst_itr_ctx *itr);
 
 
     void Trend_Log_Property_Lists(

@@ -53,7 +53,7 @@
 
 /* number of demo objects */
 #ifndef MAX_TREND_LOGS
-#define MAX_TREND_LOGS 512
+#define MAX_TREND_LOGS 65535
 #endif
 unsigned max_trend_logs_int = 0;
 
@@ -125,6 +125,25 @@ void Trend_Log_Property_Lists(
     return;
 }
 
+void Trend_Log_Load_UCI_List(const char *sec_idx,
+	struct tl_inst_itr_ctx *itr)
+{
+	tl_inst_tuple_t *t = malloc(sizeof(tl_inst_tuple_t));
+	bool disable;
+	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+	"disable", 0);
+	if (strcmp(sec_idx,"default") == 0)
+		return;
+	if (disable)
+		return;
+	if( (t = (tl_inst_tuple_t *)malloc(sizeof(tl_inst_tuple_t))) != NULL ) {
+		strncpy(t->idx, sec_idx, sizeof(t->idx));
+		t->next = itr->list;
+		itr->list = t;
+	}
+    return;
+}
+
 /*
  * Things to do when starting up the stack for Trend Logs.
  * Should be called whenever we reset the device or power it up
@@ -132,15 +151,16 @@ void Trend_Log_Property_Lists(
 void Trend_Log_Init(
     void)
 {
-    int i = 0;
+    unsigned i;
     static bool initialized = false;
     char name[64];
     const char *uciname;
-    char description[64];
     int ucidisable;
-    //int ucivalue;
+    char description[64];
     const char *ucidescription;
     const char *ucidescription_default;
+    const char *idx_c;
+    char idx_cc[64];
     int ucidevice_type;
     int ucidevice_type_default;
     int uciobject_type;
@@ -154,13 +174,31 @@ void Trend_Log_Init(
     int iEntry;
     struct tm TempTime;
     time_t tClock;
+    const char *sec = "bacnet_tl";
+
+	char *section;
+	char *type;
+	struct tl_inst_itr_ctx itr_m;
+	section = "bacnet_tl";
+
+#if PRINT_ENABLED
+    fprintf(stderr, "Trend_Log_Init\n");
+#endif
 
     if (!initialized) {
         initialized = true;
-        fprintf(stderr, "Trend_Log_Init\n");
         ctx = ucix_init("bacnet_tl");
+#if PRINT_ENABLED
         if(!ctx)
             fprintf(stderr,  "Failed to load config file bacnet_tl\n");
+#endif
+		type = "tl";
+		tl_inst_tuple_t *cur = malloc(sizeof(tl_inst_tuple_t));
+		itr_m.list = NULL;
+		itr_m.section = section;
+		itr_m.ctx = ctx;
+		ucix_for_each_section_type(ctx, section, type,
+			(void *)Trend_Log_Load_UCI_List, &itr_m);
 
         ucidescription_default = ucix_get_option(ctx, "bacnet_tl", "default",
             "description");
@@ -173,7 +211,8 @@ void Trend_Log_Init(
 
         /* initialize all the values */
 
-        for (i = 0; i < MAX_TREND_LOGS; i++) {
+        i = 0;
+		for( cur = itr_m.list; cur; cur = cur->next ) {
             /*
              * Do we need to do anything here?
              * Trend logs are usually assumed to survive over resets
@@ -185,13 +224,17 @@ void Trend_Log_Init(
              * entries into any active logs if the power down or reset
              * may have caused us to miss readings.
              */
+            /* init with zeros */
+			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
+    	    idx_c = idx_cc;
+
             sprintf(i_string,"%d",i);
-            ucidevice_type = ucix_get_option_int(ctx, "bacnet_tl",
-                i_string, "device_type", ucidevice_type_default);
-            uciobject_type = ucix_get_option_int(ctx, "bacnet_tl",
-                i_string, "object_type", uciobject_type_default);
-            uciobject_instance = ucix_get_option_int(ctx, "bacnet_tl",
-                i_string, "object_instance", i);
+            ucidevice_type = ucix_get_option_int(ctx, sec,
+                idx_c, "device_type", ucidevice_type_default);
+            uciobject_type = ucix_get_option_int(ctx, sec,
+                idx_c, "object_type", uciobject_type_default);
+            uciobject_instance = ucix_get_option_int(ctx, sec,
+                idx_c, "object_instance", i);
             sprintf(i_instance_string, "%lu",
                 (unsigned long) uciobject_instance);
 /*            switch (ucidevice_type) {
@@ -225,6 +268,8 @@ void Trend_Log_Init(
                     if (strcmp(uciobject_s,"bacnet_mv") != 0) {
                         uciobject_s = "bacnet_mv";
                         ctxd = ucix_init(uciobject_s);
+						fprintf(stderr, "Trend_Log_Init %s %i %s %s\n",
+							idx_cc,i,i_instance_string,uciobject_s);
                     }
                     break;
                 default:
@@ -239,10 +284,12 @@ void Trend_Log_Init(
             ucidisable = ucix_get_option_int(ctxd, uciobject_s,
                 i_instance_string, "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
-                fprintf(stderr, "Trend_Log %s\n",uciname);
+            	memset(&TL_Descr[i], 0x00, sizeof(TREND_LOG_DESCR));
+            	TL_Descr[i].Instance=atoi(idx_cc);
+				fprintf(stderr, "Trend_Log_Init name %s \n",
+					uciname);
                 TL_Descr[i].Disable=false;
-                max_trend_logs_int = i+1;
-                sprintf(name, "TL_%s", uciname);
+                sprintf(name, "%s_TL", uciname);
                 ucix_string_copy(TL_Descr[i].Object_Name,
                     sizeof(TL_Descr[i].Object_Name), name);
                 ucidescription = ucix_get_option(ctxd, uciobject_s,
@@ -319,15 +366,16 @@ void Trend_Log_Init(
                 //    TL_BAC_Time_To_Local(&TL_Descr[i].StopTime);
                 TL_Descr[i].ucTimeFlags |= TL_T_STOP_WILD;
                 TL_Descr[i].tStopTime = 0xFFFFFFFF;
-            } else {
-                TL_Descr[i].Disable=true;
+				i++;
+				max_trend_logs_int = i;
             }
         }
-        fprintf(stderr, "max_trend_logs %i\n", max_trend_logs_int);
+#if PRINT_ENABLED
+        fprintf(stderr, "max_trend_logs: %i\n", max_trend_logs_int);
+#endif
         if(ctx)
             ucix_cleanup(ctx);
     }
-
     return;
 }
 
@@ -337,12 +385,17 @@ void Trend_Log_Init(
 unsigned Trend_Log_Instance_To_Index(
     uint32_t object_instance)
 {
-    unsigned index = max_trend_logs_int;
-
-    if (object_instance < max_trend_logs_int)
-        index = object_instance;
-
-    return index;
+    TREND_LOG_DESCR *CurrentTL;
+    int index,instance,i;
+    index = max_trend_logs_int;
+    for (i = 0; i < index; i++) {
+    	CurrentTL = &TL_Descr[i];
+    	instance = CurrentTL->Instance;
+    	if (CurrentTL->Instance == object_instance) {
+    		return i;
+    	}
+    }
+    return 0;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -352,16 +405,10 @@ uint32_t Trend_Log_Index_To_Instance(
     unsigned index)
 {
     TREND_LOG_DESCR *CurrentTL;
-    if (index < max_trend_logs_int) {
-        CurrentTL = &TL_Descr[index];
-        if (CurrentTL->Disable == false) {
-            return index;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
+    uint32_t instance;
+	CurrentTL = &TL_Descr[index];
+	instance = CurrentTL->Instance;
+	return instance;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -380,15 +427,16 @@ bool Trend_Log_Valid_Instance(
 {
     TREND_LOG_DESCR *CurrentTL;
     unsigned index = 0; /* offset from instance lookup */
-    index = Trend_Log_Instance_To_Index(object_instance);
-    if (index < max_trend_logs_int) {
-        CurrentTL = &TL_Descr[index];
-        if (CurrentTL->Disable == false) {
-            return true;
-        } else {
-            return false;
-        }
+    index = Trend_Log_Index_To_Instance(object_instance);
+    if (index == MAX_TREND_LOGS) {
+#if PRINT_ENABLED
+        fprintf(stderr, "Trend_Log_Valid_Instance %i invalid\n",object_instance);
+#endif
+    	return false;
     }
+    CurrentTL = &TL_Descr[index];
+    if (CurrentTL->Disable == false)
+        return true;
 
     return false;
 }
@@ -400,12 +448,10 @@ static char *Trend_Log_Description(
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
-    index = Trend_Log_Instance_To_Index(object_instance);
-    if (index < max_trend_logs_int) {
+    if (Trend_Log_Valid_Instance(object_instance)) {
+        index = Trend_Log_Instance_To_Index(object_instance);
         CurrentTL = &TL_Descr[index];
-        if (CurrentTL->Disable == false) {
-            pName = CurrentTL->Object_Description;
-        }
+        pName = CurrentTL->Object_Description;
     }
 
     return pName;
@@ -515,6 +561,38 @@ bool Trend_Log_Object_Name(
     return status;
 }
 
+/* note: the object name must be unique within this device */
+bool Trend_Log_Object_Name_Set(
+    uint32_t object_instance,
+    char *new_name)
+{
+    TREND_LOG_DESCR *CurrentTL;
+    unsigned index = 0; /* offset from instance lookup */
+    size_t i = 0;       /* loop counter */
+    bool status = false;        /* return value */
+
+    index = Trend_Log_Instance_To_Index(object_instance);
+    if (index < max_trend_logs_int) {
+        CurrentTL = &TL_Descr[index];
+        status = true;
+        /* FIXME: check to see if there is a matching name */
+        if (new_name) {
+            for (i = 0; i < sizeof(CurrentTL->Object_Name); i++) {
+                CurrentTL->Object_Name[i] = new_name[i];
+                if (new_name[i] == 0) {
+                    break;
+                }
+            }
+        } else {
+            for (i = 0; i < sizeof(CurrentTL->Object_Name); i++) {
+                CurrentTL->Object_Name[i] = 0;
+            }
+        }
+    }
+
+    return status;
+}
+
 static bool Trend_Log_Object_Name_Write(
     uint32_t object_instance,
     BACNET_CHARACTER_STRING *char_string,
@@ -579,7 +657,7 @@ int Trend_Log_Read_Property(
     BACNET_BIT_STRING bit_string;
     BACNET_CHARACTER_STRING char_string;
     uint8_t *apdu = NULL;
-    unsigned object_index = 0;
+    unsigned index = 0;
 
     if ((rpdata == NULL) || (rpdata->application_data == NULL) ||
         (rpdata->application_data_len == 0)) {
@@ -588,14 +666,12 @@ int Trend_Log_Read_Property(
 
     apdu = rpdata->application_data;
 
-    object_index = Trend_Log_Instance_To_Index(rpdata->object_instance);
-    if (object_index < max_trend_logs_int)
-        CurrentTL = &TL_Descr[object_index];
-    else
+    if (Trend_Log_Valid_Instance(rpdata->object_instance)) {
+        index = Trend_Log_Instance_To_Index(rpdata->object_instance);
+        CurrentTL = &TL_Descr[index];
+    } else
         return BACNET_STATUS_ERROR;
 
-    if (CurrentTL->Disable == true)
-        return BACNET_STATUS_ERROR;
 
     switch (rpdata->object_property) {
         case PROP_OBJECT_IDENTIFIER:
@@ -762,7 +838,7 @@ bool Trend_Log_Write_Property(
 {
     TREND_LOG_DESCR *CurrentTL;
     bool status = false;        /* return value */
-    unsigned int object_index = 0;
+    unsigned index = 0;
     int object_type = 0;
     uint32_t object_instance = 0;
     int len = 0;
@@ -771,9 +847,9 @@ bool Trend_Log_Write_Property(
     BACNET_DATE TempDate;       /* build here in case of error in time half of datetime */
     BACNET_DEVICE_OBJECT_PROPERTY_REFERENCE TempSource;
     bool bEffectiveEnable;
-    //ctx = ucix_init("bacnet_tl");
-    //const char *idx_c;
-    //char idx_cc[64];
+    ctx = ucix_init("bacnet_tl");
+    const char *idx_c;
+    char idx_cc[64];
 
 
     /* decode the some of the request */
@@ -794,11 +870,11 @@ bool Trend_Log_Write_Property(
         wp_data->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         return false;
     }
-    object_index = Trend_Log_Instance_To_Index(wp_data->object_instance);
-    if (object_index < max_trend_logs_int) {
-        CurrentTL = &TL_Descr[object_index];
-        //sprintf(idx_cc, "%d", object_index);
-        //idx_c = idx_cc;
+    index = Trend_Log_Instance_To_Index(wp_data->object_instance);
+    if (index < max_trend_logs_int) {
+        CurrentTL = &TL_Descr[index];
+        sprintf(idx_cc, "%d", index);
+        idx_c = idx_cc;
     } else
         return false;
 
@@ -859,22 +935,22 @@ bool Trend_Log_Write_Property(
 
                 /* Only trigger this validation on a potential change of state */
                 if (CurrentTL->bEnable != value.type.Boolean) {
-                    bEffectiveEnable = TL_Is_Enabled(object_index);
+                    bEffectiveEnable = TL_Is_Enabled(index);
                     CurrentTL->bEnable = value.type.Boolean;
                     /* To do: what actions do we need to take on writing ? */
                     if (value.type.Boolean == false) {
                         if (bEffectiveEnable == true) {
                             /* Only insert record if we really were
                                enabled i.e. times and enable flags */
-                            TL_Insert_Status_Rec(object_index,
+                            TL_Insert_Status_Rec(index,
                                 LOG_STATUS_LOG_DISABLED, true);
                         }
                     } else {
-                        if (TL_Is_Enabled(object_index)) {
+                        if (TL_Is_Enabled(index)) {
                             /* Have really gone from disabled to enabled as
                              * enable flag and times were correct
                              */
-                            TL_Insert_Status_Rec(object_index,
+                            TL_Insert_Status_Rec(index,
                                 LOG_STATUS_LOG_DISABLED, false);
                         }
                     }
@@ -899,7 +975,7 @@ bool Trend_Log_Write_Property(
                          * disable the log and record the fact - see 135-2008 12.25.12
                          */
                         CurrentTL->bEnable = false;
-                        TL_Insert_Status_Rec(object_index,
+                        TL_Insert_Status_Rec(index,
                             LOG_STATUS_LOG_DISABLED, true);
                     }
                 }
@@ -924,7 +1000,7 @@ bool Trend_Log_Write_Property(
                     /* Time to clear down the log */
                     CurrentTL->ulRecordCount = 0;
                     CurrentTL->iIndex = 0;
-                    TL_Insert_Status_Rec(object_index, LOG_STATUS_BUFFER_PURGED,
+                    TL_Insert_Status_Rec(index, LOG_STATUS_BUFFER_PURGED,
                         true);
                 }
             }
@@ -982,7 +1058,7 @@ bool Trend_Log_Write_Property(
                     break;
                 }
                 /* First record the current enable state of the log */
-                bEffectiveEnable = TL_Is_Enabled(object_index);
+                bEffectiveEnable = TL_Is_Enabled(index);
                 CurrentTL->StartTime.date = TempDate;  /* Safe to copy the date now */
                 CurrentTL->StartTime.time = value.type.Time;
 
@@ -997,15 +1073,15 @@ bool Trend_Log_Write_Property(
                         TL_BAC_Time_To_Local(&CurrentTL->StartTime);
                 }
 
-                if (bEffectiveEnable != TL_Is_Enabled(object_index)) {
+                if (bEffectiveEnable != TL_Is_Enabled(index)) {
                     /* Enable status has changed because of time update */
                     if (bEffectiveEnable == true) {
                         /* Say we went from enabled to disabled */
-                        TL_Insert_Status_Rec(object_index,
+                        TL_Insert_Status_Rec(index,
                             LOG_STATUS_LOG_DISABLED, true);
                     } else {
                         /* Say we went from disabled to enabled */
-                        TL_Insert_Status_Rec(object_index,
+                        TL_Insert_Status_Rec(index,
                             LOG_STATUS_LOG_DISABLED, false);
                     }
                 }
@@ -1034,7 +1110,7 @@ bool Trend_Log_Write_Property(
                     break;
                 }
                 /* First record the current enable state of the log */
-                bEffectiveEnable = TL_Is_Enabled(object_index);
+                bEffectiveEnable = TL_Is_Enabled(index);
                 CurrentTL->StopTime.date = TempDate;   /* Safe to copy the date now */
                 CurrentTL->StopTime.time = value.type.Time;
 
@@ -1049,15 +1125,15 @@ bool Trend_Log_Write_Property(
                         TL_BAC_Time_To_Local(&CurrentTL->StopTime);
                 }
 
-                if (bEffectiveEnable != TL_Is_Enabled(object_index)) {
+                if (bEffectiveEnable != TL_Is_Enabled(index)) {
                     /* Enable status has changed because of time update */
                     if (bEffectiveEnable == true) {
                         /* Say we went from enabled to disabled */
-                        TL_Insert_Status_Rec(object_index,
+                        TL_Insert_Status_Rec(index,
                             LOG_STATUS_LOG_DISABLED, true);
                     } else {
                         /* Say we went from disabled to enabled */
-                        TL_Insert_Status_Rec(object_index,
+                        TL_Insert_Status_Rec(index,
                             LOG_STATUS_LOG_DISABLED, false);
                     }
                 }
@@ -1159,7 +1235,7 @@ bool Trend_Log_Write_Property(
                 /* Clear buffer if property being logged is changed */
                 CurrentTL->ulRecordCount = 0;
                 CurrentTL->iIndex = 0;
-                TL_Insert_Status_Rec(object_index, LOG_STATUS_BUFFER_PURGED,
+                TL_Insert_Status_Rec(index, LOG_STATUS_BUFFER_PURGED,
                     true);
             }
             CurrentTL->Source = TempSource;
@@ -1237,8 +1313,12 @@ bool Trend_Log_Write_Property(
             wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
             break;
     }
-    //ucix_commit(ctx, "bacnet_tl");
-    //ucix_cleanup(ctx);
+
+    if(ctx) {
+        ucix_commit(ctx, "bacnet_tl");
+        ucix_cleanup(ctx);
+    }
+
     return status;
 }
 
@@ -1246,10 +1326,10 @@ bool TrendLogGetRRInfo(
     BACNET_READ_RANGE_DATA * pRequest,  /* Info on the request */
     RR_PROP_INFO * pInfo)
 {       /* Where to put the information */
-    int object_index;
+    unsigned index;
 
-    object_index = Trend_Log_Instance_To_Index(pRequest->object_instance);
-    if (object_index >= MAX_TREND_LOGS) {
+    index = Trend_Log_Instance_To_Index(pRequest->object_instance);
+    if (index >= MAX_TREND_LOGS) {
         pRequest->error_class = ERROR_CLASS_OBJECT;
         pRequest->error_code = ERROR_CODE_UNKNOWN_OBJECT;
     } else if (pRequest->object_property == PROP_LOG_BUFFER) {
@@ -1489,7 +1569,7 @@ int TL_encode_by_position(
     uint8_t * apdu,
     BACNET_READ_RANGE_DATA * pRequest)
 {
-    int object_index = 0;
+    unsigned index = 0;
     int iLen = 0;
     int32_t iTemp = 0;
     TREND_LOG_DESCR *CurrentTL = NULL;
@@ -1502,8 +1582,8 @@ int TL_encode_by_position(
 
     /* See how much space we have */
     uiRemaining = MAX_APDU - pRequest->Overhead;
-    object_index = Trend_Log_Instance_To_Index(pRequest->object_instance);
-    CurrentTL = &TL_Descr[object_index];
+    index = Trend_Log_Instance_To_Index(pRequest->object_instance);
+    CurrentTL = &TL_Descr[index];
     if (pRequest->RequestType == RR_READ_ALL) {
         /*
          * Read all the list or as much as will fit in the buffer by selecting
@@ -1561,7 +1641,7 @@ int TL_encode_by_position(
             break;
         }
 
-        iTemp = TL_encode_entry(&apdu[iLen], object_index, uiIndex);
+        iTemp = TL_encode_entry(&apdu[iLen], index, uiIndex);
 
         uiRemaining -= iTemp;   /* Reduce the remaining space */
         iLen += iTemp;  /* and increase the length consumed */
@@ -1593,7 +1673,7 @@ int TL_encode_by_sequence(
     uint8_t * apdu,
     BACNET_READ_RANGE_DATA * pRequest)
 {
-    int object_index = 0;
+    unsigned index = 0;
     int iLen = 0;
     int32_t iTemp = 0;
     TREND_LOG_DESCR *CurrentTL = NULL;
@@ -1612,8 +1692,8 @@ int TL_encode_by_sequence(
 
     /* See how much space we have */
     uiRemaining = MAX_APDU - pRequest->Overhead;
-    object_index = Trend_Log_Instance_To_Index(pRequest->object_instance);
-    CurrentTL = &TL_Descr[object_index];
+    index = Trend_Log_Instance_To_Index(pRequest->object_instance);
+    CurrentTL = &TL_Descr[index];
     /* Figure out the sequence number for the first record, last is ulTotalRecordCount */
     uiFirstSeq =
         CurrentTL->ulTotalRecordCount - (CurrentTL->ulRecordCount - 1);
@@ -1695,7 +1775,7 @@ int TL_encode_by_sequence(
             break;
         }
 
-        iTemp = TL_encode_entry(&apdu[iLen], object_index, uiIndex);
+        iTemp = TL_encode_entry(&apdu[iLen], index, uiIndex);
 
         uiRemaining -= iTemp;   /* Reduce the remaining space */
         iLen += iTemp;  /* and increase the length consumed */
@@ -1729,7 +1809,7 @@ int TL_encode_by_time(
     uint8_t * apdu,
     BACNET_READ_RANGE_DATA * pRequest)
 {
-    int object_index = 0;
+    unsigned index = 0;
     int iLen = 0;
     int32_t iTemp = 0;
     int iCount = 0;
@@ -1744,8 +1824,8 @@ int TL_encode_by_time(
 
     /* See how much space we have */
     uiRemaining = MAX_APDU - pRequest->Overhead;
-    object_index = Trend_Log_Instance_To_Index(pRequest->object_instance);
-    CurrentTL = &TL_Descr[object_index];
+    index = Trend_Log_Instance_To_Index(pRequest->object_instance);
+    CurrentTL = &TL_Descr[index];
 
     tRefTime = TL_BAC_Time_To_Local(&pRequest->Range.RefTime);
     /* Find correct position for oldest entry in log */
@@ -1827,7 +1907,7 @@ int TL_encode_by_time(
             break;
         }
 
-        iTemp = TL_encode_entry(&apdu[iLen], object_index, uiIndex);
+        iTemp = TL_encode_entry(&apdu[iLen], index, uiIndex);
 
         uiRemaining -= iTemp;   /* Reduce the remaining space */
         iLen += iTemp;  /* and increase the length consumed */
