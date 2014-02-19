@@ -2,6 +2,8 @@
 *
 * Copyright (C) 2012 Steve Karg <skarg@users.sourceforge.net>
 *
+* Copyright (C) 2013 Patrick Grimm <patrick@lunatiki.de>
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
 * "Software"), to deal in the Software without restriction, including
@@ -28,6 +30,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bacdef.h"
+#include "cov.h"
 #include "bacerror.h"
 #include "rp.h"
 #include "wp.h"

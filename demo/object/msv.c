@@ -31,13 +31,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "bacdef.h"
 #include "bacdcode.h"
 #include "bacenum.h"
 #include "bacapp.h"
 #include "bactext.h"
-#include "cov.h"
 #include "config.h"     /* the custom stuff */
 #include "device.h"
 #include "handlers.h"
@@ -54,14 +54,10 @@ unsigned max_multi_state_values_int = 0;
 /* the Relinquish Default value */
 #define MULTI_STATE_RELINQUISH_DEFAULT 0
 
-/* NULL part of the array */
-#define MULTI_STATE_NULL (255)
-
 /* we choose to have a NULL level in our system represented by */
 /* a particular value.  When the priorities are not in use, they */
 /* will be relinquished (i.e. set to the NULL level). */
 #define MULTI_STATE_LEVEL_NULL 255
-
 
 MULTI_STATE_VALUE_DESCR MSV_Descr[MAX_MULTI_STATE_VALUES];
 
@@ -245,7 +241,7 @@ void Multistate_Value_Init(
     
                 ucivalue = ucix_get_option_int(ctx, "bacnet_mv", idx_c,
                     "value", 1);
-                MSV_Descr[i].Priority_Array[15] = ucivalue;
+                MSV_Descr[i].Priority_Array[15] = (uint8_t) ucivalue;
                 MSV_Descr[i].Relinquish_Default = 1; //TODO read uci
 
                 ucistate_n = ucix_get_list(ucistate, ctx,
@@ -438,21 +434,21 @@ bool Multistate_Value_Present_Value_Set(
     if (Multistate_Value_Valid_Instance(object_instance)) {
         index = Multistate_Value_Instance_To_Index(object_instance);
         CurrentMSV = &MSV_Descr[index];
-        if ((value > 0) && (value <= CurrentMSV->number_of_states)) {
-            CurrentMSV->Present_Value = (uint8_t) value;
+        if (priority && (priority <= BACNET_MAX_PRIORITY) &&
+            (priority != 6 /* reserved */ ) && (value > 0) &&
+            (value <= CurrentMSV->number_of_states)) {
+//          CurrentMSV->Present_Value = (uint8_t) value;
             CurrentMSV->Priority_Array[priority - 1] = (uint8_t) value;
+            /* Note: you could set the physical output here to the next
+                highest priority, or to the relinquish default if no
+                priorities are set.
+                However, if Out of Service is TRUE, then don't set the
+                physical output.  This comment may apply to the
+                main loop (i.e. check out of service before changing output) */
+            if (priority == 8) {
+                CurrentMSV->Priority_Array[15] = (uint8_t) value;
+            }
             status = true;
-            //if (priority && (priority <= BACNET_MAX_PRIORITY) &&
-                //(priority != 6 /* reserved */ )) {
-                    //CurrentMSV->Priority_Array[priority - 1] = (uint8_t) value;
-                    /* Note: you could set the physical output here to the next
-                    highest priority, or to the relinquish default if no
-                    priorities are set.
-                    However, if Out of Service is TRUE, then don't set the
-                    physical output.  This comment may apply to the
-                    main loop (i.e. check out of service before changing output) */
-                    //status = true;
-             //}
         }
     }
     return status;
@@ -597,7 +593,7 @@ static bool Multistate_Value_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentMSV->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mv", idx_c,
@@ -701,7 +697,7 @@ static bool Multistate_Value_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentMSV->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mv", idx_c,
@@ -802,7 +798,7 @@ static bool Multistate_Value_State_Text_Write(
     if (Multistate_Value_Valid_Instance(object_instance)) {
         index = Multistate_Value_Instance_To_Index(object_instance);
         CurrentMSV = &MSV_Descr[index];
-        sprintf(idx_cc,"%d",index);
+        sprintf(idx_cc,"%d",CurrentMSV->Instance);
         idx_c = idx_cc;
         if ((state_index > 0) && (state_index <= CurrentMSV->number_of_states)) {
             state_index--;
@@ -1200,6 +1196,8 @@ bool Multistate_Value_Write_Property(
     const char index_c[32] = "";
     const char *idx_c;
     char idx_cc[64];
+    char cur_value[16];
+    time_t cur_value_time;
 
     /* decode the some of the request */
     len =
@@ -1216,10 +1214,11 @@ bool Multistate_Value_Write_Property(
     if (Multistate_Value_Valid_Instance(wp_data->object_instance)) {
         index = Multistate_Value_Instance_To_Index(wp_data->object_instance);
         CurrentMSV = &MSV_Descr[index];
-        sprintf(idx_cc,"%d",index);
+        sprintf(idx_cc,"%d",CurrentMSV->Instance);
         idx_c = idx_cc;
-    } else
+    } else {
         return false;
+    }
 
     switch (wp_data->object_property) {
         case PROP_OBJECT_NAME:
@@ -1268,6 +1267,14 @@ bool Multistate_Value_Write_Property(
                 if (Multistate_Value_Present_Value_Set(wp_data->object_instance,
                         value.type.Unsigned_Int, wp_data->priority)) {
                     status = true;
+                    sprintf(cur_value,"%d",value.type.Unsigned_Int);
+                    ucix_add_option(ctx, "bacnet_mv", idx_c, "value",
+                        cur_value);
+                    cur_value_time = time(NULL);
+                    ucix_add_option_int(ctx, "bacnet_mv", idx_c, "value_time",
+                        cur_value_time);
+                    ucix_add_option_int(ctx, "bacnet_mv", idx_c, "write",
+                        1);
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
