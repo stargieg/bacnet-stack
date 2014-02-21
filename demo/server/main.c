@@ -179,8 +179,10 @@ int main(
 
     pEnv = getenv("UCI_SECTION");
     ctx = ucix_init("bacnet_dev");
+#if PRINT_ENABLED
     if(!ctx)
         fprintf(stderr,  "Failed to load config file bacnet_dev\n");
+#endif
     uci_id = ucix_get_option_int(ctx, "bacnet_dev", pEnv, "id", 0);
     if (uci_id != 0) {
         Device_Set_Object_Instance_Number(uci_id);
@@ -192,9 +194,11 @@ int main(
     if(ctx)
         ucix_cleanup(ctx);
 
-    printf("BACnet Server Demo\n" "BACnet Stack Version %s\n"
+#if PRINT_ENABLED
+    printf("BACnet Server with uci\n" "BACnet Stack Version %s\n"
         "BACnet Device ID: %u\n" "Max APDU: %d\n", BACnet_Version,
         Device_Object_Instance_Number(), MAX_APDU);
+#endif
     /* load any static address bindings to show up
        in our device bindings list */
     address_init();
@@ -250,6 +254,7 @@ int main(
             recipient_scan_tmr = 0;
         }
 #endif
+#if false
         /* output */
         rewrite++;
         if (rewrite>10000) {
@@ -263,12 +268,16 @@ int main(
         chk_mtime = check_uci_update(section, ucimodtime_bacnet_av);
         if ( rewrite == 0) {
             chk_mtime = ucimodtime_bacnet_av;
+#if PRINT_ENABLED
             printf("rewrite %i\n", rewrite);
+#endif
         }
         if(chk_mtime != 0) {
             sleep(1);
             ucimodtime_bacnet_av = chk_mtime;
+#if PRINT_ENABLED
             printf("Config changed, reloading %s\n",section);
+#endif
             ctx = ucix_init(section);
             struct uci_itr_ctx itr;
             value_tuple_t *cur;
@@ -278,11 +287,15 @@ int main(
             ucix_for_each_section_type(ctx, section, type,
                 (void *)load_value, &itr);
             for( cur = itr.list; cur; cur = cur->next ) {
+#if PRINT_ENABLED
                 printf("section %s idx %s \n", section, cur->idx);
+#endif
                 val_f = strtof(cur->value,NULL);
                 uci_idx = atoi(cur->idx);
+#if PRINT_ENABLED
                 printf("idx %s ",cur->idx);
                 printf("value %s\n",cur->value);
+#endif
                 pval_f = Analog_Value_Present_Value(uci_idx);
                 if ( val_f != pval_f ) {
                     Analog_Value_Present_Value_Set(uci_idx,val_f,16);
@@ -294,8 +307,10 @@ int main(
                         Analog_Value_Reliability_Set(uci_idx,
                             RELIABILITY_NO_FAULT_DETECTED);
                 } else {
+#if PRINT_ENABLED
                     printf("idx %s ",cur->idx);
                     printf("Out_Of_Service\n");
+#endif
                     Analog_Value_Out_Of_Service_Set(uci_idx,1);
                     Analog_Value_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
@@ -315,7 +330,9 @@ int main(
         if(chk_mtime != 0) {
             sleep(1);
             ucimodtime_bacnet_ao = chk_mtime;
+#if PRINT_ENABLED
             printf("Config changed, reloading %s\n",section);
+#endif
             ctx = ucix_init(section);
             struct uci_itr_ctx itr;
             value_tuple_t *cur;
@@ -325,11 +342,15 @@ int main(
             ucix_for_each_section_type(ctx, section, type,
                 (void *)load_value, &itr);
             for( cur = itr.list; cur; cur = cur->next ) {
+#if PRINT_ENABLED
                 printf("section %s idx %s \n", section, cur->idx);
+#endif
                 val_f = strtof(cur->value,NULL);
                 uci_idx = atoi(cur->idx);
+#if PRINT_ENABLED
                 printf("idx %s ",cur->idx);
                 printf("value %s\n",cur->value);
+#endif
                 pval_f = Analog_Output_Present_Value(uci_idx);
                 if ( val_f != pval_f ) {
                     Analog_Output_Present_Value_Set(uci_idx,val_f,16);
@@ -341,8 +362,10 @@ int main(
                         Analog_Output_Reliability_Set(uci_idx,
                             RELIABILITY_NO_FAULT_DETECTED);
                 } else {
+#if PRINT_ENABLED
                     printf("idx %s ",cur->idx);
                     printf("Out_Of_Service\n");
+#endif
                     Analog_Output_Out_Of_Service_Set(uci_idx,1);
                     Analog_Output_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
@@ -360,9 +383,11 @@ int main(
         if ( rewrite == 0) {
             chk_mtime = ucimodtime_bacnet_mv;
         }
-        if(chk_mtime != 0) {
+        if(chk_mtime != 1) {
             ucimodtime_bacnet_mv = chk_mtime;
+#if PRINT_ENABLED
             printf("Config changed, reloading %s\n",section);
+#endif
             ctx = ucix_init(section);
             struct uci_itr_ctx itr;
             value_tuple_t *cur;
@@ -372,12 +397,16 @@ int main(
             ucix_for_each_section_type(ctx, section, type,
                 (void *)load_value, &itr);
             for( cur = itr.list; cur; cur = cur->next ) {
+#if PRINT_ENABLED
                 printf("section %s idx %s \n", section, cur->idx);
+#endif
                 val_f = strtof(cur->value,NULL);
                 uci_idx = atoi(cur->idx);
                 if (val_f || !strcmp(cur->value, "0")) {
+#if PRINT_ENABLED
                     printf("idx %s ",cur->idx);
                     printf("value %s\n",cur->value);
+#endif
                     pval_f = Multistate_Value_Present_Value(uci_idx);
                     if ( val_f != pval_f ) {
                         Multistate_Value_Present_Value_Set(uci_idx,val_f,16);
@@ -388,8 +417,10 @@ int main(
                         Multistate_Value_Reliability_Set(uci_idx,
                             RELIABILITY_NO_FAULT_DETECTED);
                 } else {
+#if PRINT_ENABLED
                     printf("idx %s ",cur->idx);
                     printf("Out_Of_Service\n");
+#endif
                     Multistate_Value_Out_Of_Service_Set(uci_idx,1);
                     Multistate_Value_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
@@ -401,8 +432,10 @@ int main(
                         Multistate_Value_Reliability_Set(uci_idx,
                             RELIABILITY_NO_FAULT_DETECTED);
                 } else {
+#if PRINT_ENABLED
                     printf("idx %s ",cur->idx);
                     printf("Out_Of_Service\n");
+#endif
                     Multistate_Value_Out_Of_Service_Set(uci_idx,1);
                     Multistate_Value_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
@@ -422,7 +455,9 @@ int main(
         }
         if(chk_mtime != 0) {
             ucimodtime_bacnet_bi = chk_mtime;
+#if PRINT_ENABLED
             printf("Config changed, reloading %s\n",section);
+#endif
             ctx = ucix_init(section);
             struct uci_itr_ctx itr;
             value_tuple_t *cur;
@@ -432,10 +467,14 @@ int main(
             ucix_for_each_section_type(ctx, section, type,
                 (void *)load_value, &itr);
             for( cur = itr.list; cur; cur = cur->next ) {
+#if PRINT_ENABLED
                 printf("section %s idx %s \n", section, cur->idx);
+#endif
                 if (cur->value) {
+#if PRINT_ENABLED
                     printf("idx %s ",cur->idx);
                     printf("value %s\n",cur->value);
+#endif
                     val_i = atoi(cur->value);
                     uci_idx = atoi(cur->idx);
                     pval_i = Binary_Input_Present_Value(uci_idx);
@@ -450,8 +489,10 @@ int main(
                         Binary_Input_Reliability_Set(uci_idx,
                             RELIABILITY_NO_FAULT_DETECTED);
                 } else {
+#if PRINT_ENABLED
                     printf("idx %s ",cur->idx);
                     printf("Out_Of_Service\n");
+#endif
                     Binary_Input_Out_Of_Service_Set(uci_idx,1);
                     Binary_Input_Reliability_Set(uci_idx,
                         RELIABILITY_COMMUNICATION_FAILURE);
@@ -460,7 +501,7 @@ int main(
             ucix_cleanup(ctx);
         }
         /* update end */
-
+#endif
         /* blink LEDs, Turn on or off outputs, etc */
     }
 

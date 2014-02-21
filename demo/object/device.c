@@ -123,7 +123,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         Analog_Input_Intrinsic_Reporting},
-#endif
     {OBJECT_ANALOG_OUTPUT,
             Analog_Output_Init,
             Analog_Output_Count,
@@ -139,6 +138,7 @@ static object_functions_t My_Object_Table[] = {
             Analog_Output_Change_Of_Value,
             Analog_Output_Change_Of_Value_Clear,
         Analog_Value_Intrinsic_Reporting},
+#endif
     {OBJECT_ANALOG_VALUE,
             Analog_Value_Init,
             Analog_Value_Count,
@@ -154,6 +154,7 @@ static object_functions_t My_Object_Table[] = {
             Analog_Value_Change_Of_Value,
             Analog_Value_Change_Of_Value_Clear,
         Analog_Value_Intrinsic_Reporting},
+#if 0
     {OBJECT_BINARY_INPUT,
             Binary_Input_Init,
             Binary_Input_Count,
@@ -184,7 +185,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#if 0
     {OBJECT_BINARY_VALUE,
             Binary_Value_Init,
             Binary_Value_Count,
@@ -264,7 +264,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
-#endif
     {OBJECT_MULTI_STATE_INPUT,
             Multistate_Input_Init,
             Multistate_Input_Count,
@@ -295,6 +294,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         Multistate_Output_Intrinsic_Reporting },
+#endif
     {OBJECT_MULTI_STATE_VALUE,
             Multistate_Value_Init,
             Multistate_Value_Count,
@@ -493,8 +493,10 @@ bool Device_Reinitialize(
         if (enable_pw) {
             uci_password = ucix_get_option(ctx, "bacnet_dev", pEnv, "password");
         }
+#if PRINT_ENABLED
     } else {
         fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
     }
 
     if (enable_pw) {
@@ -718,8 +720,10 @@ bool Device_Set_Object_Name(
             ucix_add_option(ctx, "bacnet_dev", pEnv, "name", object_name->value);
             ucix_commit(ctx, "bacnet_dev");
             ucix_cleanup(ctx);
+#if PRINT_ENABLED
         } else {
             fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
         }
     }
 
@@ -889,8 +893,10 @@ bool Device_Set_Description(
             ucix_add_option(ctx, "bacnet_dev", pEnv, "description", name);
             ucix_commit(ctx, "bacnet_dev");
             ucix_cleanup(ctx);
+#if PRINT_ENABLED
         } else {
             fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
         }
         status = true;
     }
@@ -920,8 +926,10 @@ bool Device_Set_Location(
             ucix_add_option(ctx, "bacnet_dev", pEnv, "location", name);
             ucix_commit(ctx, "bacnet_dev");
             ucix_cleanup(ctx);
+#if PRINT_ENABLED
         } else {
             fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
         }
         status = true;
     }
@@ -1872,7 +1880,9 @@ void Device_Init(
 
     pEnv = getenv("UCI_SECTION");
 
+#if PRINT_ENABLED
     fprintf(stderr, "Device_Init\n");
+#endif
     ctx = ucix_init("bacnet_dev");
     if(!ctx)
         fprintf(stderr,  "Failed to load config file bacnet_dev\n");
