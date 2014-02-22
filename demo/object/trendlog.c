@@ -295,22 +295,22 @@ void Trend_Log_Init(
                 uciinterval = ucix_get_option_int(ctx, "bacnet_tl",
                     i_string, "interval", uciinterval_default);
 
+#if 0
                 /* We will just fill the logs with some entries for testing
                  * purposes.
                  */
-                TempTime.tm_year = 109;
-                TempTime.tm_mon = i + 1; /* Different month for each log */
+                TempTime.tm_year = 2000;
+                TempTime.tm_mon = 1;
                 TempTime.tm_mday = 1;
                 TempTime.tm_hour = 0;
                 TempTime.tm_min = 0;
                 TempTime.tm_sec = 0;
                 tClock = mktime(&TempTime);
-    
                 for (iEntry = 0; iEntry < TL_INIT_ENTRIES; iEntry++) {
                     Logs[i][iEntry].tTimeStamp = tClock;
                     Logs[i][iEntry].ucRecType = TL_TYPE_REAL;
-                    Logs[i][iEntry].Datum.fReal =
-                        (float) (iEntry + (i * TL_MAX_ENTRIES));
+                    Logs[i][iEntry].Datum.fReal = 0;
+                    //    (float) (iEntry + (i * TL_MAX_ENTRIES));
                     /* Put status flags with every second log */
                     if ((i & 1) == 0)
                         Logs[i][iEntry].ucStatus = 128;
@@ -318,7 +318,7 @@ void Trend_Log_Init(
                         Logs[i][iEntry].ucStatus = 0;
                     tClock += 900;  /* advance 15 minutes */
                 }
-    
+#endif
                 TL_Descr[i].tLastDataTime = tClock - 900;
                 TL_Descr[i].bAlignIntervals = true;
                 TL_Descr[i].bEnable = true;
@@ -331,8 +331,8 @@ void Trend_Log_Init(
                 TL_Descr[i].iIndex = 0;
                 TL_Descr[i].ulLogInterval = uciinterval;
                 TL_Descr[i].ulRecordCount = TL_INIT_ENTRIES;
-                TL_Descr[i].ulTotalRecordCount = 10000;
-    
+                TL_Descr[i].ulTotalRecordCount = TL_INIT_ENTRIES;
+
                 TL_Descr[i].Source.deviceIndentifier.instance =
                     Device_Object_Instance_Number();
                 TL_Descr[i].Source.deviceIndentifier.type = ucidevice_type;
@@ -340,21 +340,12 @@ void Trend_Log_Init(
                 TL_Descr[i].Source.objectIdentifier.type = uciobject_type;
                 TL_Descr[i].Source.arrayIndex = BACNET_ARRAY_ALL;
                 TL_Descr[i].Source.propertyIdentifier = PROP_PRESENT_VALUE;
-    
-                //datetime_set_values(&TL_Descr[i].StartTime, 2009, 1, 1, 0, 0, 0,
-                //    0);
-                //TL_Descr[i].tStartTime =
-                //    TL_BAC_Time_To_Local(&TL_Descr[i].StartTime);
-                TL_Descr[i].ucTimeFlags |= TL_T_START_WILD;
-                TL_Descr[i].tStartTime = 0;
-                //datetime_set_values(&TL_Descr[i].StopTime,
-                //    2020, 12, 22, 23, 59, 59, 99);
-                //TL_Descr[i].tStopTime =
-                //    TL_BAC_Time_To_Local(&TL_Descr[i].StopTime);
+
+                datetime_set_values(&TL_Descr[i].StartTime, 2000, 1, 1, 0, 0, 0,
+                    0);
                 TL_Descr[i].ucTimeFlags |= TL_T_STOP_WILD;
-                TL_Descr[i].tStopTime = 0xFFFFFFFF;
-				i++;
-				max_trend_logs_int = i;
+                i++;
+                max_trend_logs_int = i;
             }
         }
 #if PRINT_ENABLED
@@ -658,8 +649,9 @@ int Trend_Log_Read_Property(
     if (Trend_Log_Valid_Instance(rpdata->object_instance)) {
         index = Trend_Log_Instance_To_Index(rpdata->object_instance);
         CurrentTL = &TL_Descr[index];
-    } else
+    } else {
         return BACNET_STATUS_ERROR;
+    }
 
 
     switch (rpdata->object_property) {
@@ -1317,8 +1309,7 @@ bool TrendLogGetRRInfo(
 {       /* Where to put the information */
     unsigned index;
 
-    if (Trend_Log_Valid_Instance(pRequest->object_instance)) {
-        index = Trend_Log_Instance_To_Index(pRequest->object_instance);
+    if (!Trend_Log_Valid_Instance(pRequest->object_instance)) {
         pRequest->error_class = ERROR_CLASS_OBJECT;
         pRequest->error_code = ERROR_CODE_UNKNOWN_OBJECT;
     } else if (pRequest->object_property == PROP_LOG_BUFFER) {
@@ -1424,6 +1415,7 @@ bool TL_Is_Enabled(
                 }
         }
     }
+
     return (bStatus);
 }
 
@@ -1512,6 +1504,7 @@ int rr_trend_log_encode(
     uint8_t * apdu,
     BACNET_READ_RANGE_DATA * pRequest)
 {
+    unsigned index = 0;
     /* Initialise result flags to all false */
     bitstring_init(&pRequest->ResultFlags);
     bitstring_set_bit(&pRequest->ResultFlags, RESULT_FLAG_FIRST_ITEM, false);
@@ -1520,15 +1513,18 @@ int rr_trend_log_encode(
     pRequest->ItemCount = 0;    /* Start out with nothing */
 
     /* Bail out now if nowt - should never happen for a Trend Log but ... */
-    if (TL_Descr[Trend_Log_Instance_To_Index(pRequest->
-                object_instance)].ulRecordCount == 0)
-        return (0);
+    if (Trend_Log_Valid_Instance(pRequest->object_instance)) {
+        index = Trend_Log_Instance_To_Index(pRequest->object_instance);
+        if (TL_Descr[index].ulRecordCount == 0)
+            return (0);
+    }
 
     if ((pRequest->RequestType == RR_BY_POSITION) ||
-        (pRequest->RequestType == RR_READ_ALL))
+        (pRequest->RequestType == RR_READ_ALL)) {
         return (TL_encode_by_position(apdu, pRequest));
-    else if (pRequest->RequestType == RR_BY_SEQUENCE)
+    } else if (pRequest->RequestType == RR_BY_SEQUENCE) {
         return (TL_encode_by_sequence(apdu, pRequest));
+    }
 
     return (TL_encode_by_time(apdu, pRequest));
 }
@@ -1554,6 +1550,8 @@ int TL_encode_by_position(
     uint32_t uiTarget = 0;      /* Last entry we are required to encode */
     uint32_t uiRemaining = 0;   /* Amount of unused space in packet */
 
+    if (!Trend_Log_Valid_Instance(pRequest->object_instance))
+            return (iLen);
     /* See how much space we have */
     uiRemaining = MAX_APDU - pRequest->Overhead;
     index = Trend_Log_Instance_To_Index(pRequest->object_instance);
@@ -1663,6 +1661,9 @@ int TL_encode_by_sequence(
     uint32_t uiEnd = 0; /* Ending Sequence number for request */
     bool bWrapReq = false;      /* Has request sequence range spanned the max for uint32_t? */
     bool bWrapLog = false;      /* Has log sequence range spanned the max for uint32_t? */
+
+    if (!Trend_Log_Valid_Instance(pRequest->object_instance))
+            return (iLen);
 
     /* See how much space we have */
     uiRemaining = MAX_APDU - pRequest->Overhead;
@@ -1796,6 +1797,9 @@ int TL_encode_by_time(
     uint32_t uiFirstSeq = 0;    /* Sequence number for 1st record in log */
     time_t tRefTime = 0;        /* The time from the request in local format */
 
+    if (!Trend_Log_Valid_Instance(pRequest->object_instance))
+            return (iLen);
+
     /* See how much space we have */
     uiRemaining = MAX_APDU - pRequest->Overhead;
     index = Trend_Log_Instance_To_Index(pRequest->object_instance);
@@ -1816,7 +1820,7 @@ int TL_encode_by_time(
         /* Start out with the sequence number for the last record */
         uiFirstSeq = CurrentTL->ulTotalRecordCount;
         for (;;) {
-            if (Logs[pRequest->object_instance][(uiIndex +
+            if (Logs[index][(uiIndex +
                         iCount) % TL_MAX_ENTRIES].tTimeStamp < tRefTime)
                 break;
 
@@ -1854,7 +1858,7 @@ int TL_encode_by_time(
         uiFirstSeq =
             CurrentTL->ulTotalRecordCount - (CurrentTL->ulRecordCount - 1);
         for (;;) {
-            if (Logs[pRequest->object_instance][(uiIndex +
+            if (Logs[index][(uiIndex +
                         iCount) % TL_MAX_ENTRIES].tTimeStamp > tRefTime)
                 break;
 

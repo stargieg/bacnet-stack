@@ -81,7 +81,7 @@ extern "C" {
 #define TL_T_STOP_WILD  2       /* Stop Time is wild carded */
 
 #define TL_MAX_ENTRIES 1000     /* Entries per datalog */
-#define TL_INIT_ENTRIES 1     /* Entries per datalog */
+#define TL_INIT_ENTRIES 0       /* Entries per datalog */
 
 /* Structure containing config and status info for a Trend Log */
 
