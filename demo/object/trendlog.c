@@ -169,11 +169,11 @@ void Trend_Log_Init(
     int uciobject_instance;
     int uciinterval;
     int uciinterval_default;
-    char i_string[64];
     char i_instance_string[64];
-    int iEntry;
+#if 0
     struct tm TempTime;
     time_t tClock;
+#endif
     const char *sec = "bacnet_tl";
 
 	char *section;
@@ -200,14 +200,14 @@ void Trend_Log_Init(
 		ucix_for_each_section_type(ctx, section, type,
 			(void *)Trend_Log_Load_UCI_List, &itr_m);
 
-        ucidescription_default = ucix_get_option(ctx, "bacnet_tl", "default",
+        ucidescription_default = ucix_get_option(ctx, sec, "default",
             "description");
-        uciinterval_default = ucix_get_option_int(ctx, "bacnet_tl",
+        uciinterval_default = ucix_get_option_int(ctx, sec,
             "default", "interval", 900);
-        ucidevice_type_default = ucix_get_option_int(ctx, "bacnet_tl",
-            i_string, "device_type", OBJECT_DEVICE);
-        uciobject_type_default = ucix_get_option_int(ctx, "bacnet_tl",
-            i_string, "object_type", 255);
+        ucidevice_type_default = ucix_get_option_int(ctx, sec,
+            "default", "device_type", OBJECT_DEVICE);
+        uciobject_type_default = ucix_get_option_int(ctx, sec,
+            "default", "object_type", 255);
 
         /* initialize all the values */
 
@@ -227,7 +227,6 @@ void Trend_Log_Init(
             /* init with zeros */
             strncpy(idx_cc, cur->idx, sizeof(idx_cc));
             idx_c = idx_cc;
-            sprintf(i_string,"%d",i);
             ucidevice_type = ucix_get_option_int(ctx, sec,
                 idx_c, "device_type", ucidevice_type_default);
             uciobject_type = ucix_get_option_int(ctx, sec,
@@ -292,8 +291,8 @@ void Trend_Log_Init(
                 }
                 ucix_string_copy(TL_Descr[i].Object_Description,
                     sizeof(TL_Descr[i].Object_Description), description);
-                uciinterval = ucix_get_option_int(ctx, "bacnet_tl",
-                    i_string, "interval", uciinterval_default);
+                uciinterval = ucix_get_option_int(ctx, sec,
+                    idx_c, "interval", uciinterval_default);
 
 #if 0
                 /* We will just fill the logs with some entries for testing
@@ -318,8 +317,8 @@ void Trend_Log_Init(
                         Logs[i][iEntry].ucStatus = 0;
                     tClock += 900;  /* advance 15 minutes */
                 }
-#endif
                 TL_Descr[i].tLastDataTime = tClock - 900;
+#endif
                 TL_Descr[i].bAlignIntervals = true;
                 TL_Descr[i].bEnable = true;
                 TL_Descr[i].bStopWhenFull = false;
@@ -533,38 +532,6 @@ bool Trend_Log_Object_Name(
         CurrentTL = &TL_Descr[index];
         if (CurrentTL->Disable == false) {
             status = characterstring_init_ansi(object_name, CurrentTL->Object_Name);
-        }
-    }
-
-    return status;
-}
-
-/* note: the object name must be unique within this device */
-bool Trend_Log_Object_Name_Set(
-    uint32_t object_instance,
-    char *new_name)
-{
-    TREND_LOG_DESCR *CurrentTL;
-    unsigned index = 0; /* offset from instance lookup */
-    size_t i = 0;       /* loop counter */
-    bool status = false;        /* return value */
-
-    if (Trend_Log_Valid_Instance(object_instance)) {
-        index = Trend_Log_Instance_To_Index(object_instance);
-        CurrentTL = &TL_Descr[index];
-        status = true;
-        /* FIXME: check to see if there is a matching name */
-        if (new_name) {
-            for (i = 0; i < sizeof(CurrentTL->Object_Name); i++) {
-                CurrentTL->Object_Name[i] = new_name[i];
-                if (new_name[i] == 0) {
-                    break;
-                }
-            }
-        } else {
-            for (i = 0; i < sizeof(CurrentTL->Object_Name); i++) {
-                CurrentTL->Object_Name[i] = 0;
-            }
         }
     }
 
@@ -1307,7 +1274,6 @@ bool TrendLogGetRRInfo(
     BACNET_READ_RANGE_DATA * pRequest,  /* Info on the request */
     RR_PROP_INFO * pInfo)
 {       /* Where to put the information */
-    unsigned index;
 
     if (!Trend_Log_Valid_Instance(pRequest->object_instance)) {
         pRequest->error_class = ERROR_CLASS_OBJECT;
