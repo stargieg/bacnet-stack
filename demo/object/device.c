@@ -154,7 +154,6 @@ static object_functions_t My_Object_Table[] = {
             Analog_Value_Change_Of_Value,
             Analog_Value_Change_Of_Value_Clear,
         Analog_Value_Intrinsic_Reporting},
-#if 0
     {OBJECT_BINARY_INPUT,
             Binary_Input_Init,
             Binary_Input_Count,
@@ -170,6 +169,7 @@ static object_functions_t My_Object_Table[] = {
             Binary_Input_Change_Of_Value,
             Binary_Input_Change_Of_Value_Clear,
         Binary_Input_Intrinsic_Reporting},
+#if 0
     {OBJECT_BINARY_OUTPUT,
             Binary_Output_Init,
             Binary_Output_Count,

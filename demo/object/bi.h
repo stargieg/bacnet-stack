@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include "bacdef.h"
 #include "cov.h"
+#include "bacerror.h"
 #include "rp.h"
 #include "wp.h"
 #if defined(INTRINSIC_REPORTING)
@@ -44,9 +45,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int max_binary_inputs;
-
     typedef struct binary_input_descr {
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         BACNET_BINARY_PV Present_Value;
@@ -75,6 +75,28 @@ int max_binary_inputs;
         ACK_NOTIFICATION Ack_notify_data;
 #endif /* INTRINSIC_REPORTING */
     } BINARY_INPUT_DESCR;
+
+
+
+
+/* value/name tuples */
+struct bi_inst_tuple {
+	char idx[18];
+	struct bi_inst_tuple *next;
+};
+
+typedef struct bi_inst_tuple bi_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct bi_inst_itr_ctx {
+	struct bi_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+	void Binary_Input_Load_UCI_List(
+		const char *sec_idx,
+		struct bi_inst_itr_ctx *itr);
 
 
     void Binary_Input_Property_Lists(
@@ -167,6 +189,9 @@ int max_binary_inputs;
         uint32_t object_instance,
         BACNET_BINARY_PV value,
         uint8_t priority);
+
+    unsigned Binary_Input_Present_Value_Priority(
+        uint32_t object_instance);
 
     /* note: header of Intrinsic_Reporting function is required
        even when INTRINSIC_REPORTING is not defined */
