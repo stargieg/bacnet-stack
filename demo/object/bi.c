@@ -1281,7 +1281,7 @@ bool Binary_Input_Write_Property(
     if (Binary_Input_Valid_Instance(wp_data->object_instance)) {
         index = Binary_Input_Instance_To_Index(wp_data->object_instance);
         CurrentBI = &BI_Descr[index];
-        sprintf(idx_cc,"%d",index);
+        sprintf(idx_cc,"%d",CurrentBI->Instance);
         idx_c = idx_cc;
     } else
         return false;
