@@ -687,9 +687,11 @@ static bool Binary_Input_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bi", idx_c,
                             "name", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_bi\n");
+#endif
                     }
                 }
             } else {
@@ -836,9 +838,11 @@ bool Binary_Input_Polarity_Set(
         if(ctx) {
             ucix_add_option_int(ctx, "bacnet_bi", idx_c,
                 "polarity", polarity);
+#if PRINT_ENABLED
         } else {
             fprintf(stderr,
                 "Failed to open config file bacnet_bi\n");
+#endif
         }
     }
 
@@ -877,9 +881,11 @@ static bool Binary_Input_Active_Text_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bi", idx_c,
                             "active", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_bi\n");
+#endif
                     }
                 }
             } else {
@@ -927,9 +933,11 @@ static bool Binary_Input_Inactive_Text_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bi", idx_c,
                             "inactive", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_bi\n");
+#endif
                     }
                 }
             } else {
@@ -972,7 +980,6 @@ int Binary_Input_Read_Property(
     } else
         return BACNET_STATUS_ERROR;
 
-    //fprintf(stderr,"object_property: %i\n", rpdata->object_property);
     switch (rpdata->object_property) {
         case PROP_OBJECT_IDENTIFIER:
             apdu_len =
