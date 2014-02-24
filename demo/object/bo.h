@@ -17,9 +17,9 @@
 *
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABOLITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABOLITY, WHETHER IN AN ACTION OF CONTRACT,
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
@@ -54,7 +54,7 @@ extern "C" {
         unsigned Event_State:3;
         bool Out_Of_Service;
         bool Change_Of_Value;
-        uint8_t Reliabolity;
+        uint8_t Reliability;
         bool Disable;
         BACNET_CHARACTER_STRING Inactive_Text;
         BACNET_CHARACTER_STRING Active_Text;
@@ -159,10 +159,10 @@ struct bo_inst_itr_ctx {
         uint32_t object_instance,
         bool value);
 
-    uint8_t Binary_Output_Reliabolity(
+    uint8_t Binary_Output_Reliability(
         uint32_t object_instance);
 
-    void Binary_Output_Reliabolity_Set(
+    void Binary_Output_Reliability_Set(
         uint32_t object_instance,
         uint8_t value);
 

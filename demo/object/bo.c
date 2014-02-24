@@ -471,7 +471,7 @@ void Binary_Output_Out_Of_Service_Set(
     return;
 }
 
-uint8_t Binary_Output_Reliabolity(
+uint8_t Binary_Output_Reliability(
     uint32_t object_instance)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
@@ -481,13 +481,13 @@ uint8_t Binary_Output_Reliabolity(
     if (Binary_Output_Valid_Instance(object_instance)) {
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
-        value = CurrentBO->Reliabolity;
+        value = CurrentBO->Reliability;
     }
 
     return value;
 }
 
-void Binary_Output_Reliabolity_Set(
+void Binary_Output_Reliability_Set(
     uint32_t object_instance,
     uint8_t value)
 {
@@ -497,7 +497,7 @@ void Binary_Output_Reliabolity_Set(
     if (Binary_Output_Valid_Instance(object_instance)) {
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
-        CurrentBO->Reliabolity = value;
+        CurrentBO->Reliability = value;
     }
 
     return;
@@ -1054,7 +1054,7 @@ int Binary_Output_Read_Property(
 
         case PROP_RELIABILITY:
             apdu_len = encode_application_enumerated(&apdu[0], 
-                CurrentBO->Reliabolity);
+                CurrentBO->Reliability);
             break;
 
         case PROP_PRIORITY_ARRAY:
@@ -1417,7 +1417,7 @@ bool Binary_Output_Write_Property(
                 WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
-                CurrentBO->Reliabolity = value.type.Enumerated;
+                CurrentBO->Reliability = value.type.Enumerated;
             }
             break;
 
