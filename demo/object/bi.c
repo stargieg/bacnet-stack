@@ -1061,7 +1061,7 @@ int Binary_Input_Read_Property(
             /* Array element zero is the number of elements in the array */
             if (rpdata->array_index == 0) {
                 apdu_len =
-                    encode_application_unsigned(&apdu[0], BACNET_MAX_PRIORITY);
+                    encode_application_enumerated(&apdu[0], BACNET_MAX_PRIORITY);
             /* if no index was specified, then try to encode the entire list */
             /* into one packet. */
             } else if (rpdata->array_index == BACNET_ARRAY_ALL) {
@@ -1072,7 +1072,7 @@ int Binary_Input_Read_Property(
                     } else {
                         present_value = CurrentBI->Priority_Array[i];
                         len =
-                            encode_application_unsigned(&apdu[apdu_len],
+                            encode_application_enumerated(&apdu[apdu_len],
                             present_value);
                     }
                     /* add it if we have room */
@@ -1094,7 +1094,7 @@ int Binary_Input_Read_Property(
                         present_value =
                             CurrentBI->Priority_Array[rpdata->array_index - 1];
                         apdu_len =
-                            encode_application_unsigned(&apdu[0],present_value);
+                            encode_application_enumerated(&apdu[0],present_value);
                     }
                 } else {
                     rpdata->error_class = ERROR_CLASS_PROPERTY;
@@ -1106,7 +1106,7 @@ int Binary_Input_Read_Property(
 
         case PROP_RELINQUISH_DEFAULT:
             present_value = CurrentBI->Relinquish_Default;
-            apdu_len = encode_application_unsigned(&apdu[0], present_value);
+            apdu_len = encode_application_enumerated(&apdu[0], present_value);
             break;
 
         case PROP_POLARITY:
@@ -1118,7 +1118,7 @@ int Binary_Input_Read_Property(
 #if defined(INTRINSIC_REPORTING)
         case PROP_ALARM_VALUE:
             len =
-                encode_application_unsigned(&apdu[apdu_len],
+                encode_application_enumerated(&apdu[apdu_len],
                 CurrentBI->Alarm_Value);
                 apdu_len += len;
             break;
@@ -1422,10 +1422,10 @@ bool Binary_Input_Write_Property(
 
         case PROP_RELINQUISH_DEFAULT:
             status =
-                WPValidateArgType(&value, BACNET_APPLICATION_TAG_BOOLEAN,
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
-                CurrentBI->Relinquish_Default = value.type.Boolean;
+                CurrentBI->Relinquish_Default = value.type.Enumerated;
             }
             break;
 
@@ -1446,7 +1446,7 @@ bool Binary_Input_Write_Property(
             break;
 #if defined(INTRINSIC_REPORTING)
         case PROP_ALARM_VALUES:
-            if (value.tag == BACNET_APPLICATION_TAG_UNSIGNED_INT) {
+            if (value.tag == BACNET_APPLICATION_TAG_ENUMERATED) {
                 if (wp_data->array_index == 0) {
                     /* Array element zero is the number of
                        elements in the array.  We have a fixed
