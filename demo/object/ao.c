@@ -25,7 +25,7 @@
 *
 *********************************************************************/
 
-/* Analog Value Objects - customize for your use */
+/* Analog Output Objects - customize for your use */
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -46,8 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_ANALOG_OUTPUTS
-//#define MAX_ANALOG_OUTPUTS 65535
-#define MAX_ANALOG_OUTPUTS 512
+#define MAX_ANALOG_OUTPUTS 65535
 #endif
 unsigned max_analog_outputs_int = 0;
 
@@ -60,10 +59,7 @@ unsigned max_analog_outputs_int = 0;
 /* will be relinquished (i.e. set to the NULL level). */
 #define ANALOG_LEVEL_NULL 255
 
-
-
 ANALOG_OUTPUT_DESCR AO_Descr[MAX_ANALOG_OUTPUTS];
-
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
 static const int Analog_Output_Properties_Required[] = {
@@ -119,6 +115,26 @@ void Analog_Output_Property_Lists(
     return;
 }
 
+void Analog_Output_Load_UCI_List(const char *sec_idx,
+	struct ao_inst_itr_ctx *itr)
+{
+	ao_inst_tuple_t *t = malloc(sizeof(ao_inst_tuple_t));
+	bool disable;
+	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+	"disable", 0);
+	if (strcmp(sec_idx,"default") == 0)
+		return;
+	if (disable)
+		return;
+	if( (t = (ao_inst_tuple_t *)malloc(sizeof(ao_inst_tuple_t))) != NULL ) {
+		strncpy(t->idx, sec_idx, sizeof(t->idx));
+		t->next = itr->list;
+		itr->list = t;
+	}
+    return;
+}
+
+
 void Analog_Output_Init(
     void)
 {
@@ -158,12 +174,29 @@ void Analog_Output_Init(
     const char *ucicov_increment;
     const char *ucicov_increment_default;
     const char *sec = "bacnet_ao";
+
+	char *section;
+	char *type;
+	struct ao_inst_itr_ctx itr_m;
+	section = "bacnet_ao";
+
+#if PRINT_ENABLED
     fprintf(stderr, "Analog_Output_Init\n");
+#endif
     if (!initialized) {
         initialized = true;
         ctx = ucix_init(sec);
+#if PRINT_ENABLED
         if(!ctx)
             fprintf(stderr, "Failed to load config file bacnet_ao\n");
+#endif
+		type = "ao";
+		ao_inst_tuple_t *cur = malloc(sizeof (ao_inst_tuple_t));
+		itr_m.list = NULL;
+		itr_m.section = section;
+		itr_m.ctx = ctx;
+		ucix_for_each_section_type(ctx, section, type,
+			(void *)Analog_Output_Load_UCI_List, &itr_m);
 
         ucidescription_default = ucix_get_option(ctx, sec, "default",
             "description");
@@ -187,21 +220,21 @@ void Analog_Output_Init(
             "dead_limit");
         ucicov_increment_default = ucix_get_option(ctx, sec, "default",
             "cov_increment");
-
-        for (i = 0; i < MAX_ANALOG_OUTPUTS; i++) {
-            memset(&AO_Descr[i], 0x00, sizeof(ANALOG_OUTPUT_DESCR));
-            /* initialize all the analog output priority arrays to NULL */
-            for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
-                AO_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
-            }
-            sprintf(idx_cc,"%d",i);
+        i = 0;
+		for( cur = itr_m.list; cur; cur = cur->next ) {
+			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
             idx_c = idx_cc;
             uciname = ucix_get_option(ctx, "bacnet_ao", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_ao", idx_c,
                 "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
+                memset(&AO_Descr[i], 0x00, sizeof(ANALOG_OUTPUT_DESCR));
+                /* initialize all the analog output priority arrays to NULL */
+                for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
+                    AO_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
+                }
+                AO_Descr[i].Instance=atoi(idx_cc);
                 AO_Descr[i].Disable=false;
-                max_analog_outputs_int = i+1;
                 sprintf(name, "%s", uciname);
                 ucix_string_copy(AO_Descr[i].Object_Name,
                     sizeof(AO_Descr[i].Object_Name), name);
@@ -312,7 +345,7 @@ void Analog_Output_Init(
                 AO_Descr[i].Event_State = EVENT_STATE_NORMAL;
                 /* notification class not connected */
                 if (ucinc > -1) AO_Descr[i].Notification_Class = ucinc;
-                else AO_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
+                else AO_Descr[i].Notification_Class = 0;
                 if (ucievent > -1) AO_Descr[i].Event_Enable = ucievent;
                 else AO_Descr[i].Event_Enable = 0;
                 if (ucitime_delay > -1) AO_Descr[i].Time_Delay = ucitime_delay;
@@ -339,11 +372,13 @@ void Analog_Output_Init(
                 handler_get_alarm_summary_set(OBJECT_ANALOG_OUTPUT,
                     Analog_Output_Alarm_Summary);
 #endif
-            } else {
-                AO_Descr[i].Disable=true;
+                i++;
+                max_analog_outputs_int = i;
             }
         }
+#if PRINT_ENABLED
         fprintf(stderr, "max_analog_outputs %i\n", max_analog_outputs_int);
+#endif
         if(ctx)
             ucix_cleanup(ctx);
     }
@@ -356,12 +391,17 @@ void Analog_Output_Init(
 unsigned Analog_Output_Instance_To_Index(
     uint32_t object_instance)
 {
-    unsigned index = max_analog_outputs_int;
-
-    if (object_instance < max_analog_outputs_int)
-        index = object_instance;
-
-    return index;
+    ANALOG_OUTPUT_DESCR *CurrentAO;
+    int index,instance,i;
+    index = max_analog_outputs_int;
+    for (i = 0; i < index; i++) {
+    	CurrentAO = &AO_Descr[i];
+    	instance = CurrentAO->Instance;
+    	if (CurrentAO->Instance == object_instance) {
+    		return i;
+    	}
+    }
+    return MAX_ANALOG_OUTPUTS;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -371,16 +411,10 @@ uint32_t Analog_Output_Index_To_Instance(
     unsigned index)
 {
     ANALOG_OUTPUT_DESCR *CurrentAO;
-    if (index < max_analog_outputs_int) {
-        CurrentAO = &AO_Descr[index];
-        if (CurrentAO->Disable == false) {
-            return index;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
+    uint32_t instance;
+	CurrentAO = &AO_Descr[index];
+	instance = CurrentAO->Instance;
+	return instance;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -400,14 +434,15 @@ bool Analog_Output_Valid_Instance(
     ANALOG_OUTPUT_DESCR *CurrentAO;
     unsigned index = 0; /* offset from instance lookup */
     index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
-        CurrentAO = &AO_Descr[index];
-        if (CurrentAO->Disable == false) {
-            return true;
-        } else {
-            return false;
-        }
+    if (index == MAX_ANALOG_OUTPUTS) {
+#if PRINT_ENABLED
+        fprintf(stderr, "Analog_Output_Valid_Instance %i invalid\n",object_instance);
+#endif
+    	return false;
     }
+    CurrentAO = &AO_Descr[index];
+    if (CurrentAO->Disable == false)
+            return true;
 
     return false;
 }
@@ -417,10 +452,10 @@ bool Analog_Output_Change_Of_Value(
 {
     ANALOG_OUTPUT_DESCR *CurrentAO;
     bool status = false;
-    unsigned index;
+    unsigned index = 0;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         status = CurrentAO->Change_Of_Value;
     }
@@ -432,10 +467,10 @@ void Analog_Output_Change_Of_Value_Clear(
     uint32_t object_instance)
 {
     ANALOG_OUTPUT_DESCR *CurrentAO;
-    unsigned index;
+    unsigned index = 0;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         CurrentAO->Change_Of_Value = false;
     }
@@ -495,8 +530,8 @@ float Analog_Output_Present_Value(
     unsigned index = 0; /* offset from instance lookup */
     unsigned i = 0;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         /* When all the priorities are level null, the present value returns */
         /* the Relinquish Default value */
@@ -520,8 +555,8 @@ unsigned Analog_Output_Present_Value_Priority(
     unsigned i = 0;     /* loop counter */
     unsigned priority = 0;      /* return value */
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
             if (CurrentAO->Priority_Array[priority] != ANALOG_LEVEL_NULL) {
@@ -534,7 +569,6 @@ unsigned Analog_Output_Present_Value_Priority(
     return priority;
 }
 
-
 bool Analog_Output_Present_Value_Set(
     uint32_t object_instance,
     float value,
@@ -544,8 +578,8 @@ bool Analog_Output_Present_Value_Set(
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         if (priority && (priority <= BACNET_MAX_PRIORITY) &&
             (priority != 6 /* reserved */ ) ) {
@@ -565,7 +599,6 @@ bool Analog_Output_Present_Value_Set(
     }
     return status;
 }
-
 
 bool Analog_Output_Present_Value_Relinquish(
     uint32_t object_instance,
@@ -601,8 +634,8 @@ bool Analog_Output_Out_Of_Service(
     unsigned index = 0; /* offset from instance lookup */
     bool value = false;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         value = CurrentAO->Out_Of_Service;
     }
@@ -617,8 +650,8 @@ void Analog_Output_Out_Of_Service_Set(
     ANALOG_OUTPUT_DESCR *CurrentAO;
     unsigned index = 0;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         CurrentAO->Out_Of_Service = value;
     }
@@ -633,8 +666,8 @@ void Analog_Output_Reliability_Set(
     ANALOG_OUTPUT_DESCR *CurrentAO;
     unsigned index = 0;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         CurrentAO->Reliability = value;
     }
@@ -649,8 +682,8 @@ uint8_t Analog_Output_Reliability(
     unsigned index = 0; /* offset from instance lookup */
     uint8_t value = 0;
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         value = CurrentAO->Reliability;
     }
@@ -665,8 +698,8 @@ static char *Analog_Output_Description(
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         pName = CurrentAO->Object_Description;
     }
@@ -683,8 +716,8 @@ bool Analog_Output_Description_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         status = true;
         if (new_name) {
@@ -718,8 +751,8 @@ static bool Analog_Output_Description_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentAO->Object_Description)) {
@@ -733,14 +766,16 @@ static bool Analog_Output_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentAO->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_ao", idx_c,
                             "description", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_ao\n");
+#endif
                     }
                 }
             } else {
@@ -764,10 +799,8 @@ bool Analog_Output_Object_Name(
     ANALOG_OUTPUT_DESCR *CurrentAO;
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
-
-    index = Analog_Output_Instance_To_Index(object_instance);
-
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         status = characterstring_init_ansi(object_name, CurrentAO->Object_Name);
     }
@@ -789,8 +822,8 @@ static bool Analog_Output_Object_Name_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Analog_Output_Instance_To_Index(object_instance);
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentAO->Object_Name)) {
@@ -804,14 +837,16 @@ static bool Analog_Output_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentAO->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_ao", idx_c,
                             "name", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_ao\n");
+#endif
                     }
                 }
             } else {
@@ -837,7 +872,7 @@ int Analog_Output_Read_Property(
     BACNET_BIT_STRING bit_string;
     BACNET_CHARACTER_STRING char_string;
     float present_value = 0;
-    unsigned object_index = 0;
+    unsigned index = 0;
     unsigned i = 0;
     uint8_t *apdu = NULL;
 
@@ -848,10 +883,10 @@ int Analog_Output_Read_Property(
 
     apdu = rpdata->application_data;
 
-    object_index = Analog_Output_Instance_To_Index(rpdata->object_instance);
-    if (object_index < max_analog_outputs_int)
-        CurrentAO = &AO_Descr[object_index];
-    else
+    if (Analog_Output_Valid_Instance(rpdata->object_instance)) {
+        index = Analog_Output_Instance_To_Index(rpdata->object_instance);
+        CurrentAO = &AO_Descr[index];
+    } else
         return BACNET_STATUS_ERROR;
 
     switch (rpdata->object_property) {
@@ -1136,7 +1171,7 @@ bool Analog_Output_Write_Property(
 {
     ANALOG_OUTPUT_DESCR *CurrentAO;
     bool status = false;        /* return value */
-    unsigned int object_index = 0;
+    unsigned index = 0;
     int object_type = 0;
     uint32_t object_instance = 0;
     unsigned int priority = 0;
@@ -1171,10 +1206,10 @@ bool Analog_Output_Write_Property(
         wp_data->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         return false;
     }
-    object_index = Analog_Output_Instance_To_Index(wp_data->object_instance);
-    if (object_index < max_analog_outputs_int) {
-        CurrentAO = &AO_Descr[object_index];
-        sprintf(idx_cc,"%d",object_index);
+    if (Analog_Output_Valid_Instance(wp_data->object_instance)) {
+        index = Analog_Output_Instance_To_Index(wp_data->object_instance);
+        CurrentAO = &AO_Descr[index];
+        sprintf(idx_cc,"%d",CurrentAO->Instance);
         idx_c = idx_cc;
     } else
         return false;
@@ -1482,18 +1517,17 @@ void Analog_Output_Intrinsic_Reporting(
     ANALOG_OUTPUT_DESCR *CurrentAO;
     BACNET_EVENT_NOTIFICATION_DATA event_data;
     BACNET_CHARACTER_STRING msgText;
-    unsigned int object_index;
+    unsigned index = 0;
     uint8_t FromState = 0;
     uint8_t ToState;
     float ExceededLimit = 0.0f;
     float PresentVal = 0.0f;
     bool SendNotify = false;
 
-
-    object_index = Analog_Output_Instance_To_Index(object_instance);
-    if (object_index < max_analog_outputs_int)
-        CurrentAO = &AO_Descr[object_index];
-    else
+    if (Analog_Output_Valid_Instance(object_instance)) {
+        index = Analog_Output_Instance_To_Index(object_instance);
+        CurrentAO = &AO_Descr[index];
+    } else
         return;
 
     /* check limits */
@@ -1785,7 +1819,7 @@ int Analog_Output_Event_Information(
 
 
     /* check index */
-    if (index < max_analog_outputs_int) {
+    if (Analog_Output_Valid_Instance(index)) {
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (AO_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
@@ -1853,16 +1887,15 @@ int Analog_Output_Alarm_Ack(
     BACNET_ERROR_CODE * error_code)
 {
     ANALOG_OUTPUT_DESCR *CurrentAO;
-    unsigned int object_index;
+    unsigned index = 0;
 
-
-    object_index =
-        Analog_Output_Instance_To_Index(alarmack_data->eventObjectIdentifier.
-        instance);
-
-    if (object_index < max_analog_outputs_int)
-        CurrentAO = &AO_Descr[object_index];
-    else {
+    if (Analog_Output_Valid_Instance(alarmack_data->eventObjectIdentifier.
+        instance)) {
+        index =
+            Analog_Output_Instance_To_Index(alarmack_data->eventObjectIdentifier.
+            instance);
+        CurrentAO = &AO_Descr[index];
+    } else {
         *error_code = ERROR_CODE_UNKNOWN_OBJECT;
         return -1;
     }
@@ -2048,7 +2081,7 @@ int main(
     Test *pTest;
     bool rc;
 
-    pTest = ct_create("BACnet Analog Value", NULL);
+    pTest = ct_create("BACnet Analog Output", NULL);
     /* individual tests */
     rc = ct_addTestFunction(pTest, testAnalog_Output);
     assert(rc);

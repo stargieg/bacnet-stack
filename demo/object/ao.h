@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include "bacdef.h"
 #include "cov.h"
+#include "bacerror.h"
 #include "wp.h"
 #include "rp.h"
 #if defined(INTRINSIC_REPORTING)
@@ -44,10 +45,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int max_analog_outputs;
-
     typedef struct analog_output_descr {
-        unsigned Object_ID;
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         //uint8_t Present_Value;
@@ -81,6 +80,25 @@ int max_analog_outputs;
 #endif /* INTRINSIC_REPORTING */
     } ANALOG_OUTPUT_DESCR;
 
+/* value/name tuples */
+struct ao_inst_tuple {
+	char idx[18];
+	struct ao_inst_tuple *next;
+};
+
+typedef struct ao_inst_tuple ao_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct ao_inst_itr_ctx {
+	struct ao_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Analog_Output_Load_UCI_List(
+		const char *sec_idx,
+		struct ao_inst_itr_ctx *itr);
 
     void Analog_Output_Property_Lists(
         const int **pRequired,

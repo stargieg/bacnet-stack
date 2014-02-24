@@ -471,7 +471,7 @@ void Binary_Value_Out_Of_Service_Set(
     return;
 }
 
-uint8_t Binary_Value_Reliabvlity(
+uint8_t Binary_Value_Reliability(
     uint32_t object_instance)
 {
     BINARY_VALUE_DESCR *CurrentBV;
@@ -481,13 +481,13 @@ uint8_t Binary_Value_Reliabvlity(
     if (Binary_Value_Valid_Instance(object_instance)) {
         index = Binary_Value_Instance_To_Index(object_instance);
         CurrentBV = &BV_Descr[index];
-        value = CurrentBV->Reliabvlity;
+        value = CurrentBV->Reliability;
     }
 
     return value;
 }
 
-void Binary_Value_Reliabvlity_Set(
+void Binary_Value_Reliability_Set(
     uint32_t object_instance,
     uint8_t value)
 {
@@ -497,7 +497,7 @@ void Binary_Value_Reliabvlity_Set(
     if (Binary_Value_Valid_Instance(object_instance)) {
         index = Binary_Value_Instance_To_Index(object_instance);
         CurrentBV = &BV_Descr[index];
-        CurrentBV->Reliabvlity = value;
+        CurrentBV->Reliability = value;
     }
 
     return;
@@ -1054,7 +1054,7 @@ int Binary_Value_Read_Property(
 
         case PROP_RELIABILITY:
             apdu_len = encode_application_enumerated(&apdu[0], 
-                CurrentBV->Reliabvlity);
+                CurrentBV->Reliability);
             break;
 
         case PROP_PRIORITY_ARRAY:
@@ -1416,7 +1416,7 @@ bool Binary_Value_Write_Property(
                 WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
-                CurrentBV->Reliabvlity = value.type.Enumerated;
+                CurrentBV->Reliability = value.type.Enumerated;
             }
             break;
 
