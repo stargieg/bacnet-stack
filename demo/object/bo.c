@@ -14,7 +14,7 @@
 *
 * The above copyright notice and this permission notice shall be included
 * in all copies or substantial portions of the Software.
-*
+*                      
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -31,22 +31,33 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "bacdef.h"
 #include "bacdcode.h"
 #include "bacenum.h"
 #include "bacapp.h"
 #include "bactext.h"
-#include "cov.h"
 #include "config.h"     /* the custom stuff */
 #include "device.h"
 #include "handlers.h"
 #include "bo.h"
 #include "ucix.h"
 
+/* number of demo objects */
 #ifndef MAX_BINARY_OUTPUTS
-#define MAX_BINARY_OUTPUTS 512
+#define MAX_BINARY_OUTPUTS 65535
 #endif
+unsigned max_binary_outputs_int = 0;
+
+/* When all the priorities are level null, the present value returns */
+/* the Relinquish Default value */
+#define BINARY_RELINQUISH_DEFAULT 0
+
+/* we choose to have a NULL level in our system represented by */
+/* a particular value.  When the priorities are not in use, they */
+/* will be relinquished (i.e. set to the NULL level). */
+#define BINARY_LEVEL_NULL 255
 
 BINARY_OUTPUT_DESCR BO_Descr[MAX_BINARY_OUTPUTS];
 
@@ -105,6 +116,26 @@ void Binary_Output_Property_Lists(
 
     return;
 }
+
+void Binary_Output_Load_UCI_List(const char *sec_idx,
+	struct bo_inst_itr_ctx *itr)
+{
+	bo_inst_tuple_t *t = malloc(sizeof(bo_inst_tuple_t));
+	bool disable;
+	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+	"disable", 0);
+	if (strcmp(sec_idx,"default") == 0)
+		return;
+	if (disable)
+		return;
+	if( (t = (bo_inst_tuple_t *)malloc(sizeof(bo_inst_tuple_t))) != NULL ) {
+		strncpy(t->idx, sec_idx, sizeof(t->idx));
+		t->next = itr->list;
+		itr->list = t;
+	}
+    return;
+}
+
 /*
  * Things to do when starting up the stack for Binary Output.
  * Should be called whenever we reset the device or power it up
@@ -139,46 +170,62 @@ void Binary_Output_Init(
     int ucialarm_value;
     int ucipolarity_default;
     int ucipolarity;
-    fprintf(stderr, "Binary_Output_Init\n");
+    const char *sec = "bacnet_bo";
 
+	char *section;
+	char *type;
+	struct bo_inst_itr_ctx itr_m;
+	section = "bacnet_bo";
+
+#if PRINT_ENABLED
+    fprintf(stderr, "Binary_Output_Init\n");
+#endif
     if (!initialized) {
         initialized = true;
         ctx = ucix_init("bacnet_bo");
+#if PRINT_ENABLED
         if(!ctx)
             fprintf(stderr,  "Failed to load config file bacnet_bo\n");
-    
-        ucidescription_default = ucix_get_option(ctx, "bacnet_bo", "default",
-            "description");
-        uciinactive_text_default = ucix_get_option(ctx, "bacnet_bo", "default",
-            "inactive");
-        uciactive_text_default = ucix_get_option(ctx, "bacnet_bo", "default",
-            "active");
-        ucinc_default = ucix_get_option_int(ctx, "bacnet_bo", "default",
-            "nc", -1);
-        ucievent_default = ucix_get_option_int(ctx, "bacnet_bo", "default",
-            "event", -1);
-        ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_bo", "default",
-            "time_delay", -1);
-        ucialarm_value_default = ucix_get_option_int(ctx, "bacnet_bo", "default",
-            "alarm_value", -1);
-        ucipolarity_default = ucix_get_option_int(ctx, "bacnet_bo", "default",
-            "polarity", 0);
+#endif
+		type = "bo";
+		bo_inst_tuple_t *cur = malloc(sizeof (bo_inst_tuple_t));
+		itr_m.list = NULL;
+		itr_m.section = section;
+		itr_m.ctx = ctx;
+		ucix_for_each_section_type(ctx, section, type,
+			(void *)Binary_Output_Load_UCI_List, &itr_m);
 
-        /* initialize all the values */
-        for (i = 0; i < MAX_BINARY_OUTPUTS; i++) {
-            memset(&BO_Descr[i], 0x00, sizeof(BINARY_OUTPUT_DESCR));
-            sprintf(idx_cc,"%d",i);
+        ucidescription_default = ucix_get_option(ctx, sec, "default",
+            "description");
+        uciinactive_text_default = ucix_get_option(ctx, sec, "default",
+            "inactive");
+        uciactive_text_default = ucix_get_option(ctx, sec, "default",
+            "active");
+        ucinc_default = ucix_get_option_int(ctx, sec, "default",
+            "nc", -1);
+        ucievent_default = ucix_get_option_int(ctx, sec, "default",
+            "event", -1);
+        ucitime_delay_default = ucix_get_option_int(ctx, sec, "default",
+            "time_delay", -1);
+        ucialarm_value_default = ucix_get_option_int(ctx, sec, "default",
+            "alarm_value", -1);
+        ucipolarity_default = ucix_get_option_int(ctx, sec, "default",
+            "polarity", 0);
+        i = 0;
+		for( cur = itr_m.list; cur; cur = cur->next ) {
+			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
             idx_c = idx_cc;
             uciname = ucix_get_option(ctx, "bacnet_bo", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_bo", idx_c,
                 "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
-                BO_Descr[i].Disable=false;
+                memset(&BO_Descr[i], 0x00, sizeof(BINARY_OUTPUT_DESCR));
                 /* initialize all the priority arrays to NULL */
                 for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
-                    BO_Descr[i].Priority_Array[j] = BINARY_NULL;
+                    BO_Descr[i].Priority_Array[j] = BINARY_LEVEL_NULL;
                 }
-                max_binary_outputs = i+1;
+                BO_Descr[i].Instance=atoi(idx_cc);
+                BO_Descr[i].Disable=false;
                 sprintf(name, "%s", uciname);
                 ucix_string_copy(BO_Descr[i].Object_Name,
                     sizeof(BO_Descr[i].Object_Name), name);
@@ -190,7 +237,7 @@ void Binary_Output_Init(
                     sprintf(description, "%s %lu", ucidescription_default,
                         (unsigned long) i);
                 } else {
-                    sprintf(description, "BI%lu no uci section configured",
+                    sprintf(description, "BO%lu no uci section configured",
                         (unsigned long) i);
                 }
                 ucix_string_copy(BO_Descr[i].Object_Description,
@@ -265,15 +312,16 @@ void Binary_Output_Init(
                 handler_get_alarm_summary_set(OBJECT_BINARY_OUTPUT,
                     Binary_Output_Alarm_Summary);
 #endif
-            } else {
-                BO_Descr[i].Disable=true;
+                i++;
+                max_binary_outputs_int = i;
             }
         }
-        fprintf(stderr, "max_binary_outputs %i\n", max_binary_outputs);
+#if PRINT_ENABLED
+        fprintf(stderr, "max_binary_outputs %i\n", max_binary_outputs_int);
+#endif
         if(ctx)
             ucix_cleanup(ctx);
     }
-
     return;
 }
 
@@ -283,13 +331,16 @@ void Binary_Output_Init(
 unsigned Binary_Output_Instance_To_Index(
     uint32_t object_instance)
 {
-    unsigned index = max_binary_outputs;
-
-    if (object_instance < max_binary_outputs) {
-        index = object_instance;
+    BINARY_OUTPUT_DESCR *CurrentBO;
+    int index,i;
+    index = max_binary_outputs_int;
+    for (i = 0; i < index; i++) {
+    	CurrentBO = &BO_Descr[i];
+    	if (CurrentBO->Instance == object_instance) {
+    		return i;
+    	}
     }
-
-    return index;
+    return MAX_BINARY_OUTPUTS;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -299,16 +350,10 @@ uint32_t Binary_Output_Index_To_Instance(
     unsigned index)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
-    if (index < max_binary_outputs) {
-        CurrentBO = &BO_Descr[index];
-        if (CurrentBO->Disable == false) {
-            return index;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
+    uint32_t instance;
+	CurrentBO = &BO_Descr[index];
+	instance = CurrentBO->Instance;
+	return instance;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -316,7 +361,7 @@ uint32_t Binary_Output_Index_To_Instance(
 unsigned Binary_Output_Count(
     void)
 {
-    return max_binary_outputs;
+    return max_binary_outputs_int;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -328,14 +373,16 @@ bool Binary_Output_Valid_Instance(
     BINARY_OUTPUT_DESCR *CurrentBO;
     unsigned index = 0; /* offset from instance lookup */
     index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
-        CurrentBO = &BO_Descr[index];
-        if (CurrentBO->Disable == false) {
-            return true;
-        } else {
-            return false;
-        }
+    if (index == MAX_BINARY_OUTPUTS) {
+#if PRINT_ENABLED
+        fprintf(stderr, "Binary_Output_Valid_Instance %i invalid index %i max %i\n",
+            object_instance,index,max_binary_outputs_int);
+#endif
+    	return false;
     }
+    CurrentBO = &BO_Descr[index];
+    if (CurrentBO->Disable == false)
+            return true;
 
     return false;
 }
@@ -344,18 +391,18 @@ BACNET_BINARY_PV Binary_Output_Present_Value(
     uint32_t object_instance)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
-    BACNET_BINARY_PV value = BINARY_INACTIVE;
+    BACNET_BINARY_PV value = BINARY_RELINQUISH_DEFAULT;
     unsigned index = 0;
     unsigned i = 0;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         /* When all the priorities are level null, the present value returns */
         /* the Relinquish Default value */
         value = CurrentBO->Relinquish_Default;
         for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
-            if (CurrentBO->Priority_Array[i] != BINARY_NULL) {
+            if (CurrentBO->Priority_Array[i] != BINARY_LEVEL_NULL) {
                 value = CurrentBO->Priority_Array[i];
                 break;
             }
@@ -365,6 +412,30 @@ BACNET_BINARY_PV Binary_Output_Present_Value(
     return value;
 }
 
+unsigned Binary_Output_Present_Value_Priority(
+    uint32_t object_instance)
+{
+    BINARY_OUTPUT_DESCR *CurrentBO;
+    unsigned index = 0; /* instance to index conversion */
+    unsigned i = 0;     /* loop counter */
+    unsigned priority = 0;      /* return value */
+
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
+        CurrentBO = &BO_Descr[index];
+        for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
+            if (CurrentBO->Priority_Array[priority] != BINARY_LEVEL_NULL) {
+                priority = i + 1;
+                break;
+            }
+        }
+    }
+
+    return priority;
+}
+
+
+
 bool Binary_Output_Out_Of_Service(
     uint32_t object_instance)
 {
@@ -372,8 +443,8 @@ bool Binary_Output_Out_Of_Service(
     unsigned index = 0; /* offset from instance lookup */
     bool value = false;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         value = CurrentBO->Out_Of_Service;
     }
@@ -388,8 +459,8 @@ void Binary_Output_Out_Of_Service_Set(
     BINARY_OUTPUT_DESCR *CurrentBO;
     unsigned index = 0;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         if (CurrentBO->Out_Of_Service != value) {
             CurrentBO->Change_Of_Value = true;
@@ -400,33 +471,33 @@ void Binary_Output_Out_Of_Service_Set(
     return;
 }
 
-uint8_t Binary_Output_Reliability(
+uint8_t Binary_Output_Reliabolity(
     uint32_t object_instance)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
     unsigned index = 0; /* offset from instance lookup */
     uint8_t value = 0;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
-        value = CurrentBO->Reliability;
+        value = CurrentBO->Reliabolity;
     }
 
     return value;
 }
 
-void Binary_Output_Reliability_Set(
+void Binary_Output_Reliabolity_Set(
     uint32_t object_instance,
     uint8_t value)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
     unsigned index = 0;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
-        CurrentBO->Reliability = value;
+        CurrentBO->Reliabolity = value;
     }
 
     return;
@@ -439,8 +510,8 @@ static char *Binary_Output_Description(
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         pName = CurrentBO->Object_Description;
     }
@@ -457,8 +528,8 @@ bool Binary_Output_Description_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         status = true;
         if (new_name) {
@@ -492,8 +563,8 @@ static bool Binary_Output_Description_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentBO->Object_Description)) {
@@ -512,9 +583,11 @@ static bool Binary_Output_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bo", idx_c,
                             "description", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_bo\n");
+#endif
                     }
                 }
             } else {
@@ -539,9 +612,8 @@ bool Binary_Output_Object_Name(
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         status = characterstring_init_ansi(object_name, CurrentBO->Object_Name);
     }
@@ -559,8 +631,8 @@ bool Binary_Output_Name_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         status = true;
         /* FIXME: check to see if there is a matching name */
@@ -595,8 +667,8 @@ static bool Binary_Output_Object_Name_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentBO->Object_Name)) {
@@ -615,9 +687,11 @@ static bool Binary_Output_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bo", idx_c,
                             "name", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_bo\n");
+#endif
                     }
                 }
             } else {
@@ -638,10 +712,10 @@ bool Binary_Output_Change_Of_Value(
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
     bool status = false;
-    unsigned index;
+    unsigned index = 0;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         status = CurrentBO->Change_Of_Value;
     }
@@ -653,10 +727,10 @@ void Binary_Output_Change_Of_Value_Clear(
     uint32_t object_instance)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
-    unsigned index;
+    unsigned index = 0;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         CurrentBO->Change_Of_Value = false;
     }
@@ -716,10 +790,10 @@ bool Binary_Output_Present_Value_Set(
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
     if (value > 1)
-        value = BINARY_NULL;
+        value = BINARY_LEVEL_NULL;
     
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         CurrentBO->Present_Value = (uint8_t) value;
         CurrentBO->Priority_Array[priority - 1] = (uint8_t) value;
@@ -736,8 +810,8 @@ BACNET_POLARITY Binary_Output_Polarity(
 
     BACNET_POLARITY polarity = POLARITY_NORMAL;
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (object_instance < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         polarity = CurrentBO->Polarity;
     }
@@ -755,8 +829,8 @@ bool Binary_Output_Polarity_Set(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (object_instance < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         CurrentBO->Polarity=polarity;
         sprintf(idx_cc,"%d",index);
@@ -764,9 +838,11 @@ bool Binary_Output_Polarity_Set(
         if(ctx) {
             ucix_add_option_int(ctx, "bacnet_bo", idx_c,
                 "polarity", polarity);
+#if PRINT_ENABLED
         } else {
             fprintf(stderr,
                 "Failed to open config file bacnet_bo\n");
+#endif
         }
     }
 
@@ -787,8 +863,8 @@ static bool Binary_Output_Active_Text_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentBO->Active_Text)) {
@@ -805,9 +881,11 @@ static bool Binary_Output_Active_Text_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bo", idx_c,
                             "active", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_bo\n");
+#endif
                     }
                 }
             } else {
@@ -837,8 +915,8 @@ static bool Binary_Output_Inactive_Text_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Binary_Output_Instance_To_Index(object_instance);
-    if (index < max_binary_outputs) {
+    if (Binary_Output_Valid_Instance(object_instance)) {
+        index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentBO->Inactive_Text)) {
@@ -855,9 +933,11 @@ static bool Binary_Output_Inactive_Text_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bo", idx_c,
                             "inactive", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_bo\n");
+#endif
                     }
                 }
             } else {
@@ -884,7 +964,7 @@ int Binary_Output_Read_Property(
     BACNET_BIT_STRING bit_string;
     BACNET_CHARACTER_STRING char_string;
     BACNET_BINARY_PV present_value = 0;
-    unsigned object_index = 0;
+    unsigned index = 0;
     unsigned i = 0;
     uint8_t *apdu = NULL;
 
@@ -894,15 +974,12 @@ int Binary_Output_Read_Property(
     }
     apdu = rpdata->application_data;
     
-    object_index = Binary_Output_Instance_To_Index(rpdata->object_instance);
-    if (object_index < max_binary_outputs)
-        CurrentBO = &BO_Descr[object_index];
-    else
-        return BACNET_STATUS_ERROR;
-    if (CurrentBO->Disable)
+    if (Binary_Output_Valid_Instance(rpdata->object_instance)) {
+        index = Binary_Output_Instance_To_Index(rpdata->object_instance);
+        CurrentBO = &BO_Descr[index];
+    } else
         return BACNET_STATUS_ERROR;
 
-    //fprintf(stderr,"object_property: %i\n", rpdata->object_property);
     switch (rpdata->object_property) {
         case PROP_OBJECT_IDENTIFIER:
             apdu_len =
@@ -977,7 +1054,7 @@ int Binary_Output_Read_Property(
 
         case PROP_RELIABILITY:
             apdu_len = encode_application_enumerated(&apdu[0], 
-                CurrentBO->Reliability);
+                CurrentBO->Reliabolity);
             break;
 
         case PROP_PRIORITY_ARRAY:
@@ -990,12 +1067,12 @@ int Binary_Output_Read_Property(
             } else if (rpdata->array_index == BACNET_ARRAY_ALL) {
                 for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
                     /* FIXME: check if we have room before adding it to APDU */
-                    if (CurrentBO->Priority_Array[i] == BINARY_NULL) {
+                    if (CurrentBO->Priority_Array[i] == BINARY_LEVEL_NULL) {
                         len = encode_application_null(&apdu[apdu_len]);
                     } else {
                         present_value = CurrentBO->Priority_Array[i];
                         len =
-                            encode_application_unsigned(&apdu[apdu_len],
+                            encode_application_enumerated(&apdu[apdu_len],
                             present_value);
                     }
                     /* add it if we have room */
@@ -1011,13 +1088,13 @@ int Binary_Output_Read_Property(
             } else {
                 if (rpdata->array_index <= BACNET_MAX_PRIORITY) {
                     if (CurrentBO->Priority_Array[rpdata->array_index - 1]
-                        == BINARY_NULL)
+                        == BINARY_LEVEL_NULL)
                         apdu_len = encode_application_null(&apdu[0]);
                     else {
                         present_value =
                             CurrentBO->Priority_Array[rpdata->array_index - 1];
                         apdu_len =
-                            encode_application_unsigned(&apdu[0],present_value);
+                            encode_application_enumerated(&apdu[0],present_value);
                     }
                 } else {
                     rpdata->error_class = ERROR_CLASS_PROPERTY;
@@ -1029,7 +1106,7 @@ int Binary_Output_Read_Property(
 
         case PROP_RELINQUISH_DEFAULT:
             present_value = CurrentBO->Relinquish_Default;
-            apdu_len = encode_application_unsigned(&apdu[0], present_value);
+            apdu_len = encode_application_enumerated(&apdu[0], present_value);
             break;
 
         case PROP_POLARITY:
@@ -1039,9 +1116,10 @@ int Binary_Output_Read_Property(
             break;
 
 #if defined(INTRINSIC_REPORTING)
+        case PROP_FEEDBACK_VALUE:
         case PROP_ALARM_VALUE:
             len =
-                encode_application_unsigned(&apdu[apdu_len],
+                encode_application_enumerated(&apdu[apdu_len],
                 CurrentBO->Alarm_Value);
                 apdu_len += len;
             break;
@@ -1175,16 +1253,19 @@ bool Binary_Output_Write_Property(
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
     bool status = false;        /* return value */
-    unsigned int object_index = 0;
+    unsigned int index = 0;
     int object_type = 0;
     uint32_t object_instance = 0;
     unsigned int priority = 0;
-    uint8_t level = BINARY_NULL;
+    uint8_t level = BINARY_LEVEL_NULL;
     int len = 0;
     BACNET_APPLICATION_DATA_VALUE value;
     ctx = ucix_init("bacnet_bo");
     const char index_c[32] = "";
     const char *idx_c;
+    BACNET_BINARY_PV pvalue = 0;
+    int i;
+    time_t cur_value_time;
     char idx_cc[64];
 
     /* decode the some of the request */
@@ -1205,10 +1286,10 @@ bool Binary_Output_Write_Property(
         return false;
     }
 
-    object_index = Binary_Output_Instance_To_Index(wp_data->object_instance);
-    if (object_index < max_binary_outputs) {
-        CurrentBO = &BO_Descr[object_index];
-        sprintf(idx_cc,"%d",object_index);
+    if (Binary_Output_Valid_Instance(wp_data->object_instance)) {
+        index = Binary_Output_Instance_To_Index(wp_data->object_instance);
+        CurrentBO = &BO_Descr[index];
+        sprintf(idx_cc,"%d",CurrentBO->Instance);
         idx_c = idx_cc;
     } else
         return false;
@@ -1265,6 +1346,13 @@ bool Binary_Output_Write_Property(
                 if (Binary_Output_Present_Value_Set(wp_data->object_instance,
                         value.type.Unsigned_Int, wp_data->priority)) {
                     status = true;
+                    ucix_add_option_int(ctx, "bacnet_bo", idx_c, "value",
+                        value.type.Unsigned_Int);
+                    cur_value_time = time(NULL);
+                    ucix_add_option_int(ctx, "bacnet_bo", idx_c, "value_time",
+                        cur_value_time);
+                    ucix_add_option_int(ctx, "bacnet_bo", idx_c, "write",
+                        1);
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1280,7 +1368,7 @@ bool Binary_Output_Write_Property(
                     WPValidateArgType(&value, BACNET_APPLICATION_TAG_NULL,
                     &wp_data->error_class, &wp_data->error_code);
                 if (status) {
-                    level = BINARY_NULL;
+                    level = BINARY_LEVEL_NULL;
                     priority = wp_data->priority;
                     if (priority && (priority <= BACNET_MAX_PRIORITY)) {
                         priority--;
@@ -1291,6 +1379,20 @@ bool Binary_Output_Write_Property(
                            However, if Out of Service is TRUE, then don't set the
                            physical output.  This comment may apply to the
                            main loop (i.e. check out of service before changing output) */
+                        pvalue = CurrentBO->Relinquish_Default;
+                        for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
+                            if (CurrentBO->Priority_Array[i] != BINARY_LEVEL_NULL) {
+                                pvalue = CurrentBO->Priority_Array[i];
+                                break;
+                            }
+                        }
+                        ucix_add_option_int(ctx, "bacnet_bo", idx_c, "value",
+                            pvalue);
+                        cur_value_time = time(NULL);
+                        ucix_add_option_int(ctx, "bacnet_bo", idx_c, "value_time",
+                            cur_value_time);
+                        ucix_add_option_int(ctx, "bacnet_bo", idx_c, "write",
+                            1);
                     } else {
                         status = false;
                         wp_data->error_class = ERROR_CLASS_PROPERTY;
@@ -1315,16 +1417,16 @@ bool Binary_Output_Write_Property(
                 WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
-                CurrentBO->Reliability = value.type.Enumerated;
+                CurrentBO->Reliabolity = value.type.Enumerated;
             }
             break;
 
         case PROP_RELINQUISH_DEFAULT:
             status =
-                WPValidateArgType(&value, BACNET_APPLICATION_TAG_BOOLEAN,
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
-                CurrentBO->Relinquish_Default = value.type.Boolean;
+                CurrentBO->Relinquish_Default = value.type.Enumerated;
             }
             break;
 
@@ -1344,8 +1446,9 @@ bool Binary_Output_Write_Property(
             }
             break;
 #if defined(INTRINSIC_REPORTING)
+        case PROP_FEEDBACK_VALUE:
         case PROP_ALARM_VALUES:
-            if (value.tag == BACNET_APPLICATION_TAG_UNSIGNED_INT) {
+            if (value.tag == BACNET_APPLICATION_TAG_ENUMERATED) {
                 if (wp_data->array_index == 0) {
                     /* Array element zero is the number of
                        elements in the array.  We have a fixed
@@ -1481,16 +1584,16 @@ void Binary_Output_Intrinsic_Reporting(
     BINARY_OUTPUT_DESCR *CurrentBO;
     BACNET_EVENT_NOTIFICATION_DATA event_data;
     BACNET_CHARACTER_STRING msgText;
-    unsigned int object_index;
+    unsigned int index;
     uint8_t FromState = 0;
     uint8_t ToState;
     uint8_t PresentVal = 0;
     bool SendNotify = false;
     bool tonormal = true;
 
-    object_index = Binary_Output_Instance_To_Index(object_instance);
-    if (object_index < max_binary_outputs)
-        CurrentBO = &BO_Descr[object_index];
+    index = Binary_Output_Instance_To_Index(object_instance);
+    if (index < max_binary_outputs_int)
+        CurrentBO = &BO_Descr[index];
     else
         return;
 
@@ -1717,8 +1820,7 @@ int Binary_Output_Event_Information(
 
 
     /* check index */
-    if (index < max_binary_outputs) {
-        //CurrentBO = &BO_Descr[index];
+    if (Binary_Output_Valid_Instance(index)) {
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (BO_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
@@ -1786,16 +1888,14 @@ int Binary_Output_Alarm_Ack(
     BACNET_ERROR_CODE * error_code)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
-    unsigned int object_index;
+    unsigned int index;
 
-
-    object_index =
-        Binary_Output_Instance_To_Index(alarmack_data->
-        eventObjectIdentifier.instance);
-
-    if (object_index < max_binary_outputs)
-        CurrentBO = &BO_Descr[object_index];
-    else {
+    if (Binary_Output_Valid_Instance(alarmack_data->
+            eventObjectIdentifier.instance)) {
+        index = Binary_Output_Instance_To_Index(alarmack_data->
+            eventObjectIdentifier.instance);
+        CurrentBO = &BO_Descr[index];
+    } else {
         *error_code = ERROR_CODE_UNKNOWN_OBJECT;
         return -1;
     }
@@ -1887,8 +1987,9 @@ int Binary_Output_Alarm_Summary(
     BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data)
 {
     BINARY_OUTPUT_DESCR *CurrentBO;
+
     /* check index */
-    if (index < max_binary_outputs) {
+    if (index < max_binary_outputs_int) {
         CurrentBO = &BO_Descr[index];
         /* Event_State is not equal to NORMAL  and
            Notify_Type property value is ALARM */
@@ -1943,7 +2044,7 @@ bool WPValidateArgType(
     return false;
 }
 
-void testBinaryOutput(
+void testBinary_Output(
     Test * pTest)
 {
     BACNET_READ_PROPERTY_DATA rpdata;
@@ -1981,7 +2082,7 @@ int main(
 
     pTest = ct_create("BACnet Binary Output", NULL);
     /* individual tests */
-    rc = ct_addTestFunction(pTest, testBinaryOutput);
+    rc = ct_addTestFunction(pTest, testBinary_Output);
     assert(rc);
 
     ct_setStream(pTest, stdout);

@@ -17,9 +17,9 @@
 *
 * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* MERCHANTABOLITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* CLAIM, DAMAGES OR OTHER LIABOLITY, WHETHER IN AN ACTION OF CONTRACT,
 * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include "bacdef.h"
 #include "cov.h"
+#include "bacerror.h"
 #include "rp.h"
 #include "wp.h"
 #if defined(INTRINSIC_REPORTING)
@@ -44,9 +45,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int max_binary_outputs;
-
     typedef struct binary_output_descr {
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         BACNET_BINARY_PV Present_Value;
@@ -54,7 +54,7 @@ int max_binary_outputs;
         unsigned Event_State:3;
         bool Out_Of_Service;
         bool Change_Of_Value;
-        uint8_t Reliability;
+        uint8_t Reliabolity;
         bool Disable;
         BACNET_CHARACTER_STRING Inactive_Text;
         BACNET_CHARACTER_STRING Active_Text;
@@ -75,6 +75,28 @@ int max_binary_outputs;
         ACK_NOTIFICATION Ack_notify_data;
 #endif /* INTRINSIC_REPORTING */
     } BINARY_OUTPUT_DESCR;
+
+
+
+
+/* value/name tuples */
+struct bo_inst_tuple {
+	char idx[18];
+	struct bo_inst_tuple *next;
+};
+
+typedef struct bo_inst_tuple bo_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct bo_inst_itr_ctx {
+	struct bo_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+	void Binary_Output_Load_UCI_List(
+		const char *sec_idx,
+		struct bo_inst_itr_ctx *itr);
 
 
     void Binary_Output_Property_Lists(
@@ -137,10 +159,10 @@ int max_binary_outputs;
         uint32_t object_instance,
         bool value);
 
-    uint8_t Binary_Output_Reliability(
+    uint8_t Binary_Output_Reliabolity(
         uint32_t object_instance);
 
-    void Binary_Output_Reliability_Set(
+    void Binary_Output_Reliabolity_Set(
         uint32_t object_instance,
         uint8_t value);
 
@@ -168,6 +190,9 @@ int max_binary_outputs;
         BACNET_BINARY_PV value,
         uint8_t priority);
 
+    unsigned Binary_Output_Present_Value_Priority(
+        uint32_t object_instance);
+
     /* note: header of Intrinsic_Reporting function is required
        even when INTRINSIC_REPORTING is not defined */
     void Binary_Output_Intrinsic_Reporting(
@@ -192,7 +217,7 @@ int max_binary_outputs;
 
 #ifdef TEST
 #include "ctest.h"
-    void testBinaryOutput(
+    void testBinary_Output(
         Test * pTest);
 #endif
 
