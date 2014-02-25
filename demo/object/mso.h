@@ -2,6 +2,8 @@
 *
 * Copyright (C) 2012 Steve Karg <skarg@users.sourceforge.net>
 *
+* Copyright (C) 2013 Patrick Grimm <patrick@lunatiki.de>
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
 * "Software"), to deal in the Software without restriction, including
@@ -28,6 +30,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bacdef.h"
+#include "cov.h"
 #include "bacerror.h"
 #include "rp.h"
 #include "wp.h"
@@ -45,11 +48,13 @@ extern "C" {
 int max_multi_state_outputs;
 
     typedef struct multistate_output_descr {
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        uint8_t Reliability;
         bool Disable;
         uint8_t Units;
         char State_Text[254][64];
@@ -75,6 +80,26 @@ int max_multi_state_outputs;
 #endif /* INTRINSIC_REPORTING */
     } MULTI_STATE_OUTPUT_DESCR;
 
+
+/* value/name tuples */
+struct mo_inst_tuple {
+	char idx[18];
+	struct mo_inst_tuple *next;
+};
+
+typedef struct mo_inst_tuple mo_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct mo_inst_itr_ctx {
+	struct mo_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Multistate_Output_Load_UCI_List(
+		const char *sec_idx,
+		struct mo_inst_itr_ctx *itr);
 
     void Multistate_Output_Property_Lists(
         const int **pRequired,
@@ -126,6 +151,13 @@ int max_multi_state_outputs;
         uint32_t object_instance,
         bool value);
 
+    uint8_t Multistate_Output_Reliability(
+        uint32_t object_instance);
+
+    void Multistate_Output_Reliability_Set(
+        uint32_t object_instance,
+        uint8_t value);
+
     bool Multistate_Output_Description_Set(
         uint32_t object_instance,
         char *text_string);
@@ -163,7 +195,7 @@ int max_multi_state_outputs;
 
 #ifdef TEST
 #include "ctest.h"
-    void testMultistateOutput(
+    void testMultistate_Output(
         Test * pTest);
 #endif
 
