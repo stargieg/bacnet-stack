@@ -254,7 +254,7 @@ int main(
             recipient_scan_tmr = 0;
         }
 #endif
-#if false
+//#if false
         /* output */
         rewrite++;
         if (rewrite>10000) {
@@ -501,7 +501,7 @@ int main(
             ucix_cleanup(ctx);
         }
         /* update end */
-#endif
+//#endif
         /* blink LEDs, Turn on or off outputs, etc */
     }
 
