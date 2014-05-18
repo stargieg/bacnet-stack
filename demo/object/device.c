@@ -262,6 +262,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
     {OBJECT_MULTI_STATE_INPUT,
             Multistate_Input_Init,
             Multistate_Input_Count,
@@ -292,7 +293,6 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         Multistate_Output_Intrinsic_Reporting },
-#endif
     {OBJECT_MULTI_STATE_VALUE,
             Multistate_Value_Init,
             Multistate_Value_Count,
