@@ -159,202 +159,202 @@ static time_t uci_Update(
 #endif
 /* update Analog Input from uci */
 			if (update_object_type == OBJECT_ANALOG_INPUT) {
-					val_f = strtof(cur->value,NULL);
-					pval_f = Analog_Input_Present_Value(uci_idx);
-					if ( val_f != pval_f ) {
-						Analog_Input_Present_Value_Set(uci_idx,val_f,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Analog_Input_Out_Of_Service(uci_idx))
-							Analog_Input_Out_Of_Service_Set(uci_idx,0);
-						if (Analog_Input_Reliability(uci_idx))
-							Analog_Input_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Analog_Input_Out_Of_Service_Set(uci_idx,1);
+				val_f = strtof(cur->value,NULL);
+				pval_f = Analog_Input_Present_Value(uci_idx);
+				if ( val_f != pval_f ) {
+					Analog_Input_Present_Value_Set(uci_idx,val_f,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Analog_Input_Out_Of_Service(uci_idx))
+						Analog_Input_Out_Of_Service_Set(uci_idx,0);
+					if (Analog_Input_Reliability(uci_idx))
 						Analog_Input_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Analog_Input_Out_Of_Service_Set(uci_idx,1);
+					Analog_Input_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 /* update Analog Output from uci */
 			} else if (update_object_type == OBJECT_ANALOG_OUTPUT) {
-					val_f = strtof(cur->value,NULL);
-					pval_f = Analog_Output_Present_Value(uci_idx);
-					if ( val_f != pval_f ) {
-						Analog_Output_Present_Value_Set(uci_idx,val_f,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Analog_Output_Out_Of_Service(uci_idx))
-							Analog_Output_Out_Of_Service_Set(uci_idx,0);
-						if (Analog_Output_Reliability(uci_idx))
-							Analog_Output_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Analog_Output_Out_Of_Service_Set(uci_idx,1);
+				val_f = strtof(cur->value,NULL);
+				pval_f = Analog_Output_Present_Value(uci_idx);
+				if ( val_f != pval_f ) {
+					Analog_Output_Present_Value_Set(uci_idx,val_f,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Analog_Output_Out_Of_Service(uci_idx))
+						Analog_Output_Out_Of_Service_Set(uci_idx,0);
+					if (Analog_Output_Reliability(uci_idx))
 						Analog_Output_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Analog_Output_Out_Of_Service_Set(uci_idx,1);
+					Analog_Output_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 /* update Analog Value from uci */
 			} else if (update_object_type == OBJECT_ANALOG_VALUE) {
-					val_f = strtof(cur->value,NULL);
-					pval_f = Analog_Value_Present_Value(uci_idx);
-					if ( val_f != pval_f ) {
-						Analog_Value_Present_Value_Set(uci_idx,val_f,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Analog_Value_Out_Of_Service(uci_idx))
-							Analog_Value_Out_Of_Service_Set(uci_idx,0);
-						if (Analog_Value_Reliability(uci_idx))
-							Analog_Value_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Analog_Value_Out_Of_Service_Set(uci_idx,1);
+				val_f = strtof(cur->value,NULL);
+				pval_f = Analog_Value_Present_Value(uci_idx);
+				if ( val_f != pval_f ) {
+					Analog_Value_Present_Value_Set(uci_idx,val_f,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Analog_Value_Out_Of_Service(uci_idx))
+						Analog_Value_Out_Of_Service_Set(uci_idx,0);
+					if (Analog_Value_Reliability(uci_idx))
 						Analog_Value_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Analog_Value_Out_Of_Service_Set(uci_idx,1);
+					Analog_Value_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 /* update Binary Input from uci */
 			} else if (update_object_type == OBJECT_BINARY_INPUT) {
-					val_i = atoi(cur->value);
-					pval_i = Binary_Input_Present_Value(uci_idx);
-					if ( val_i != pval_i ) {
-						Binary_Input_Present_Value_Set(uci_idx,val_i,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Binary_Input_Out_Of_Service(uci_idx))
-							Binary_Input_Out_Of_Service_Set(uci_idx,0);
-						if (Binary_Input_Reliability(uci_idx))
-							Binary_Input_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Binary_Input_Out_Of_Service_Set(uci_idx,1);
+				val_i = atoi(cur->value);
+				pval_i = Binary_Input_Present_Value(uci_idx);
+				if ( val_i != pval_i ) {
+					Binary_Input_Present_Value_Set(uci_idx,val_i,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Binary_Input_Out_Of_Service(uci_idx))
+						Binary_Input_Out_Of_Service_Set(uci_idx,0);
+					if (Binary_Input_Reliability(uci_idx))
 						Binary_Input_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Binary_Input_Out_Of_Service_Set(uci_idx,1);
+					Binary_Input_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 /* update Binary Output from uci */
 			} else if (update_object_type == OBJECT_BINARY_OUTPUT) {
-					val_i = atoi(cur->value);
-					pval_i = Binary_Output_Present_Value(uci_idx);
-					if ( val_i != pval_i ) {
-						Binary_Output_Present_Value_Set(uci_idx,val_i,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Binary_Output_Out_Of_Service(uci_idx))
-							Binary_Output_Out_Of_Service_Set(uci_idx,0);
-						if (Binary_Output_Reliability(uci_idx))
-							Binary_Output_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Binary_Output_Out_Of_Service_Set(uci_idx,1);
+				val_i = atoi(cur->value);
+				pval_i = Binary_Output_Present_Value(uci_idx);
+				if ( val_i != pval_i ) {
+					Binary_Output_Present_Value_Set(uci_idx,val_i,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Binary_Output_Out_Of_Service(uci_idx))
+						Binary_Output_Out_Of_Service_Set(uci_idx,0);
+					if (Binary_Output_Reliability(uci_idx))
 						Binary_Output_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Binary_Output_Out_Of_Service_Set(uci_idx,1);
+					Binary_Output_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 /* update Binary Value from uci */
 			} else if (update_object_type == OBJECT_BINARY_VALUE) {
-					val_i = atoi(cur->value);
-					pval_i = Binary_Value_Present_Value(uci_idx);
-					if ( val_i != pval_i ) {
-						Binary_Value_Present_Value_Set(uci_idx,val_i,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Binary_Value_Out_Of_Service(uci_idx))
-							Binary_Value_Out_Of_Service_Set(uci_idx,0);
-						if (Binary_Value_Reliability(uci_idx))
-							Binary_Value_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Binary_Value_Out_Of_Service_Set(uci_idx,1);
+				val_i = atoi(cur->value);
+				pval_i = Binary_Value_Present_Value(uci_idx);
+				if ( val_i != pval_i ) {
+					Binary_Value_Present_Value_Set(uci_idx,val_i,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Binary_Value_Out_Of_Service(uci_idx))
+						Binary_Value_Out_Of_Service_Set(uci_idx,0);
+					if (Binary_Value_Reliability(uci_idx))
 						Binary_Value_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Binary_Value_Out_Of_Service_Set(uci_idx,1);
+					Binary_Value_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 /* update Multistate Input from uci */
 /*			} else if (update_object_type == OBJECT_MULTI_STATE_INPUT) {
-					val_i = atoi(cur->value);
-					pval_i = Multistate_Input_Present_Value(uci_idx);
-					if ( val_i != pval_i ) {
-						Multistate_Input_Present_Value_Set(uci_idx,val_i,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Multistate_Input_Out_Of_Service(uci_idx))
-							Multistate_Input_Out_Of_Service_Set(uci_idx,0);
-						if (Multistate_Input_Reliability(uci_idx))
-							Multistate_Input_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Multistate_Input_Out_Of_Service_Set(uci_idx,1);
+				val_i = atoi(cur->value);
+				pval_i = Multistate_Input_Present_Value(uci_idx);
+				if ( val_i != pval_i ) {
+					Multistate_Input_Present_Value_Set(uci_idx,val_i,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Multistate_Input_Out_Of_Service(uci_idx))
+						Multistate_Input_Out_Of_Service_Set(uci_idx,0);
+					if (Multistate_Input_Reliability(uci_idx))
 						Multistate_Input_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}*/
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Multistate_Input_Out_Of_Service_Set(uci_idx,1);
+					Multistate_Input_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}*/
 /* update Multistate Output from uci */
 			} else if (update_object_type == OBJECT_MULTI_STATE_OUTPUT) {
-					val_i = atoi(cur->value);
-					pval_i = Multistate_Output_Present_Value(uci_idx);
-					if ( val_i != pval_i ) {
-						Multistate_Output_Present_Value_Set(uci_idx,val_i,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Multistate_Output_Out_Of_Service(uci_idx))
-							Multistate_Output_Out_Of_Service_Set(uci_idx,0);
-						if (Multistate_Output_Reliability(uci_idx))
-							Multistate_Output_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Multistate_Output_Out_Of_Service_Set(uci_idx,1);
+				val_i = atoi(cur->value);
+				pval_i = Multistate_Output_Present_Value(uci_idx);
+				if ( val_i != pval_i ) {
+					Multistate_Output_Present_Value_Set(uci_idx,val_i,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Multistate_Output_Out_Of_Service(uci_idx))
+						Multistate_Output_Out_Of_Service_Set(uci_idx,0);
+					if (Multistate_Output_Reliability(uci_idx))
 						Multistate_Output_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Multistate_Output_Out_Of_Service_Set(uci_idx,1);
+					Multistate_Output_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 /* update Multistate Value from uci */
 			} else if (update_object_type == OBJECT_MULTI_STATE_VALUE) {
-					val_i = atoi(cur->value);
-					pval_i = Multistate_Value_Present_Value(uci_idx);
-					if ( val_i != pval_i ) {
-						Multistate_Value_Present_Value_Set(uci_idx,val_i,16);
-					}
-					if (cur->Out_Of_Service == 0) {
-						if (Multistate_Value_Out_Of_Service(uci_idx))
-							Multistate_Value_Out_Of_Service_Set(uci_idx,0);
-						if (Multistate_Value_Reliability(uci_idx))
-							Multistate_Value_Reliability_Set(uci_idx,
-								RELIABILITY_NO_FAULT_DETECTED);
-					} else {
-#if PRINT_ENABLED
-						printf("idx %s ",cur->idx);
-						printf("Out_Of_Service\n");
-#endif
-						Multistate_Value_Out_Of_Service_Set(uci_idx,1);
+				val_i = atoi(cur->value);
+				pval_i = Multistate_Value_Present_Value(uci_idx);
+				if ( val_i != pval_i ) {
+					Multistate_Value_Present_Value_Set(uci_idx,val_i,16);
+				}
+				if (cur->Out_Of_Service == 0) {
+					if (Multistate_Value_Out_Of_Service(uci_idx))
+						Multistate_Value_Out_Of_Service_Set(uci_idx,0);
+					if (Multistate_Value_Reliability(uci_idx))
 						Multistate_Value_Reliability_Set(uci_idx,
-							RELIABILITY_COMMUNICATION_FAILURE);
-					}
+							RELIABILITY_NO_FAULT_DETECTED);
+				} else {
+#if PRINT_ENABLED
+					printf("idx %s ",cur->idx);
+					printf("Out_Of_Service\n");
+#endif
+					Multistate_Value_Out_Of_Service_Set(uci_idx,1);
+					Multistate_Value_Reliability_Set(uci_idx,
+						RELIABILITY_COMMUNICATION_FAILURE);
+				}
 			}
 		}
 		ucix_cleanup(ctx);
