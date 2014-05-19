@@ -270,7 +270,7 @@ static time_t uci_Update(
 /* update Binary Value from uci */
 			} else if (update_object_type == OBJECT_BINARY_VALUE) {
 					val_i = atoi(cur->value);
-					pval_i = Analog_Value_Present_Value(uci_idx);
+					pval_i = Binary_Value_Present_Value(uci_idx);
 					if ( val_i != pval_i ) {
 						Binary_Value_Present_Value_Set(uci_idx,val_i,16);
 					}
@@ -463,7 +463,7 @@ int main(
     time_t ucimodtime_bacnet_mo = 0;
     time_t ucimodtime_bacnet_mv = 0;
     char *pEnv = NULL;
-    int rewrite;
+    int rewrite = 0;
     BACNET_OBJECT_TYPE u_object_type;
 
     pEnv = getenv("UCI_SECTION");
@@ -546,9 +546,11 @@ int main(
 //#if false
         /* output */
         rewrite++;
-        if (rewrite>10000) {
-            rewrite=0;
+        if (rewrite>100000) {
+#if PRINT_ENABLED
             printf("rewrite %i\n", rewrite);
+#endif
+            rewrite=0;
         }
         /* update Analog Input from uci */
         u_object_type = OBJECT_ANALOG_INPUT;
