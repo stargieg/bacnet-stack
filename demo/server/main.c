@@ -114,9 +114,9 @@ static time_t uci_Update(
 	} else if (update_object_type == OBJECT_BINARY_VALUE) {
 		section = "bacnet_bv";
 		type = "bv";
-//	} else if (update_object_type == OBJECT_MULTI_STATE_INPUT) {
-//		section = "bacnet_mi";
-//		type = "mi";
+	} else if (update_object_type == OBJECT_MULTI_STATE_INPUT) {
+		section = "bacnet_mi";
+		type = "mi";
 	} else if (update_object_type == OBJECT_MULTI_STATE_OUTPUT) {
 		section = "bacnet_mo";
 		type = "mo";
@@ -290,7 +290,7 @@ static time_t uci_Update(
 						RELIABILITY_COMMUNICATION_FAILURE);
 				}
 /* update Multistate Input from uci */
-/*			} else if (update_object_type == OBJECT_MULTI_STATE_INPUT) {
+			} else if (update_object_type == OBJECT_MULTI_STATE_INPUT) {
 				val_i = atoi(cur->value);
 				pval_i = Multistate_Input_Present_Value(uci_idx);
 				if ( val_i != pval_i ) {
@@ -310,7 +310,7 @@ static time_t uci_Update(
 					Multistate_Input_Out_Of_Service_Set(uci_idx,1);
 					Multistate_Input_Reliability_Set(uci_idx,
 						RELIABILITY_COMMUNICATION_FAILURE);
-				}*/
+				}
 /* update Multistate Output from uci */
 			} else if (update_object_type == OBJECT_MULTI_STATE_OUTPUT) {
 				val_i = atoi(cur->value);
@@ -462,6 +462,8 @@ int main(
     time_t ucimodtime_bacnet_mi = 0;
     time_t ucimodtime_bacnet_mo = 0;
     time_t ucimodtime_bacnet_mv = 0;
+    char path[128];
+    struct stat s;
     char *pEnv = NULL;
     int rewrite = 0;
     BACNET_OBJECT_TYPE u_object_type;
@@ -482,6 +484,34 @@ int main(
     }
     if(ctx)
         ucix_cleanup(ctx);
+
+	snprintf(path, sizeof(path), "/etc/config/bacnet_ai");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_ai = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_ao");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_ao = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_av");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_av = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_bi");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_bi = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_bo");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_bo = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_bv");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_bi = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_mi");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_mi = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_mo");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_mo = s.st_mtime;
+	snprintf(path, sizeof(path), "/etc/config/bacnet_mv");
+	if( stat(path, &s) > -1 )
+		ucimodtime_bacnet_mv = s.st_mtime;
 
 #if PRINT_ENABLED
     printf("BACnet Server with uci\n" "BACnet Stack Version %s\n"
