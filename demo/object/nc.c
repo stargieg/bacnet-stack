@@ -50,7 +50,7 @@
 
 /* number of demo objects */
 #ifndef MAX_NOTIFICATION_CLASSES
-#define MAX_NOTIFICATION_CLASSES 65535
+#define MAX_NOTIFICATION_CLASSES 1024
 #endif
 unsigned max_notificaton_classes_int = 0;
 

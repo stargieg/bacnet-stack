@@ -53,7 +53,7 @@
 
 /* number of demo objects */
 #ifndef MAX_TREND_LOGS
-#define MAX_TREND_LOGS 65535
+#define MAX_TREND_LOGS 1024
 #endif
 unsigned max_trend_logs_int = 0;
 
@@ -2181,7 +2181,7 @@ void trend_log_timer(
     time_t tNow = 0;
 
     /* unused parameter */
-    uSeconds = uSeconds;
+    //uSeconds = uSeconds;
     /* use OS to get the current time */
     tNow = time(NULL);
     for (iCount = 0; iCount < max_trend_logs_int; iCount++) {
