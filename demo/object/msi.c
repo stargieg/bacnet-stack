@@ -1112,8 +1112,6 @@ int Multistate_Input_Read_Property(
                     characterstring_init_ansi(&char_string,
                         Multistate_Input_State_Text(rpdata->object_instance,
                         rpdata->array_index));
-                        Multistate_Input_State_Text(rpdata->object_instance,
-                        rpdata->array_index));
                     apdu_len =
                         encode_application_character_string(&apdu[0],
                         &char_string);
