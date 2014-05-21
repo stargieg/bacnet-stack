@@ -54,6 +54,7 @@ int max_multi_state_values;
         uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        bool Change_Of_Value;
         uint8_t Reliability;
         bool Disable;
         uint8_t Units;
@@ -157,6 +158,16 @@ struct mv_inst_itr_ctx {
     void Multistate_Value_Reliability_Set(
         uint32_t object_instance,
         uint8_t value);
+
+    bool Multistate_Value_Encode_Value_List(
+        uint32_t object_instance,
+        BACNET_PROPERTY_VALUE * value_list);
+
+    bool Multistate_Value_Change_Of_Value(
+        uint32_t instance);
+
+    void Multistate_Value_Change_Of_Value_Clear(
+        uint32_t instance);
 
     bool Multistate_Value_Description_Set(
         uint32_t object_instance,

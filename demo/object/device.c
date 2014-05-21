@@ -274,9 +274,9 @@ static object_functions_t My_Object_Table[] = {
             Multistate_Input_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
+            Multistate_Input_Encode_Value_List,
+            Multistate_Input_Change_Of_Value,
+            Multistate_Input_Change_Of_Value_Clear,
         Multistate_Input_Intrinsic_Reporting },
     {OBJECT_MULTI_STATE_OUTPUT,
             Multistate_Output_Init,
@@ -289,9 +289,9 @@ static object_functions_t My_Object_Table[] = {
             Multistate_Output_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
+            Multistate_Output_Encode_Value_List,
+            Multistate_Output_Change_Of_Value,
+            Multistate_Output_Change_Of_Value_Clear,
         Multistate_Output_Intrinsic_Reporting },
     {OBJECT_MULTI_STATE_VALUE,
             Multistate_Value_Init,
@@ -304,9 +304,9 @@ static object_functions_t My_Object_Table[] = {
             Multistate_Value_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
+            Multistate_Value_Encode_Value_List,
+            Multistate_Value_Change_Of_Value,
+            Multistate_Value_Change_Of_Value_Clear,
         Multistate_Value_Intrinsic_Reporting },
     {OBJECT_TRENDLOG,
             Trend_Log_Init,
@@ -646,7 +646,7 @@ unsigned Device_Count(
 uint32_t Device_Index_To_Instance(
     unsigned index)
 {
-    index = index;
+    //index = index;
     return Object_Instance_Number;
 }
 

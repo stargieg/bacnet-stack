@@ -46,7 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_MULTI_STATE_VALUES
-#define MAX_MULTI_STATE_VALUES 65535
+#define MAX_MULTI_STATE_VALUES 1024
 #endif
 unsigned max_multi_state_values_int = 0;
 
@@ -386,7 +386,7 @@ bool Multistate_Value_Valid_Instance(
     index = Multistate_Value_Instance_To_Index(object_instance);
     if (index == MAX_MULTI_STATE_VALUES) {
 #if PRINT_ENABLED
-        fprintf(stderr, "Analog_Value_Valid_Instance %i invalid\n",object_instance);
+        fprintf(stderr, "Multistate_Value_Valid_Instance %i invalid\n",object_instance);
 #endif
     	return false;
     }
@@ -395,6 +395,81 @@ bool Multistate_Value_Valid_Instance(
             return true;
 
     return false;
+}
+
+bool Multistate_Value_Change_Of_Value(
+    uint32_t object_instance)
+{
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
+    bool status = false;
+    unsigned index = 0;
+
+    if (Multistate_Value_Valid_Instance(object_instance)) {
+        index = Multistate_Value_Instance_To_Index(object_instance);
+        CurrentMSV = &MSV_Descr[index];
+        status = CurrentMSV->Change_Of_Value;
+    }
+
+    return status;
+}
+
+void Multistate_Value_Change_Of_Value_Clear(
+    uint32_t object_instance)
+{
+    MULTI_STATE_VALUE_DESCR *CurrentMSV;
+    unsigned index = 0;
+
+    if (Multistate_Value_Valid_Instance(object_instance)) {
+        index = Multistate_Value_Instance_To_Index(object_instance);
+        CurrentMSV = &MSV_Descr[index];
+        CurrentMSV->Change_Of_Value = false;
+    }
+
+    return;
+}
+
+
+/* returns true if value has changed */
+bool Multistate_Value_Encode_Value_List(
+    uint32_t object_instance,
+    BACNET_PROPERTY_VALUE * value_list)
+{
+    bool status = false;
+
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_PRESENT_VALUE;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+        value_list->value.type.Enumerated =
+            Multistate_Value_Present_Value(object_instance);
+        value_list->priority = BACNET_NO_PRIORITY;
+        value_list = value_list->next;
+    }
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_STATUS_FLAGS;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
+        bitstring_init(&value_list->value.type.Bit_String);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_IN_ALARM, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_FAULT, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_OVERRIDDEN, false);
+        if (Multistate_Value_Out_Of_Service(object_instance)) {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, true);
+        } else {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, false);
+        }
+        value_list->priority = BACNET_NO_PRIORITY;
+    }
+    status =  Multistate_Value_Change_Of_Value(object_instance);
+
+    return status;
 }
 
 uint32_t Multistate_Value_Present_Value(
@@ -437,7 +512,6 @@ bool Multistate_Value_Present_Value_Set(
         if (priority && (priority <= BACNET_MAX_PRIORITY) &&
             (priority != 6 /* reserved */ ) && (value > 0) &&
             (value <= CurrentMSV->number_of_states)) {
-//          CurrentMSV->Present_Value = (uint8_t) value;
             CurrentMSV->Priority_Array[priority - 1] = (uint8_t) value;
             /* Note: you could set the physical output here to the next
                 highest priority, or to the relinquish default if no
@@ -1986,7 +2060,7 @@ bool WPValidateArgType(
     return false;
 }
 
-void testMultistateInput(
+void testMultistateValue(
     Test * pTest)
 {
     BACNET_READ_PROPERTY_DATA rpdata;

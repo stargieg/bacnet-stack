@@ -54,6 +54,7 @@ int max_multi_state_outputs;
         uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        bool Change_Of_Value;
         uint8_t Reliability;
         bool Disable;
         uint8_t Units;
@@ -69,6 +70,7 @@ int max_multi_state_outputs;
         uint32_t Time_Delay;
         uint32_t Notification_Class;
         uint8_t Alarm_Values[254];
+        uint8_t Feedback_Value;
         unsigned Event_Enable:3;
         unsigned Notify_Type:1;
         ACKED_INFO Acked_Transitions[MAX_BACNET_EVENT_TRANSITION];
@@ -157,6 +159,16 @@ struct mo_inst_itr_ctx {
     void Multistate_Output_Reliability_Set(
         uint32_t object_instance,
         uint8_t value);
+
+    bool Multistate_Output_Encode_Value_List(
+        uint32_t object_instance,
+        BACNET_PROPERTY_VALUE * value_list);
+
+    bool Multistate_Output_Change_Of_Value(
+        uint32_t instance);
+
+    void Multistate_Output_Change_Of_Value_Clear(
+        uint32_t instance);
 
     bool Multistate_Output_Description_Set(
         uint32_t object_instance,

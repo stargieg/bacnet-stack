@@ -2,6 +2,8 @@
 *
 * Copyright (C) 2012 Steve Karg <skarg@users.sourceforge.net>
 *
+* Copyright (C) 2013 Patrick Grimm <patrick@lunatiki.de>
+*
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
 * "Software"), to deal in the Software without restriction, including
@@ -28,6 +30,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bacdef.h"
+#include "cov.h"
 #include "bacerror.h"
 #include "rp.h"
 #include "wp.h"
@@ -45,11 +48,14 @@ extern "C" {
 int max_multi_state_inputs;
 
     typedef struct multistate_input_descr {
+        uint32_t Instance;
         char Object_Name[64];
         char Object_Description[64];
         uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
+        bool Change_Of_Value;
+        uint8_t Reliability;
         bool Disable;
         uint8_t Units;
         char State_Text[254][64];
@@ -75,6 +81,26 @@ int max_multi_state_inputs;
 #endif /* INTRINSIC_REPORTING */
     } MULTI_STATE_INPUT_DESCR;
 
+
+/* value/name tuples */
+struct mi_inst_tuple {
+	char idx[18];
+	struct mi_inst_tuple *next;
+};
+
+typedef struct mi_inst_tuple mi_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct mi_inst_itr_ctx {
+	struct mi_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Multistate_Input_Load_UCI_List(
+		const char *sec_idx,
+		struct mi_inst_itr_ctx *itr);
 
     void Multistate_Input_Property_Lists(
         const int **pRequired,
@@ -125,6 +151,23 @@ int max_multi_state_inputs;
     void Multistate_Input_Out_Of_Service_Set(
         uint32_t object_instance,
         bool value);
+
+    uint8_t Multistate_Input_Reliability(
+        uint32_t object_instance);
+
+    void Multistate_Input_Reliability_Set(
+        uint32_t object_instance,
+        uint8_t value);
+
+    bool Multistate_Input_Encode_Value_List(
+        uint32_t object_instance,
+        BACNET_PROPERTY_VALUE * value_list);
+
+    bool Multistate_Input_Change_Of_Value(
+        uint32_t instance);
+
+    void Multistate_Input_Change_Of_Value_Clear(
+        uint32_t instance);
 
     bool Multistate_Input_Description_Set(
         uint32_t object_instance,

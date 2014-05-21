@@ -31,13 +31,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "bacdef.h"
 #include "bacdcode.h"
 #include "bacenum.h"
 #include "bacapp.h"
 #include "bactext.h"
-#include "cov.h"
 #include "config.h"     /* the custom stuff */
 #include "device.h"
 #include "handlers.h"
@@ -46,8 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_MULTI_STATE_INPUTS
-//#define MAX_MULTI_STATE_INPUTS 65535
-#define MAX_MULTI_STATE_INPUTS 512
+#define MAX_MULTI_STATE_INPUTS 1024
 #endif
 unsigned max_multi_state_inputs_int = 0;
 
@@ -55,14 +54,10 @@ unsigned max_multi_state_inputs_int = 0;
 /* the Relinquish Default value */
 #define MULTI_STATE_INPUT_RELINQUISH_DEFAULT 0
 
-/* NULL part of the array */
-#define MULTI_STATE_NULL (255)
-
 /* we choose to have a NULL level in our system represented by */
 /* a particular value.  When the priorities are not in use, they */
 /* will be relinquished (i.e. set to the NULL level). */
 #define MULTI_STATE_LEVEL_NULL 255
-
 
 MULTI_STATE_INPUT_DESCR MSI_Descr[MAX_MULTI_STATE_INPUTS];
 
@@ -93,6 +88,7 @@ static const int Multistate_Input_Properties_Optional[] = {
     PROP_NOTIFY_TYPE,
     PROP_EVENT_TIME_STAMPS,
 #endif
+    PROP_RELIABILITY,
     -1
 };
 
@@ -116,6 +112,27 @@ void Multistate_Input_Property_Lists(
 
     return;
 }
+
+void Multistate_Input_Load_UCI_List(const char *sec_idx,
+	struct mi_inst_itr_ctx *itr)
+{
+	mi_inst_tuple_t *t = malloc(sizeof(mi_inst_tuple_t));
+	bool disable;
+	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
+	"disable", 0);
+	if (strcmp(sec_idx,"default") == 0)
+		return;
+	if (disable)
+		return;
+	if( (t = (mi_inst_tuple_t *)malloc(sizeof(mi_inst_tuple_t))) != NULL ) {
+		strncpy(t->idx, sec_idx, sizeof(t->idx));
+		t->next = itr->list;
+		itr->list = t;
+	}
+    return;
+}
+
+
 /*
  * Things to do when starting up the stack for Multistate Value.
  * Should be called whenever we reset the device or power it up
@@ -144,13 +161,31 @@ void Multistate_Input_Init(
     int ucievent;
     int ucitime_delay_default;
     int ucitime_delay;
+    const char *sec = "bacnet_mi";
+
+	char *section;
+	char *type;
+	struct mi_inst_itr_ctx itr_m;
+	section = "bacnet_mi";
+
+#if PRINT_ENABLED
     fprintf(stderr, "Multistate_Input_Init\n");
+#endif
     if (!initialized) {
         initialized = true;
-        ctx = ucix_init("bacnet_mi");
+        ctx = ucix_init(sec);
+#if PRINT_ENABLED
         if(!ctx)
             fprintf(stderr,  "Failed to load config file bacnet_mi\n");
-    
+#endif
+		type = "mi";
+		mi_inst_tuple_t *cur = malloc(sizeof (mi_inst_tuple_t));
+		itr_m.list = NULL;
+		itr_m.section = section;
+		itr_m.ctx = ctx;
+		ucix_for_each_section_type(ctx, section, type,
+			(void *)Multistate_Input_Load_UCI_List, &itr_m);
+
         ucidescription_default = ucix_get_option(ctx, "bacnet_mi", "default",
             "description");
         ucistate_n_default = ucix_get_list(ucistate_default, ctx,
@@ -163,8 +198,11 @@ void Multistate_Input_Init(
             "event", -1);
         ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_mi", "default",
             "time_delay", -1);
-    
-        for (i = 0; i < MAX_MULTI_STATE_INPUTS; i++) {
+
+        i = 0;
+		for( cur = itr_m.list; cur; cur = cur->next ) {
+			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
+            idx_c = idx_cc;
             char *ucistate[254];
             int ucistate_n = 0;
             char *ucialarmstate[254];
@@ -173,19 +211,17 @@ void Multistate_Input_Init(
             int state_n = 0;
             char *alarmstate[254];
             int alarmstate_n = 0;
-            memset(&MSI_Descr[i], 0x00, sizeof(MULTI_STATE_INPUT_DESCR));
-            /* initialize all the analog output priority arrays to NULL */
-            for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
-                MSI_Descr[i].Priority_Array[j] = MULTI_STATE_LEVEL_NULL;
-            }
-    	    sprintf(idx_cc,"%d",i);
-    	    idx_c = idx_cc;
             uciname = ucix_get_option(ctx, "bacnet_mi", idx_c, "name");
             ucidisable = ucix_get_option_int(ctx, "bacnet_mi", idx_c,
                 "disable", 0);
             if ((uciname != 0) && (ucidisable == 0)) {
+                memset(&MSI_Descr[i], 0x00, sizeof(MULTI_STATE_INPUT_DESCR));
+                /* initialize all the analog output priority arrays to NULL */
+                for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
+                    MSI_Descr[i].Priority_Array[j] = MULTI_STATE_LEVEL_NULL;
+                }
+                MSI_Descr[i].Instance=atoi(idx_cc);
                 MSI_Descr[i].Disable=false;
-                max_multi_state_inputs_int = i+1;
                 sprintf(name, "%s", uciname);
                 ucix_string_copy(MSI_Descr[i].Object_Name,
                     sizeof(MSI_Descr[i].Object_Name), name);
@@ -286,11 +322,13 @@ void Multistate_Input_Init(
 
                 MSI_Descr[i].Notify_Type = NOTIFY_ALARM;
 #endif
-            } else {
-                MSI_Descr[i].Disable=true;
+                i++;
+                max_multi_state_inputs_int = i;
             }
         }
+#if PRINT_ENABLED
         fprintf(stderr, "max_multi_state_inputs: %i\n", max_multi_state_inputs_int);
+#endif
         if(ctx)
             ucix_cleanup(ctx);
     }
@@ -303,12 +341,17 @@ void Multistate_Input_Init(
 unsigned Multistate_Input_Instance_To_Index(
     uint32_t object_instance)
 {
-    unsigned index = max_multi_state_inputs_int;
-
-    if (object_instance < max_multi_state_inputs_int)
-        index = object_instance;
-
-    return index;
+    MULTI_STATE_INPUT_DESCR *CurrentMSI;
+    int index,instance,i;
+    index = max_multi_state_inputs_int;
+    for (i = 0; i < index; i++) {
+    	CurrentMSI = &MSI_Descr[i];
+    	instance = CurrentMSI->Instance;
+    	if (CurrentMSI->Instance == object_instance) {
+    		return i;
+    	}
+    }
+    return MAX_MULTI_STATE_INPUTS;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -318,16 +361,10 @@ uint32_t Multistate_Input_Index_To_Instance(
     unsigned index)
 {
     MULTI_STATE_INPUT_DESCR *CurrentMSI;
-    if (index < max_multi_state_inputs_int) {
-        CurrentMSI = &MSI_Descr[index];
-        if (CurrentMSI->Disable == false) {
-            return index;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
+    uint32_t instance;
+	CurrentMSI = &MSI_Descr[index];
+	instance = CurrentMSI->Instance;
+	return instance;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
@@ -347,16 +384,92 @@ bool Multistate_Input_Valid_Instance(
     MULTI_STATE_INPUT_DESCR *CurrentMSI;
     unsigned index = 0; /* offset from instance lookup */
     index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
-        CurrentMSI = &MSI_Descr[index];
-        if (CurrentMSI->Disable == false) {
-            return true;
-        } else {
-            return false;
-        }
+    if (index == MAX_MULTI_STATE_INPUTS) {
+#if PRINT_ENABLED
+        fprintf(stderr, "Multistate_Input_Valid_Instance %i invalid\n",object_instance);
+#endif
+    	return false;
     }
+    CurrentMSI = &MSI_Descr[index];
+    if (CurrentMSI->Disable == false)
+            return true;
 
     return false;
+}
+
+bool Multistate_Input_Change_Of_Value(
+    uint32_t object_instance)
+{
+    MULTI_STATE_INPUT_DESCR *CurrentMSI;
+    bool status = false;
+    unsigned index = 0;
+
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
+        CurrentMSI = &MSI_Descr[index];
+        status = CurrentMSI->Change_Of_Value;
+    }
+
+    return status;
+}
+
+void Multistate_Input_Change_Of_Value_Clear(
+    uint32_t object_instance)
+{
+    MULTI_STATE_INPUT_DESCR *CurrentMSI;
+    unsigned index = 0;
+
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
+        CurrentMSI = &MSI_Descr[index];
+        CurrentMSI->Change_Of_Value = false;
+    }
+
+    return;
+}
+
+
+/* returns true if value has changed */
+bool Multistate_Input_Encode_Value_List(
+    uint32_t object_instance,
+    BACNET_PROPERTY_VALUE * value_list)
+{
+    bool status = false;
+
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_PRESENT_VALUE;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+        value_list->value.type.Enumerated =
+            Multistate_Input_Present_Value(object_instance);
+        value_list->priority = BACNET_NO_PRIORITY;
+        value_list = value_list->next;
+    }
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_STATUS_FLAGS;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
+        bitstring_init(&value_list->value.type.Bit_String);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_IN_ALARM, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_FAULT, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_OVERRIDDEN, false);
+        if (Multistate_Input_Out_Of_Service(object_instance)) {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, true);
+        } else {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, false);
+        }
+        value_list->priority = BACNET_NO_PRIORITY;
+    }
+    status =  Multistate_Input_Change_Of_Value(object_instance);
+
+    return status;
 }
 
 uint32_t Multistate_Input_Present_Value(
@@ -367,8 +480,8 @@ uint32_t Multistate_Input_Present_Value(
     unsigned index = 0; /* offset from instance lookup */
     unsigned i = 0;
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         /* When all the priorities are level null, the present value returns */
         /* the Relinquish Default value */
@@ -393,24 +506,23 @@ bool Multistate_Input_Present_Value_Set(
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
-        if ((value > 0) && (value <= CurrentMSI->number_of_states)) {
-            CurrentMSI->Present_Value = (uint8_t) value;
+        if (priority && (priority <= BACNET_MAX_PRIORITY) &&
+            (priority != 6 /* reserved */ ) && (value > 0) &&
+            (value <= CurrentMSI->number_of_states)) {
             CurrentMSI->Priority_Array[priority - 1] = (uint8_t) value;
+            /* Note: you could set the physical output here to the next
+                highest priority, or to the relinquish default if no
+                priorities are set.
+                However, if Out of Service is TRUE, then don't set the
+                physical output.  This comment may apply to the
+                main loop (i.e. check out of service before changing output) */
+            if (priority == 8) {
+                CurrentMSI->Priority_Array[15] = (uint8_t) value;
+            }
             status = true;
-            //if (priority && (priority <= BACNET_MAX_PRIORITY) &&
-                //(priority != 6 /* reserved */ )) {
-                    //CurrentMSI->Priority_Array[priority - 1] = (uint8_t) value;
-                    /* Note: you could set the physical output here to the next
-                    highest priority, or to the relinquish default if no
-                    priorities are set.
-                    However, if Out of Service is TRUE, then don't set the
-                    physical output.  This comment may apply to the
-                    main loop (i.e. check out of service before changing output) */
-                    //status = true;
-             //}
         }
     }
     return status;
@@ -423,8 +535,8 @@ bool Multistate_Input_Out_Of_Service(
     unsigned index = 0; /* offset from instance lookup */
     bool value = false;
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         value = CurrentMSI->Out_Of_Service;
     }
@@ -439,13 +551,45 @@ void Multistate_Input_Out_Of_Service_Set(
     MULTI_STATE_INPUT_DESCR *CurrentMSI;
     unsigned index = 0;
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         CurrentMSI->Out_Of_Service = value;
     }
 
     return;
+}
+
+void Multistate_Input_Reliability_Set(
+    uint32_t object_instance,
+    uint8_t value)
+{
+    MULTI_STATE_INPUT_DESCR *CurrentMSI;
+    unsigned index = 0;
+
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
+        CurrentMSI = &MSI_Descr[index];
+        CurrentMSI->Reliability = value;
+    }
+
+    return;
+}
+
+uint8_t Multistate_Input_Reliability(
+    uint32_t object_instance)
+{
+    MULTI_STATE_INPUT_DESCR *CurrentMSI;
+    unsigned index = 0; /* offset from instance lookup */
+    uint8_t value = 0;
+
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
+        CurrentMSI = &MSI_Descr[index];
+        value = CurrentMSI->Reliability;
+    }
+
+    return value;
 }
 
 static char *Multistate_Input_Description(
@@ -455,8 +599,8 @@ static char *Multistate_Input_Description(
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         pName = CurrentMSI->Object_Description;
     }
@@ -473,8 +617,8 @@ bool Multistate_Input_Description_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         status = true;
         if (new_name) {
@@ -508,8 +652,8 @@ static bool Multistate_Input_Description_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentMSI->Object_Description)) {
@@ -523,14 +667,16 @@ static bool Multistate_Input_Description_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentMSI->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mi", idx_c,
                             "description", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_mi\n");
+#endif
                     }
                 }
             } else {
@@ -555,9 +701,8 @@ bool Multistate_Input_Object_Name(
     unsigned index = 0; /* offset from instance lookup */
     bool status = false;
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         status = characterstring_init_ansi(object_name, CurrentMSI->Object_Name);
     }
@@ -575,8 +720,8 @@ bool Multistate_Input_Name_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         status = true;
         /* FIXME: check to see if there is a matching name */
@@ -611,8 +756,8 @@ static bool Multistate_Input_Object_Name_Write(
     const char *idx_c;
     char idx_cc[64];
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         length = characterstring_length(char_string);
         if (length <= sizeof(CurrentMSI->Object_Name)) {
@@ -626,14 +771,16 @@ static bool Multistate_Input_Object_Name_Write(
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 } else {
-                    sprintf(idx_cc,"%d",index);
+                    sprintf(idx_cc,"%d",CurrentMSI->Instance);
                     idx_c = idx_cc;
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mi", idx_c,
                             "name", char_string->value);
+#if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
                             "Failed to open config file bacnet_mi\n");
+#endif
                     }
                 }
             } else {
@@ -658,19 +805,14 @@ static char *Multistate_Input_State_Text(
     unsigned index = 0; /* offset from instance lookup */
     char *pName = NULL; /* return value */
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int)
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
-    else
-        //return BACNET_STATUS_ERROR;
-        return pName;
-        //TODO return ERROR Code
-
-    if ((index < max_multi_state_inputs_int) && (state_index > 0) &&
-        (state_index <= CurrentMSI->number_of_states)) {
+        if ((state_index > 0) && (state_index <= CurrentMSI->number_of_states)) {
             state_index--;
             pName = CurrentMSI->State_Text[state_index];
         }
+    }
 
     return pName;
 }
@@ -685,27 +827,23 @@ bool Multistate_Input_State_Text_Set(
     size_t i = 0;       /* loop counter */
     bool status = false;        /* return value */
 
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if (index < max_multi_state_inputs_int) {
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
-    } else
-        return BACNET_STATUS_ERROR;
-
-    index = Multistate_Input_Instance_To_Index(object_instance);
-    if ((index < max_multi_state_inputs_int) && (state_index > 0) &&
-        (state_index <= CurrentMSI->number_of_states)) {
-        state_index--;
-        status = true;
-        if (new_name) {
-            for (i = 0; i < sizeof(CurrentMSI->State_Text[state_index]); i++) {
-                CurrentMSI->State_Text[state_index][i] = new_name[i];
-                if (new_name[i] == 0) {
-                    break;
+        if ((state_index > 0) && (state_index <= CurrentMSI->number_of_states)) {
+            state_index--;
+            status = true;
+            if (new_name) {
+                for (i = 0; i < sizeof(CurrentMSI->State_Text[state_index]); i++) {
+                    CurrentMSI->State_Text[state_index][i] = new_name[i];
+                    if (new_name[i] == 0) {
+                        break;
+                    }
                 }
-            }
-        } else {
-            for (i = 0; i < sizeof(CurrentMSI->State_Text[state_index]); i++) {
-                CurrentMSI->State_Text[state_index][i] = 0;
+            } else {
+                for (i = 0; i < sizeof(CurrentMSI->State_Text[state_index]); i++) {
+                    CurrentMSI->State_Text[state_index][i] = 0;
+                }
             }
         }
     }
@@ -721,7 +859,7 @@ static bool Multistate_Input_State_Text_Write(
     BACNET_ERROR_CODE * error_code)
 {
     MULTI_STATE_INPUT_DESCR *CurrentMSI;
-    unsigned int object_index = 0; /* offset from instance lookup */
+    unsigned index = 0; /* offset from instance lookup */
     size_t length = 0;
     uint8_t encoding = 0;
     bool status = false;        /* return value */
@@ -731,36 +869,36 @@ static bool Multistate_Input_State_Text_Write(
     int ucialarmstate_n = 0;
     int j, alarm_value;
     
-    object_index = Multistate_Input_Instance_To_Index(object_instance);
-    if (object_index < max_multi_state_inputs_int) {
-        CurrentMSI = &MSI_Descr[object_index];
-        sprintf(idx_cc,"%d",object_index);
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
+        CurrentMSI = &MSI_Descr[index];
+        sprintf(idx_cc,"%d",CurrentMSI->Instance);
         idx_c = idx_cc;
-    } else
-        return false;
-    
-    if ((object_index < max_multi_state_inputs_int) && (state_index > 0) &&
-        (state_index <= CurrentMSI->number_of_states)) {
-        state_index--;
-        length = characterstring_length(char_string);
-        if (length <= sizeof(CurrentMSI->State_Text[state_index])) {
-            encoding = characterstring_encoding(char_string);
-            if (encoding == CHARACTER_UTF8) {
-                status =
-                    characterstring_ansi_copy(CurrentMSI->State_Text[state_index],
+        if ((state_index > 0) && (state_index <= CurrentMSI->number_of_states)) {
+            state_index--;
+            length = characterstring_length(char_string);
+            if (length <= sizeof(CurrentMSI->State_Text[state_index])) {
+                encoding = characterstring_encoding(char_string);
+                if (encoding == CHARACTER_UTF8) {
+                    status =
+                        characterstring_ansi_copy(CurrentMSI->State_Text[state_index],
                     sizeof(CurrentMSI->State_Text[state_index]), char_string);
-                ucix_set_list(ctx, "bacnet_mi", idx_c, "state",
-                    CurrentMSI->State_Text, CurrentMSI->number_of_states);
-                ucialarmstate_n = CurrentMSI->number_of_alarmstates;
-                for (j = 0; j < ucialarmstate_n; j++) {
-                    alarm_value = CurrentMSI->Alarm_Values[j];
-                    length = sizeof(CurrentMSI->State_Text[state_index]);
-                    sprintf(ucialarmstate[j], "%s",
-                        CurrentMSI->State_Text[alarm_value-1]);
-                }
-                ucix_set_list(ctx, "bacnet_mi", idx_c, "alarmstate",
-                    ucialarmstate, ucialarmstate_n);
-                if (!status) {
+                    ucix_set_list(ctx, "bacnet_mi", idx_c, "state",
+                        CurrentMSI->State_Text, CurrentMSI->number_of_states);
+                    ucialarmstate_n = CurrentMSI->number_of_alarmstates;
+                    for (j = 0; j < ucialarmstate_n; j++) {
+                        alarm_value = CurrentMSI->Alarm_Values[j];
+                        length = sizeof(CurrentMSI->State_Text[state_index]);
+                        sprintf(ucialarmstate[j], "%s",
+                            CurrentMSI->State_Text[alarm_value-1]);
+                    }
+                    ucix_set_list(ctx, "bacnet_mi", idx_c, "alarmstate",
+                        ucialarmstate, ucialarmstate_n);
+                    if (!status) {
+                        *error_class = ERROR_CLASS_PROPERTY;
+                        *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
+                    }
+                } else {
                     *error_class = ERROR_CLASS_PROPERTY;
                     *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
                 }
@@ -772,9 +910,6 @@ static bool Multistate_Input_State_Text_Write(
             *error_class = ERROR_CLASS_PROPERTY;
             *error_code = ERROR_CODE_NO_SPACE_TO_WRITE_PROPERTY;
         }
-    } else {
-        *error_class = ERROR_CLASS_PROPERTY;
-        *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
     }
 
     return status;
@@ -791,8 +926,9 @@ int Multistate_Input_Read_Property(
     BACNET_BIT_STRING bit_string;
     BACNET_CHARACTER_STRING char_string;
     uint32_t present_value = 0;
-    unsigned object_index = 0;
+    unsigned index = 0;
     unsigned i = 0;
+    unsigned idx = 0;
     bool state = false;
     uint8_t *apdu = NULL;
 
@@ -802,10 +938,10 @@ int Multistate_Input_Read_Property(
     }
     apdu = rpdata->application_data;
 
-    object_index = Multistate_Input_Instance_To_Index(rpdata->object_instance);
-    if (object_index < max_multi_state_inputs_int)
-        CurrentMSI = &MSI_Descr[object_index];
-    else
+    if (Multistate_Input_Valid_Instance(rpdata->object_instance)) {
+        index = Multistate_Input_Instance_To_Index(rpdata->object_instance);
+        CurrentMSI = &MSI_Descr[index];
+    } else
         return BACNET_STATUS_ERROR;
     if (CurrentMSI->Disable)
         return BACNET_STATUS_ERROR;
@@ -881,6 +1017,12 @@ int Multistate_Input_Read_Property(
             apdu_len = encode_application_boolean(&apdu[0], state);
             break;
 
+        case PROP_RELIABILITY:
+            apdu_len = encode_application_enumerated(&apdu[0], 
+                CurrentMSI->Reliability);
+            break;
+
+
         case PROP_PRIORITY_ARRAY:
             /* Array element zero is the number of elements in the array */
             if (rpdata->array_index == 0) {
@@ -948,10 +1090,9 @@ int Multistate_Input_Read_Property(
             } else if (rpdata->array_index == BACNET_ARRAY_ALL) {
                 /* if no index was specified, then try to encode the entire list */
                 /* into one packet. */
-                for (i = 0; i < CurrentMSI->number_of_states; i++) {
+                for (idx = 0; idx < CurrentMSI->number_of_states-1; idx++) {
                     characterstring_init_ansi(&char_string,
-                        CurrentMSI->State_Text[i]);
-
+                        CurrentMSI->State_Text[idx]);
                     /* FIXME: this might go beyond MAX_APDU length! */
                     len =
                         encode_application_character_string(&apdu[apdu_len],
@@ -970,7 +1111,9 @@ int Multistate_Input_Read_Property(
                 if (rpdata->array_index <= CurrentMSI->number_of_states) {
                     characterstring_init_ansi(&char_string,
                         Multistate_Input_State_Text(rpdata->object_instance,
-                            rpdata->array_index));
+                        rpdata->array_index));
+                        Multistate_Input_State_Text(rpdata->object_instance,
+                        rpdata->array_index));
                     apdu_len =
                         encode_application_character_string(&apdu[0],
                         &char_string);
@@ -1115,7 +1258,7 @@ bool Multistate_Input_Write_Property(
 {
     MULTI_STATE_INPUT_DESCR *CurrentMSI;
     bool status = false;        /* return value */
-    unsigned int object_index = 0;
+    unsigned index = 0;
     int object_type = 0;
     uint32_t object_instance = 0;
     unsigned int priority = 0;
@@ -1129,6 +1272,8 @@ bool Multistate_Input_Write_Property(
     const char index_c[32] = "";
     const char *idx_c;
     char idx_cc[64];
+    char cur_value[16];
+    time_t cur_value_time;
 
     /* decode the some of the request */
     len =
@@ -1142,13 +1287,14 @@ bool Multistate_Input_Write_Property(
         return false;
     }
 
-    object_index = Multistate_Input_Instance_To_Index(wp_data->object_instance);
-    if (object_index < max_multi_state_inputs_int) {
-        CurrentMSI = &MSI_Descr[object_index];
-        sprintf(idx_cc,"%d",object_index);
+    if (Multistate_Input_Valid_Instance(wp_data->object_instance)) {
+        index = Multistate_Input_Instance_To_Index(wp_data->object_instance);
+        CurrentMSI = &MSI_Descr[index];
+        sprintf(idx_cc,"%d",CurrentMSI->Instance);
         idx_c = idx_cc;
-    } else
+    } else {
         return false;
+    }
 
     switch (wp_data->object_property) {
         case PROP_OBJECT_NAME:
@@ -1197,6 +1343,14 @@ bool Multistate_Input_Write_Property(
                 if (Multistate_Input_Present_Value_Set(wp_data->object_instance,
                         value.type.Unsigned_Int, wp_data->priority)) {
                     status = true;
+                    sprintf(cur_value,"%d",value.type.Unsigned_Int);
+                    ucix_add_option(ctx, "bacnet_mi", idx_c, "value",
+                        cur_value);
+                    cur_value_time = time(NULL);
+                    ucix_add_option_int(ctx, "bacnet_mi", idx_c, "value_time",
+                        cur_value_time);
+                    ucix_add_option_int(ctx, "bacnet_mi", idx_c, "write",
+                        1);
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1239,6 +1393,15 @@ bool Multistate_Input_Write_Property(
             if (status) {
                 Multistate_Input_Out_Of_Service_Set(wp_data->object_instance,
                     value.type.Boolean);
+            }
+            break;
+
+        case PROP_RELIABILITY:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
+                &wp_data->error_class, &wp_data->error_code);
+            if (status) {
+                CurrentMSI->Reliability = value.type.Enumerated;
             }
             break;
 
@@ -1431,7 +1594,7 @@ void Multistate_Input_Intrinsic_Reporting(
     MULTI_STATE_INPUT_DESCR *CurrentMSI;
     BACNET_EVENT_NOTIFICATION_DATA event_data;
     BACNET_CHARACTER_STRING msgText;
-    unsigned int object_index;
+    unsigned index;
     uint8_t FromState = 0;
     uint8_t ToState;
     uint8_t PresentVal = 0;
@@ -1440,10 +1603,10 @@ void Multistate_Input_Intrinsic_Reporting(
     int i;
 
 
-    object_index = Multistate_Input_Instance_To_Index(object_instance);
-    if (object_index < max_multi_state_inputs_int)
-        CurrentMSI = &MSI_Descr[object_index];
-    else
+    if (Multistate_Input_Valid_Instance(object_instance)) {
+        index = Multistate_Input_Instance_To_Index(object_instance);
+        CurrentMSI = &MSI_Descr[index];
+    } else
         return;
 
     if (CurrentMSI->Ack_notify_data.bSendAckNotify) {
@@ -1743,16 +1906,14 @@ int Multistate_Input_Alarm_Ack(
     BACNET_ERROR_CODE * error_code)
 {
     MULTI_STATE_INPUT_DESCR *CurrentMSI;
-    unsigned int object_index;
+    unsigned index;
 
-
-    object_index =
-        Multistate_Input_Instance_To_Index(alarmack_data->
+    if (Multistate_Input_Valid_Instance(alarmack_data->
+        eventObjectIdentifier.instance)) {
+        index = Multistate_Input_Instance_To_Index(alarmack_data->
         eventObjectIdentifier.instance);
-
-    if (object_index < max_multi_state_inputs_int)
-        CurrentMSI = &MSI_Descr[object_index];
-    else {
+        CurrentMSI = &MSI_Descr[index];
+    } else {
         *error_code = ERROR_CODE_UNKNOWN_OBJECT;
         return -1;
     }

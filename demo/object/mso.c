@@ -46,7 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_MULTI_STATE_OUTPUTS
-#define MAX_MULTI_STATE_OUTPUTS 65535
+#define MAX_MULTI_STATE_OUTPUTS 1024
 #endif
 unsigned max_multi_state_outputs_int = 0;
 
@@ -140,7 +140,7 @@ void Multistate_Output_Load_UCI_List(const char *sec_idx,
 void Multistate_Output_Init(
     void)
 {
-    unsigned i, j, k, l;
+    unsigned i, j, l;
     static bool initialized = false;
     char name[64];
     const char *uciname;
@@ -161,6 +161,8 @@ void Multistate_Output_Init(
     int ucievent;
     int ucitime_delay_default;
     int ucitime_delay;
+    int ucifb_value_default;
+    int ucifb_value;
     const char *sec = "bacnet_mo";
 
 	char *section;
@@ -198,6 +200,8 @@ void Multistate_Output_Init(
             "event", -1);
         ucitime_delay_default = ucix_get_option_int(ctx, "bacnet_mo", "default",
             "time_delay", -1);
+        ucifb_value_default = ucix_get_option_int(ctx, "bacnet_mo", "default",
+            "fb_value", -1);
 
         i = 0;
 		for( cur = itr_m.list; cur; cur = cur->next ) {
@@ -280,12 +284,6 @@ void Multistate_Output_Init(
                     } else {
                         sprintf(MSO_Descr[i].State_Text[j], "STATUS: %i", j);
                     }
-                    for (k = 0; k < alarmstate_n; k++) {
-                        if (strcmp(state[j],alarmstate[k]) == 0) {
-                            MSO_Descr[i].Alarm_Values[l] = j+1;
-                            l++;
-                        }
-                    }
                 }
                 MSO_Descr[i].number_of_alarmstates = l;
 #if defined(INTRINSIC_REPORTING)
@@ -295,6 +293,8 @@ void Multistate_Output_Init(
                     "event", ucievent_default);
                 ucitime_delay = ucix_get_option_int(ctx, "bacnet_mo", idx_c,
                     "time_delay", ucitime_delay_default);
+                ucifb_value = ucix_get_option_int(ctx, "bacnet_mo", idx_c,
+                    "fb_value", ucifb_value_default);
                 MSO_Descr[i].Event_State = EVENT_STATE_NORMAL;
                 /* notification class not connected */
                 if (ucinc > -1) MSO_Descr[i].Notification_Class = ucinc;
@@ -303,6 +303,8 @@ void Multistate_Output_Init(
                 else MSO_Descr[i].Event_Enable = 0;
                 if (ucitime_delay > -1) MSO_Descr[i].Time_Delay = ucitime_delay;
                 else MSO_Descr[i].Time_Delay = 0;
+                if (ucifb_value > -1) MSO_Descr[i].Feedback_Value = ucifb_value;
+                else MSO_Descr[i].Feedback_Value = 0;
                 /* initialize Event time stamps using wildcards
                    and set Acked_transitions */
                 for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
@@ -397,6 +399,81 @@ bool Multistate_Output_Valid_Instance(
     return false;
 }
 
+bool Multistate_Output_Change_Of_Value(
+    uint32_t object_instance)
+{
+    MULTI_STATE_OUTPUT_DESCR *CurrentMSO;
+    bool status = false;
+    unsigned index = 0;
+
+    if (Multistate_Output_Valid_Instance(object_instance)) {
+        index = Multistate_Output_Instance_To_Index(object_instance);
+        CurrentMSO = &MSO_Descr[index];
+        status = CurrentMSO->Change_Of_Value;
+    }
+
+    return status;
+}
+
+void Multistate_Output_Change_Of_Value_Clear(
+    uint32_t object_instance)
+{
+    MULTI_STATE_OUTPUT_DESCR *CurrentMSO;
+    unsigned index = 0;
+
+    if (Multistate_Output_Valid_Instance(object_instance)) {
+        index = Multistate_Output_Instance_To_Index(object_instance);
+        CurrentMSO = &MSO_Descr[index];
+        CurrentMSO->Change_Of_Value = false;
+    }
+
+    return;
+}
+
+
+/* returns true if value has changed */
+bool Multistate_Output_Encode_Value_List(
+    uint32_t object_instance,
+    BACNET_PROPERTY_VALUE * value_list)
+{
+    bool status = false;
+
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_PRESENT_VALUE;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+        value_list->value.type.Enumerated =
+            Multistate_Output_Present_Value(object_instance);
+        value_list->priority = BACNET_NO_PRIORITY;
+        value_list = value_list->next;
+    }
+    if (value_list) {
+        value_list->propertyIdentifier = PROP_STATUS_FLAGS;
+        value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
+        value_list->value.context_specific = false;
+        value_list->value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
+        bitstring_init(&value_list->value.type.Bit_String);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_IN_ALARM, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_FAULT, false);
+        bitstring_set_bit(&value_list->value.type.Bit_String,
+            STATUS_FLAG_OVERRIDDEN, false);
+        if (Multistate_Output_Out_Of_Service(object_instance)) {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, true);
+        } else {
+            bitstring_set_bit(&value_list->value.type.Bit_String,
+                STATUS_FLAG_OUT_OF_SERVICE, false);
+        }
+        value_list->priority = BACNET_NO_PRIORITY;
+    }
+    status = Multistate_Output_Change_Of_Value(object_instance);
+
+    return status;
+}
+
 uint32_t Multistate_Output_Present_Value(
     uint32_t object_instance)
 {
@@ -437,7 +514,7 @@ bool Multistate_Output_Present_Value_Set(
         if (priority && (priority <= BACNET_MAX_PRIORITY) &&
             (priority != 6 /* reserved */ ) && (value > 0) &&
             (value <= CurrentMSO->number_of_states)) {
-//          CurrentMSO->Present_Value = (uint8_t) value;
+            CurrentMSO->Feedback_Value = (uint8_t) value;
             CurrentMSO->Priority_Array[priority - 1] = (uint8_t) value;
             /* Note: you could set the physical output here to the next
                 highest priority, or to the relinquish default if no
@@ -791,9 +868,6 @@ static bool Multistate_Output_State_Text_Write(
     bool status = false;        /* return value */
     const char *idx_c;
     char idx_cc[64];
-    char ucialarmstate[254][64];
-    int ucialarmstate_n = 0;
-    int j, alarm_value;
     
     if (Multistate_Output_Valid_Instance(object_instance)) {
         index = Multistate_Output_Instance_To_Index(object_instance);
@@ -811,15 +885,6 @@ static bool Multistate_Output_State_Text_Write(
                     sizeof(CurrentMSO->State_Text[state_index]), char_string);
                     ucix_set_list(ctx, "bacnet_mo", idx_c, "state",
                         CurrentMSO->State_Text, CurrentMSO->number_of_states);
-                    ucialarmstate_n = CurrentMSO->number_of_alarmstates;
-                    for (j = 0; j < ucialarmstate_n; j++) {
-                        alarm_value = CurrentMSO->Alarm_Values[j];
-                        length = sizeof(CurrentMSO->State_Text[state_index]);
-                        sprintf(ucialarmstate[j], "%s",
-                            CurrentMSO->State_Text[alarm_value-1]);
-                    }
-                    ucix_set_list(ctx, "bacnet_mo", idx_c, "alarmstate",
-                        ucialarmstate, ucialarmstate_n);
                     if (!status) {
                         *error_class = ERROR_CLASS_PROPERTY;
                         *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1050,15 +1115,6 @@ int Multistate_Output_Read_Property(
             break;
 
 #if defined(INTRINSIC_REPORTING)
-        case PROP_ALARM_VALUES:
-            for (i = 0; i < CurrentMSO->number_of_alarmstates; i++) {
-                len =
-                    encode_application_unsigned(&apdu[apdu_len],
-                        CurrentMSO->Alarm_Values[i]);
-                apdu_len += len;
-            }
-            break;
-
         case PROP_TIME_DELAY:
             apdu_len =
                 encode_application_unsigned(&apdu[0], CurrentMSO->Time_Delay);
@@ -1068,6 +1124,11 @@ int Multistate_Output_Read_Property(
             apdu_len =
                 encode_application_unsigned(&apdu[0],
                 CurrentMSO->Notification_Class);
+            break;
+
+        case PROP_FEEDBACK_VALUE:
+            present_value = CurrentMSO->Feedback_Value;
+            apdu_len = encode_application_unsigned(&apdu[0], present_value);
             break;
 
         case PROP_EVENT_ENABLE:
@@ -1270,6 +1331,8 @@ bool Multistate_Output_Write_Property(
                     sprintf(cur_value,"%d",value.type.Unsigned_Int);
                     ucix_add_option(ctx, "bacnet_mo", idx_c, "value",
                         cur_value);
+                    ucix_add_option(ctx, "bacnet_mo", idx_c, "fb_value",
+                        cur_value);
                     cur_value_time = time(NULL);
                     ucix_add_option_int(ctx, "bacnet_mo", idx_c, "value_time",
                         cur_value_time);
@@ -1394,36 +1457,14 @@ bool Multistate_Output_Write_Property(
             break;
 
 #if defined(INTRINSIC_REPORTING)
-//        case PROP_FEEDBACK_VALUE:
-        case PROP_ALARM_VALUES:
-            if (value.tag == BACNET_APPLICATION_TAG_UNSIGNED_INT) {
-                if (wp_data->array_index == 0) {
-                    /* Array element zero is the number of
-                       elements in the array.  We have a fixed
-                       size array, so we are read-only. */
-                    wp_data->error_class = ERROR_CLASS_PROPERTY;
-                    wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
-                } else if (wp_data->array_index == BACNET_ARRAY_ALL) {
-                    int j, alarm_value;
-                    int array_index = 0;
-                    char ucialarmstate[254][64];
-                    int ucialarmstate_n = 0;
-                    for (j = 0; j < CurrentMSO->number_of_states; j++) {
-                        array_index++;
-                        if (wp_data->application_data[array_index] > 0) {
-                            alarm_value = wp_data->application_data[array_index];
-                            CurrentMSO->Alarm_Values[j] = alarm_value;
-                            sprintf(ucialarmstate[j], "%s", 
-                                CurrentMSO->State_Text[alarm_value-1]);
-                            ucialarmstate_n++;
-                        }
-                        array_index++;        
-                    }
-                    CurrentMSO->number_of_alarmstates = ucialarmstate_n;
-                    ucix_set_list(ctx, "bacnet_mo", idx_c, "alarmstate",
-                        ucialarmstate, ucialarmstate_n);
-                }
+        case PROP_FEEDBACK_VALUE:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_UNSIGNED_INT,
+                &wp_data->error_class, &wp_data->error_code);
+            if (status) {
+                CurrentMSO->Feedback_Value = value.type.Unsigned_Int;
             }
+            break;
         case PROP_TIME_DELAY:
             status =
                 WPValidateArgType(&value, BACNET_APPLICATION_TAG_UNSIGNED_INT,
@@ -1525,7 +1566,6 @@ void Multistate_Output_Intrinsic_Reporting(
     uint8_t PresentVal = 0;
     bool SendNotify = false;
     bool tonormal = true;
-    int i;
 
 
     if (Multistate_Output_Valid_Instance(object_instance)) {
@@ -1563,31 +1603,23 @@ void Multistate_Output_Intrinsic_Reporting(
                    period of time, specified in the Time_Delay property, and
                    (b) the HighLimitEnable flag must be set in the Limit_Enable property, and
                    (c) the TO-OFFNORMAL flag must be set in the Event_Enable property. */
-                for ( i = 0; i < CurrentMSO->number_of_states; i++) {
-            	    if (CurrentMSO->Alarm_Values[i]) {
-                        if ((PresentVal == CurrentMSO->Alarm_Values[i]) &&
-                            ((CurrentMSO->Event_Enable & EVENT_ENABLE_TO_OFFNORMAL) ==
-                            EVENT_ENABLE_TO_OFFNORMAL)) {
-                                if (!CurrentMSO->Remaining_Time_Delay)
-                                    CurrentMSO->Event_State = EVENT_STATE_FAULT;
-                                else
-                                    CurrentMSO->Remaining_Time_Delay--;
-                                break;
-            	        }
-                    }
-                }
+				if ((PresentVal != CurrentMSO->Feedback_Value) &&
+					((CurrentMSO->Event_Enable & EVENT_ENABLE_TO_OFFNORMAL) ==
+					EVENT_ENABLE_TO_OFFNORMAL)) {
+						if (!CurrentMSO->Remaining_Time_Delay)
+							CurrentMSO->Event_State = EVENT_STATE_FAULT;
+						else
+							CurrentMSO->Remaining_Time_Delay--;
+						break;
+				}
                 /* value of the object is still in the same event state */
                 CurrentMSO->Remaining_Time_Delay = CurrentMSO->Time_Delay;
                 break;
 
             case EVENT_STATE_FAULT:
-                for ( i = 0; i < CurrentMSO->number_of_states; i++) {
-            	    if (CurrentMSO->Alarm_Values[i]) {
-                        if (PresentVal == CurrentMSO->Alarm_Values[i]) {
-                               tonormal = false;
-            	        }
-                    }
-                }
+				if (PresentVal != CurrentMSO->Feedback_Value) {
+					tonormal = false;
+				}
                 if ((tonormal) &&
                     ((CurrentMSO->Event_Enable & EVENT_ENABLE_TO_NORMAL) ==
                     EVENT_ENABLE_TO_NORMAL)) {
@@ -1987,7 +2019,7 @@ bool WPValidateArgType(
     return false;
 }
 
-void testMultistateInput(
+void testMultistateOutput(
     Test * pTest)
 {
     BACNET_READ_PROPERTY_DATA rpdata;
