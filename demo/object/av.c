@@ -46,7 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_ANALOG_VALUES
-#define MAX_ANALOG_VALUES 65535
+#define MAX_ANALOG_VALUES 1024
 #endif
 unsigned max_analog_values_int = 0;
 

@@ -46,7 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_ANALOG_INPUTS
-#define MAX_ANALOG_INPUTS 65535
+#define MAX_ANALOG_INPUTS 1024
 #endif
 unsigned max_analog_inputs_int = 0;
 
@@ -78,6 +78,8 @@ static const int Analog_Input_Properties_Optional[] = {
     PROP_DESCRIPTION,
     PROP_PRIORITY_ARRAY,
     PROP_RELINQUISH_DEFAULT,
+    PROP_MAX_PRES_VALUE,
+    PROP_MIN_PRES_VALUE,
 #if defined(INTRINSIC_REPORTING)
     PROP_TIME_DELAY,
     PROP_NOTIFICATION_CLASS,
@@ -153,6 +155,12 @@ void Analog_Input_Init(
     int uciunit = 0;
     int uciunit_default = 0;
     const char *ucivalue_default;
+    char max_value[64];
+    const char *ucimax_value_default;
+    const char *ucimax_value;
+    char min_value[64];
+    const char *ucimin_value_default;
+    const char *ucimin_value;
     int ucinc_default;
     int ucinc;
     int ucievent_default;
@@ -220,6 +228,10 @@ void Analog_Input_Init(
             "dead_limit");
         ucicov_increment_default = ucix_get_option(ctx, sec, "default",
             "cov_increment");
+        ucimax_value_default = ucix_get_option(ctx, sec, "default",
+            "max_value");
+        ucimin_value_default = ucix_get_option(ctx, sec, "default",
+            "min_value");
         i = 0;
 		for( cur = itr_m.list; cur; cur = cur->next ) {
 			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
@@ -299,6 +311,32 @@ void Analog_Input_Init(
                 }
                 AI_Descr[i].COV_Increment = strtof(cov_increment,
                     (char **) NULL);
+
+                ucimax_value = ucix_get_option(ctx, "bacnet_ai", idx_c,
+                    "max_value");
+                if (ucimax_value != 0) {
+                    sprintf(max_value, "%s", ucimax_value);
+                } else {
+                    if (ucimax_value_default != 0) {
+                        sprintf(max_value, "%s", ucimax_value_default);
+                    } else {
+                        sprintf(max_value, "%s", "0");
+                    }
+                }
+                AI_Descr[i].Max_Pres_Value = strtof(max_value, (char **) NULL);
+
+                ucimin_value = ucix_get_option(ctx, "bacnet_ai", idx_c,
+                    "min_value");
+                if (ucimin_value != 0) {
+                    sprintf(min_value, "%s", ucimin_value);
+                } else {
+                    if (ucimin_value_default != 0) {
+                        sprintf(min_value, "%s", ucimin_value_default);
+                    } else {
+                        sprintf(min_value, "%s", "0");
+                    }
+                }
+                AI_Descr[i].Min_Pres_Value = strtof(min_value, (char **) NULL);
 
 #if defined(INTRINSIC_REPORTING)
                 ucinc = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
@@ -997,6 +1035,16 @@ int Analog_Input_Read_Property(
             apdu_len = encode_application_real(&apdu[0], present_value);
             break;
 
+        case PROP_MAX_PRES_VALUE:
+            apdu_len =
+                encode_application_real(&apdu[0], CurrentAI->Max_Pres_Value);
+            break;
+
+        case PROP_MIN_PRES_VALUE:
+            apdu_len =
+                encode_application_real(&apdu[0], CurrentAI->Min_Pres_Value);
+            break;
+
 #if defined(INTRINSIC_REPORTING)
         case PROP_TIME_DELAY:
             apdu_len =
@@ -1334,6 +1382,30 @@ bool Analog_Input_Write_Property(
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
                 CurrentAI->Relinquish_Default = value.type.Real;
+            }
+            break;
+
+        case PROP_MAX_PRES_VALUE:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
+                &wp_data->error_class, &wp_data->error_code);
+
+            if (status) {
+                CurrentAI->Max_Pres_Value = value.type.Real;
+                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "max_value",
+                        value.type.Real);
+            }
+            break;
+
+        case PROP_MIN_PRES_VALUE:
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
+                &wp_data->error_class, &wp_data->error_code);
+
+            if (status) {
+                CurrentAI->Min_Pres_Value = value.type.Real;
+                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "min_value",
+                        value.type.Real);
             }
             break;
 

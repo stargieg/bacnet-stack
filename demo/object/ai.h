@@ -62,6 +62,8 @@ extern "C" {
         /* and load a Real for returning the value when asked. */
         float Priority_Array[BACNET_MAX_PRIORITY];
         float Relinquish_Default;
+        float Max_Pres_Value;
+        float Min_Pres_Value;
 #if defined(INTRINSIC_REPORTING)
         uint32_t Time_Delay;
         uint32_t Notification_Class;
