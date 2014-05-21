@@ -64,7 +64,7 @@ extern "C" {
 #if defined(INTRINSIC_REPORTING)
         uint32_t Time_Delay;
         uint32_t Notification_Class;
-        BACNET_BINARY_PV Alarm_Value;
+        BACNET_BINARY_PV Feedback_Value;
         unsigned Event_Enable:3;
         unsigned Notify_Type:1;
         ACKED_INFO Acked_Transitions[MAX_BACNET_EVENT_TRANSITION];

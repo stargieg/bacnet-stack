@@ -46,7 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_BINARY_OUTPUTS
-#define MAX_BINARY_OUTPUTS 65535
+#define MAX_BINARY_OUTPUTS 1024
 #endif
 unsigned max_binary_outputs_int = 0;
 
@@ -166,8 +166,8 @@ void Binary_Output_Init(
     int ucievent;
     int ucitime_delay_default;
     int ucitime_delay;
-    int ucialarm_value_default;
-    int ucialarm_value;
+    int ucifb_value_default;
+    int ucifb_value;
     int ucipolarity_default;
     int ucipolarity;
     const char *sec = "bacnet_bo";
@@ -207,8 +207,8 @@ void Binary_Output_Init(
             "event", -1);
         ucitime_delay_default = ucix_get_option_int(ctx, sec, "default",
             "time_delay", -1);
-        ucialarm_value_default = ucix_get_option_int(ctx, sec, "default",
-            "alarm_value", -1);
+        ucifb_value_default = ucix_get_option_int(ctx, sec, "default",
+            "fb_value", -1);
         ucipolarity_default = ucix_get_option_int(ctx, sec, "default",
             "polarity", 0);
         i = 0;
@@ -284,9 +284,9 @@ void Binary_Output_Init(
                     "event", ucievent_default);
                 ucitime_delay = ucix_get_option_int(ctx, "bacnet_bo", idx_c,
                     "time_delay", ucitime_delay_default);
-                ucialarm_value = ucix_get_option_int(ctx, "bacnet_bo", idx_c,
-                    "alarm_value", ucialarm_value_default);
-                BO_Descr[i].Alarm_Value = ucialarm_value;
+                ucifb_value = ucix_get_option_int(ctx, "bacnet_bo", idx_c,
+                    "fb_value", ucifb_value_default);
+                BO_Descr[i].Feedback_Value = ucifb_value;
                 BO_Descr[i].Event_State = EVENT_STATE_NORMAL;
                 /* notification class not connected */
                 if (ucinc > -1) BO_Descr[i].Notification_Class = ucinc;
@@ -295,6 +295,8 @@ void Binary_Output_Init(
                 else BO_Descr[i].Event_Enable = 0;
                 if (ucitime_delay > -1) BO_Descr[i].Time_Delay = ucitime_delay;
                 else BO_Descr[i].Time_Delay = 0;
+                if (ucifb_value > -1) BO_Descr[i].Feedback_Value = ucifb_value;
+                else BO_Descr[i].Feedback_Value = 0;
                 /* initialize Event time stamps using wildcards
                    and set Acked_transitions */
                 for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
@@ -795,9 +797,15 @@ bool Binary_Output_Present_Value_Set(
     if (Binary_Output_Valid_Instance(object_instance)) {
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
-        CurrentBO->Present_Value = (uint8_t) value;
-        CurrentBO->Priority_Array[priority - 1] = (uint8_t) value;
-        status = true;
+        if (priority && (priority <= BACNET_MAX_PRIORITY) &&
+            (priority != 6 /* reserved */ ) && (value > 0)) {
+            CurrentBO->Feedback_Value = (uint8_t) value;
+            CurrentBO->Priority_Array[priority - 1] = (uint8_t) value;
+            if (priority == 8) {
+                CurrentBO->Priority_Array[15] = (uint8_t) value;
+            }
+            status = true;
+        }
     }
     return status;
 }
@@ -1117,10 +1125,9 @@ int Binary_Output_Read_Property(
 
 #if defined(INTRINSIC_REPORTING)
         case PROP_FEEDBACK_VALUE:
-        case PROP_ALARM_VALUE:
             len =
                 encode_application_enumerated(&apdu[apdu_len],
-                CurrentBO->Alarm_Value);
+                CurrentBO->Feedback_Value);
                 apdu_len += len;
             break;
 
@@ -1447,7 +1454,6 @@ bool Binary_Output_Write_Property(
             break;
 #if defined(INTRINSIC_REPORTING)
         case PROP_FEEDBACK_VALUE:
-        case PROP_ALARM_VALUES:
             if (value.tag == BACNET_APPLICATION_TAG_ENUMERATED) {
                 if (wp_data->array_index == 0) {
                     /* Array element zero is the number of
@@ -1456,12 +1462,12 @@ bool Binary_Output_Write_Property(
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
                 } else if (wp_data->array_index == BACNET_ARRAY_ALL) {
-                    int alarm_value;
+                    BACNET_BINARY_PV fb_value = 0;
                     int array_index = 0;
-                    alarm_value = wp_data->application_data[array_index];
-                    CurrentBO->Alarm_Value = alarm_value;
-                    ucix_add_option_int(ctx, "bacnet_bo", idx_c, "alarmstate",
-                        alarm_value);
+                    fb_value = wp_data->application_data[array_index];
+                    CurrentBO->Feedback_Value = fb_value;
+                    ucix_add_option_int(ctx, "bacnet_bo", idx_c, "fb_value",
+                        fb_value);
                 }
             }
         case PROP_TIME_DELAY:
@@ -1626,7 +1632,7 @@ void Binary_Output_Intrinsic_Reporting(
                    period of time, specified in the Time_Delay property, and
                    (b) the HighLimitEnable flag must be set in the Limit_Enable property, and
                    (c) the TO-OFFNORMAL flag must be set in the Event_Enable property. */
-                if ((PresentVal == CurrentBO->Alarm_Value) &&
+                if ((PresentVal != CurrentBO->Feedback_Value) &&
                     ((CurrentBO->Event_Enable & EVENT_ENABLE_TO_OFFNORMAL) ==
                     EVENT_ENABLE_TO_OFFNORMAL)) {
                         if (!CurrentBO->Remaining_Time_Delay)
@@ -1640,7 +1646,7 @@ void Binary_Output_Intrinsic_Reporting(
                 break;
 
             case EVENT_STATE_FAULT:
-                if (PresentVal == CurrentBO->Alarm_Value) {
+                if (PresentVal != CurrentBO->Feedback_Value) {
                        tonormal = false;
                 }
                 if ((tonormal) &&
@@ -1669,20 +1675,17 @@ void Binary_Output_Intrinsic_Reporting(
 
             switch (ToState) {
                 case EVENT_STATE_FAULT:
-                    //ExceededLimit = CurrentBO->High_Limit;
                     characterstring_init_ansi(&msgText, "Goes to EVENT_STATE_FAULT");
                     break;
 
                 case EVENT_STATE_NORMAL:
                     if (FromState == EVENT_STATE_FAULT) {
-                        //ExceededLimit = CurrentBO->High_Limit;
                         characterstring_init_ansi(&msgText,
                             "Back to normal state from EVENT_STATE_FAULT");
                     }
                     break;
 
                 default:
-                    //ExceededLimit = 0;
                     break;
             }   /* switch (ToState) */
 
@@ -1773,8 +1776,6 @@ void Binary_Output_Intrinsic_Reporting(
         if ((event_data.notifyType != NOTIFY_ACK_NOTIFICATION) &&
             (event_data.ackRequired == true)) {
             switch (event_data.toState) {
-                case EVENT_STATE_HIGH_LIMIT:
-                case EVENT_STATE_LOW_LIMIT:
                 case EVENT_STATE_OFFNORMAL:
                     CurrentBO->
                         Acked_Transitions[TRANSITION_TO_OFFNORMAL].bIsAcked =
@@ -1801,6 +1802,9 @@ void Binary_Output_Intrinsic_Reporting(
                         Acked_Transitions[TRANSITION_TO_NORMAL].Time_Stamp =
                         event_data.timeStamp.value.dateTime;
                     break;
+                 case EVENT_STATE_HIGH_LIMIT:
+                 case EVENT_STATE_LOW_LIMIT:
+                     break;
             }
         }
     }

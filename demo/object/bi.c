@@ -46,7 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_BINARY_INPUTS
-#define MAX_BINARY_INPUTS 65535
+#define MAX_BINARY_INPUTS 1024
 #endif
 unsigned max_binary_inputs_int = 0;
 

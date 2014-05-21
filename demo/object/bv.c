@@ -46,7 +46,7 @@
 
 /* number of demo objects */
 #ifndef MAX_BINARY_VALUES
-#define MAX_BINARY_VALUES 65535
+#define MAX_BINARY_VALUES 1024
 #endif
 unsigned max_binary_values_int = 0;
 
