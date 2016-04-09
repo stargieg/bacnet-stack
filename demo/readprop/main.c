@@ -308,3 +308,92 @@ int main (int argc, char *argv[]) {
         return 1;
     return 0;
 }
+
+
+
+int readprop (
+    uint32_t argDeviceInstance,
+    BACNET_OBJECT_TYPE argObjectType,
+    uint32_t argObjectInstance,
+    BACKNET_PROPERTY_ID argObjectProperty,
+    int32_t argObjectIndex) {
+        
+    BACNET_ADDRESS src = { 0 };  /* address where message came from */
+    uint16_t pdu_len = 0;
+    unsigned timeout = 100;     /* milliseconds */
+    unsigned max_apdu = 0;
+    time_t elapsed_seconds = 0;
+    time_t last_seconds = 0;
+    time_t current_seconds = 0;
+    time_t timeout_seconds = 0;
+    bool found = false;
+
+    /* decode the command line parameters */
+    Target_Device_Object_Instance = argDeviceInstance;
+    Target_Object_Type = argObjectType;
+    Target_Object_Instance = argObjectInstance;
+    Target_Object_Property = argObjectProperty;
+    Target_Object_Index = argObjectIndex;
+    
+    if (Target_Device_Object_Instance > BACNET_MAX_INSTANCE) {
+        //device-instance must be less than BACNET_MAX_INSTANCE
+        return 1;
+    }
+
+    init_readprop();
+
+    /* configure the timeout values */
+    last_seconds = time(NULL);
+    timeout_seconds = (apdu_timeout() / 1000) * apdu_retries();
+    /* try to bind with the device */
+    found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
+    if (!found) {
+        Send_WhoIs(Target_Device_Object_Instance, Target_Device_Object_Instance);
+    }
+    /* loop forever */
+    for (;;) {
+        /* increment timer - exit if timed out */
+        current_seconds = time(NULL);
+        /* at least one second has passed */
+        if (current_seconds != last_seconds)
+            tsm_timer_milliseconds ((uint16_t) ((current_seconds - last_seconds) * 1000));
+        if (Error_Detected)
+            break;
+        /* wait until the device is bound, or timeout and quit */
+        if (!found) {
+            found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
+        }
+        if (found) {
+            if (Request_Invoke_ID == 0) {
+                Request_Invoke_ID = Send_Read_Property_Request(Target_Device_Object_Instance, Target_Object_Type, Target_Object_Instance, Target_Object_Property, Target_Object_Index);
+            } else if (tsm_invoke_id_free(Request_Invoke_ID))
+                break;
+            else if (tsm_invoke_id_failed(Request_Invoke_ID)) {
+                //TSM Timeout!
+                tsm_free_invoke_id(Request_Invoke_ID);
+                Error_Detected = true;
+                /* try again or abort? */
+                break;
+            }
+        } else {
+            /* increment timer - exit if timed out */
+            elapsed_seconds += (current_seconds - last_seconds);
+            if (elapsed_seconds > timeout_seconds) {
+                //printf("\rError: APDU Timeout!\r\n");
+                Error_Detected = true;
+                break;
+            }
+        }
+        /* returns 0 bytes on timeout */
+        pdu_len = datalink_receive(&src, &Rx_Buf[0], MAX_MPDU, timeout);
+        /* process */
+        if (pdu_len)
+            npdu_handler(&src, &Rx_Buf[0], pdu_len);
+        /* keep track of time for next check */
+        last_seconds = current_seconds;
+    }
+
+    if (Error_Detected)
+        return 1;
+    return 0;
+}
