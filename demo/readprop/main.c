@@ -165,13 +165,22 @@ static void Init_Service_Handlers(
     apdu_set_reject_handler(MyRejectHandler);
 }
 
-int main(
-    int argc,
-    char *argv[])
+void init_readprop (void)
 {
-    BACNET_ADDRESS src = {
-        0
-    };  /* address where message came from */
+    static bool firstRun = true;
+    if (firstRun){
+        firstRun=false;
+        /* setup my info */
+        Device_Set_Object_Instance_Number(BACNET_MAX_INSTANCE);
+        address_init();
+        Init_Service_Handlers();
+        dlenv_init();
+        atexit(datalink_cleanup);
+    }
+}
+
+int main (int argc, char *argv[]) {
+    BACNET_ADDRESS src = { 0 };  /* address where message came from */
     uint16_t pdu_len = 0;
     unsigned timeout = 100;     /* milliseconds */
     unsigned max_apdu = 0;
@@ -234,39 +243,30 @@ int main(
         return 1;
     }
 
-    /* setup my info */
-    Device_Set_Object_Instance_Number(BACNET_MAX_INSTANCE);
-    address_init();
-    Init_Service_Handlers();
-    dlenv_init();
-    atexit(datalink_cleanup);
+
+    init_readprop();
+
+    
     /* configure the timeout values */
     last_seconds = time(NULL);
     timeout_seconds = (apdu_timeout() / 1000) * apdu_retries();
     /* try to bind with the device */
-    found =
-        address_bind_request(Target_Device_Object_Instance, &max_apdu,
-        &Target_Address);
+    found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
     if (!found) {
-        Send_WhoIs(Target_Device_Object_Instance,
-            Target_Device_Object_Instance);
+        Send_WhoIs(Target_Device_Object_Instance, Target_Device_Object_Instance);
     }
     /* loop forever */
     for (;;) {
         /* increment timer - exit if timed out */
         current_seconds = time(NULL);
-
         /* at least one second has passed */
         if (current_seconds != last_seconds)
-            tsm_timer_milliseconds((uint16_t) ((current_seconds -
-                        last_seconds) * 1000));
+            tsm_timer_milliseconds ((uint16_t) ((current_seconds - last_seconds) * 1000));
         if (Error_Detected)
             break;
         /* wait until the device is bound, or timeout and quit */
         if (!found) {
-            found =
-                address_bind_request(Target_Device_Object_Instance, &max_apdu,
-                &Target_Address);
+            found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
         }
         if (found) {
             if (Request_Invoke_ID == 0) {
@@ -292,15 +292,14 @@ int main(
                 break;
             }
         }
-
+        
         /* returns 0 bytes on timeout */
         pdu_len = datalink_receive(&src, &Rx_Buf[0], MAX_MPDU, timeout);
 
         /* process */
-        if (pdu_len) {
+        if (pdu_len)
             npdu_handler(&src, &Rx_Buf[0], pdu_len);
-        }
-
+            
         /* keep track of time for next check */
         last_seconds = current_seconds;
     }
