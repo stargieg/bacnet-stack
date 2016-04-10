@@ -190,47 +190,8 @@ int main (int argc, char *argv[]) {
     time_t timeout_seconds = 0;
     bool found = false;
 
-    if (argc < 5) {
-        printf("Usage: %s device-instance object-type object-instance "
-            "property [index]\r\n", filename_remove_path(argv[0]));
-        if ((argc > 1) && (strcmp(argv[1], "--help") == 0)) {
-            printf("device-instance:\r\n"
-                "BACnet Device Object Instance number that you are\r\n"
-                "trying to communicate to.  This number will be used\r\n"
-                "to try and bind with the device using Who-Is and\r\n"
-                "I-Am services.  For example, if you were reading\r\n"
-                "Device Object 123, the device-instance would be 123.\r\n"
-                "\r\nobject-type:\r\n"
-                "The object type is the integer value of the enumeration\r\n"
-                "BACNET_OBJECT_TYPE in bacenum.h.  It is the object\r\n"
-                "that you are reading.  For example if you were\r\n"
-                "reading Analog Output 2, the object-type would be 1.\r\n"
-                "\r\nobject-instance:\r\n"
-                "This is the object instance number of the object that\r\n"
-                "you are reading.  For example, if you were reading\r\n"
-                "Analog Output 2, the object-instance would be 2.\r\n"
-                "\r\nproperty:\r\n"
-                "The property is an integer value of the enumeration\r\n"
-                "BACNET_PROPERTY_ID in bacenum.h.  It is the property\r\n"
-                "you are reading.  For example, if you were reading the\r\n"
-                "Present Value property, use 85 as the property.\r\n"
-                "\r\nindex:\r\n"
-                "This integer parameter is the index number of an array.\r\n"
-                "If the property is an array, individual elements can\r\n"
-                "be read.  If this parameter is missing and the property\r\n"
-                "is an array, the entire array will be read.\r\n"
-                "\r\nExample:\r\n"
-                "If you want read the Present-Value of Analog Output 101\r\n"
-                "in Device 123, you could send the following command:\r\n"
-                "%s 123 1 101 85\r\n"
-                "If you want read the Priority-Array of Analog Output 101\r\n"
-                "in Device 123, you could send the following command:\r\n"
-                "%s 123 1 101 87\r\n", filename_remove_path(argv[0]),
-                filename_remove_path(argv[0]));
-        }
-        return 0;
-    }
-    /* decode the command line parameters */
+   
+    /* decode the command line parameters 
     Target_Device_Object_Instance = strtol(argv[1], NULL, 0);
     Target_Object_Type = strtol(argv[2], NULL, 0);
     Target_Object_Instance = strtol(argv[3], NULL, 0);
@@ -241,68 +202,13 @@ int main (int argc, char *argv[]) {
         fprintf(stderr, "device-instance=%u - it must be less than %u\r\n",
             Target_Device_Object_Instance, BACNET_MAX_INSTANCE);
         return 1;
-    }
+    }*/
 
 
     init_readprop();
+    readprop (40101, 0, 1,85,-1);
+    readprop (50100, 0,1,85,-1);
 
-    
-    /* configure the timeout values */
-    last_seconds = time(NULL);
-    timeout_seconds = (apdu_timeout() / 1000) * apdu_retries();
-    /* try to bind with the device */
-    found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
-    if (!found) {
-        Send_WhoIs(Target_Device_Object_Instance, Target_Device_Object_Instance);
-    }
-    /* loop forever */
-    for (;;) {
-        /* increment timer - exit if timed out */
-        current_seconds = time(NULL);
-        /* at least one second has passed */
-        if (current_seconds != last_seconds)
-            tsm_timer_milliseconds ((uint16_t) ((current_seconds - last_seconds) * 1000));
-        if (Error_Detected)
-            break;
-        /* wait until the device is bound, or timeout and quit */
-        if (!found) {
-            found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
-        }
-        if (found) {
-            if (Request_Invoke_ID == 0) {
-                Request_Invoke_ID =
-                    Send_Read_Property_Request(Target_Device_Object_Instance,
-                    Target_Object_Type, Target_Object_Instance,
-                    Target_Object_Property, Target_Object_Index);
-            } else if (tsm_invoke_id_free(Request_Invoke_ID))
-                break;
-            else if (tsm_invoke_id_failed(Request_Invoke_ID)) {
-                fprintf(stderr, "\rError: TSM Timeout!\r\n");
-                tsm_free_invoke_id(Request_Invoke_ID);
-                Error_Detected = true;
-                /* try again or abort? */
-                break;
-            }
-        } else {
-            /* increment timer - exit if timed out */
-            elapsed_seconds += (current_seconds - last_seconds);
-            if (elapsed_seconds > timeout_seconds) {
-                printf("\rError: APDU Timeout!\r\n");
-                Error_Detected = true;
-                break;
-            }
-        }
-        
-        /* returns 0 bytes on timeout */
-        pdu_len = datalink_receive(&src, &Rx_Buf[0], MAX_MPDU, timeout);
-
-        /* process */
-        if (pdu_len)
-            npdu_handler(&src, &Rx_Buf[0], pdu_len);
-            
-        /* keep track of time for next check */
-        last_seconds = current_seconds;
-    }
 
     if (Error_Detected)
         return 1;
