@@ -278,6 +278,7 @@ int main (int argc, char *argv[]) {
     while(true)//we are looping endlessly
     {
         char temp[512];
+        int err;
 
         //accept() will accept an incoming
         //client connection
@@ -288,8 +289,19 @@ int main (int argc, char *argv[]) {
         //we simply send this string to the client
         send(client,temp,strlen(temp),0);
         printf ("Connection from %s\r\n", inet_ntoa(from.sin_addr));
-        readprop (40101, 0, 1,85,-1);
-        readprop (50100, 0,1,85,-1);
+        printf ("readprop 40101 0 1 85 -1: ");
+        err=readprop (40101, 0, 1,85,-1);
+        if (err)
+            printf ("fail...\n\r");
+        else
+            printf ("done!\n\r");
+
+        printf ("readprop 50100 0 1 85 -1: ");
+        err=readprop (50100, 0,1,85,-1);
+        if (err)
+            printf ("fail...\n\r");
+        else
+            printf ("done!\n\r");
 
         //close the client socket
         closesocket(client);
