@@ -53,6 +53,8 @@
 #include "txbuf.h"
 #include "dlenv.h"
 
+#include <winsock2.h>
+
 /* buffer used for receive */
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
 
@@ -165,13 +167,22 @@ static void Init_Service_Handlers(
     apdu_set_reject_handler(MyRejectHandler);
 }
 
-int main(
-    int argc,
-    char *argv[])
+void init_readprop (void)
 {
-    BACNET_ADDRESS src = {
-        0
-    };  /* address where message came from */
+    static bool firstRun = true;
+    if (firstRun){
+        firstRun=false;
+        /* setup my info */
+        Device_Set_Object_Instance_Number(BACNET_MAX_INSTANCE);
+        address_init();
+        Init_Service_Handlers();
+        dlenv_init();
+        atexit(datalink_cleanup);
+    }
+}
+
+int main (int argc, char *argv[]) {
+    BACNET_ADDRESS src = { 0 };  /* address where message came from */
     uint16_t pdu_len = 0;
     unsigned timeout = 100;     /* milliseconds */
     unsigned max_apdu = 0;
@@ -181,47 +192,8 @@ int main(
     time_t timeout_seconds = 0;
     bool found = false;
 
-    if (argc < 5) {
-        printf("Usage: %s device-instance object-type object-instance "
-            "property [index]\r\n", filename_remove_path(argv[0]));
-        if ((argc > 1) && (strcmp(argv[1], "--help") == 0)) {
-            printf("device-instance:\r\n"
-                "BACnet Device Object Instance number that you are\r\n"
-                "trying to communicate to.  This number will be used\r\n"
-                "to try and bind with the device using Who-Is and\r\n"
-                "I-Am services.  For example, if you were reading\r\n"
-                "Device Object 123, the device-instance would be 123.\r\n"
-                "\r\nobject-type:\r\n"
-                "The object type is the integer value of the enumeration\r\n"
-                "BACNET_OBJECT_TYPE in bacenum.h.  It is the object\r\n"
-                "that you are reading.  For example if you were\r\n"
-                "reading Analog Output 2, the object-type would be 1.\r\n"
-                "\r\nobject-instance:\r\n"
-                "This is the object instance number of the object that\r\n"
-                "you are reading.  For example, if you were reading\r\n"
-                "Analog Output 2, the object-instance would be 2.\r\n"
-                "\r\nproperty:\r\n"
-                "The property is an integer value of the enumeration\r\n"
-                "BACNET_PROPERTY_ID in bacenum.h.  It is the property\r\n"
-                "you are reading.  For example, if you were reading the\r\n"
-                "Present Value property, use 85 as the property.\r\n"
-                "\r\nindex:\r\n"
-                "This integer parameter is the index number of an array.\r\n"
-                "If the property is an array, individual elements can\r\n"
-                "be read.  If this parameter is missing and the property\r\n"
-                "is an array, the entire array will be read.\r\n"
-                "\r\nExample:\r\n"
-                "If you want read the Present-Value of Analog Output 101\r\n"
-                "in Device 123, you could send the following command:\r\n"
-                "%s 123 1 101 85\r\n"
-                "If you want read the Priority-Array of Analog Output 101\r\n"
-                "in Device 123, you could send the following command:\r\n"
-                "%s 123 1 101 87\r\n", filename_remove_path(argv[0]),
-                filename_remove_path(argv[0]));
-        }
-        return 0;
-    }
-    /* decode the command line parameters */
+   
+    /* decode the command line parameters 
     Target_Device_Object_Instance = strtol(argv[1], NULL, 0);
     Target_Object_Type = strtol(argv[2], NULL, 0);
     Target_Object_Instance = strtol(argv[3], NULL, 0);
@@ -232,52 +204,187 @@ int main(
         fprintf(stderr, "device-instance=%u - it must be less than %u\r\n",
             Target_Device_Object_Instance, BACNET_MAX_INSTANCE);
         return 1;
+    }*/
+
+    init_readprop();
+
+
+    //STARTING TCP SERVER
+
+    prints ("Starting up TCP server\r\n");
+
+    //A SOCKET is simply a typedef for an unsigned int.
+    SOCKET server;
+
+    //WSADATA is a struct that is filled up by the call to WSAStartup
+    WSADATA wsaData;
+
+    //The sockaddr_in specifies the address of the socket
+    //for TCP/IP sockets. Other protocols use similar structures.
+    sockaddr_in local;
+
+    //WSAStartup initializes the program for calling WinSock.
+    //The first parameter specifies the highest version of the 
+    //WinSock specification, the program is allowed to use.
+    int wsaret=WSAStartup(0x101,&wsaData);
+
+    //WSAStartup returns zero on success.
+    //If it fails we exit.
+    if(wsaret!=0)
+    {
+        prints ("Fail to init Winsock...");
+        return 1;
     }
 
-    /* setup my info */
-    Device_Set_Object_Instance_Number(BACNET_MAX_INSTANCE);
-    address_init();
-    Init_Service_Handlers();
-    dlenv_init();
-    atexit(datalink_cleanup);
+    //Now we populate the sockaddr_in structure
+    local.sin_family=AF_INET; //Address family
+    local.sin_addr.s_addr=INADDR_ANY; //Wild card IP address
+    local.sin_port=htons((u_short)20248); //port to use
+
+    //the socket function creates our SOCKET
+    server=socket(AF_INET,SOCK_STREAM,0);
+
+    //If the socket() function fails we exit
+    if(server==INVALID_SOCKET)
+    {
+        prints ("Fail to create SOCKET...");
+        return 0;
+    }
+
+    //bind links the socket we just created with the sockaddr_in 
+    //structure. Basically it connects the socket with 
+    //the local address and a specified port.
+    //If it returns non-zero quit, as this indicates error
+    if(bind(server,(sockaddr*)&local,sizeof(local))!=0)
+    {
+        printf ("Fail to BIND to local host/port...");
+        return 0;
+    }
+
+    //listen instructs the socket to listen for incoming 
+    //connections from clients. The second arg is the backlog
+    if(listen(server,10)!=0)
+    {
+        printf ("Fail on listen ()...");
+        return 0;
+    }
+
+    //we will need variables to hold the client socket.
+    //thus we declare them here.
+    SOCKET client;
+    sockaddr_in from;
+    int fromlen=sizeof(from);
+
+    while(true)//we are looping endlessly
+    {
+        char temp[512];
+        int err;
+
+        //accept() will accept an incoming
+        //client connection
+        client=accept(server, (struct sockaddr*)&from,&fromlen);
+		
+        sprintf(temp,"Your IP is %s\r\n",inet_ntoa(from.sin_addr));
+
+        //we simply send this string to the client
+        send(client,temp,strlen(temp),0);
+        printf ("Connection from %s\r\n", inet_ntoa(from.sin_addr));
+        printf ("readprop 40101 0 1 85 -1: ");
+        err=readprop (40101, 0, 1,85,-1);
+        if (err)
+            printf ("fail...\n\r");
+        else
+            printf ("done!\n\r");
+
+        printf ("readprop 50100 0 1 85 -1: ");
+        err=readprop (50100, 0,1,85,-1);
+        if (err)
+            printf ("fail...\n\r");
+        else
+            printf ("done!\n\r");
+
+        //close the client socket
+        closesocket(client);
+
+    }
+
+    //closesocket() closes the socket and releases the socket descriptor
+    closesocket(server);
+
+    //originally this function probably had some use
+    //currently this is just for backward compatibility
+    //but it is safer to call it as I still believe some
+    //implementations use this to terminate use of WS2_32.DLL 
+    WSACleanup();
+
+    return 0;
+}
+
+
+
+
+int readprop (
+    uint32_t argDeviceInstance,
+    BACNET_OBJECT_TYPE argObjectType,
+    uint32_t argObjectInstance,
+    BACKNET_PROPERTY_ID argObjectProperty,
+    int32_t argObjectIndex) {
+        
+    BACNET_ADDRESS src = { 0 };  /* address where message came from */
+    uint16_t pdu_len = 0;
+    unsigned timeout = 100;     /* milliseconds */
+    unsigned max_apdu = 0;
+    time_t elapsed_seconds = 0;
+    time_t last_seconds = 0;
+    time_t current_seconds = 0;
+    time_t timeout_seconds = 0;
+    bool found = false;
+
+    /* decode the command line parameters */
+    Target_Device_Object_Instance = argDeviceInstance;
+    Target_Object_Type = argObjectType;
+    Target_Object_Instance = argObjectInstance;
+    Target_Object_Property = argObjectProperty;
+    Target_Object_Index = argObjectIndex;
+    
+    if (Target_Device_Object_Instance > BACNET_MAX_INSTANCE) {
+        //device-instance must be less than BACNET_MAX_INSTANCE
+        return 1;
+    }
+
+    init_readprop();
+    elapsed_seconds = 0;
+    Request_Invoke_ID = 0;
+    
+
     /* configure the timeout values */
     last_seconds = time(NULL);
     timeout_seconds = (apdu_timeout() / 1000) * apdu_retries();
     /* try to bind with the device */
-    found =
-        address_bind_request(Target_Device_Object_Instance, &max_apdu,
-        &Target_Address);
+    found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
     if (!found) {
-        Send_WhoIs(Target_Device_Object_Instance,
-            Target_Device_Object_Instance);
+        Send_WhoIs(Target_Device_Object_Instance, Target_Device_Object_Instance);
     }
     /* loop forever */
     for (;;) {
         /* increment timer - exit if timed out */
         current_seconds = time(NULL);
-
         /* at least one second has passed */
         if (current_seconds != last_seconds)
-            tsm_timer_milliseconds((uint16_t) ((current_seconds -
-                        last_seconds) * 1000));
+            tsm_timer_milliseconds ((uint16_t) ((current_seconds - last_seconds) * 1000));
         if (Error_Detected)
             break;
         /* wait until the device is bound, or timeout and quit */
         if (!found) {
-            found =
-                address_bind_request(Target_Device_Object_Instance, &max_apdu,
-                &Target_Address);
+            found = address_bind_request (Target_Device_Object_Instance, &max_apdu, &Target_Address);
         }
         if (found) {
             if (Request_Invoke_ID == 0) {
-                Request_Invoke_ID =
-                    Send_Read_Property_Request(Target_Device_Object_Instance,
-                    Target_Object_Type, Target_Object_Instance,
-                    Target_Object_Property, Target_Object_Index);
+                Request_Invoke_ID = Send_Read_Property_Request(Target_Device_Object_Instance, Target_Object_Type, Target_Object_Instance, Target_Object_Property, Target_Object_Index);
             } else if (tsm_invoke_id_free(Request_Invoke_ID))
                 break;
             else if (tsm_invoke_id_failed(Request_Invoke_ID)) {
-                fprintf(stderr, "\rError: TSM Timeout!\r\n");
+                //TSM Timeout!
                 tsm_free_invoke_id(Request_Invoke_ID);
                 Error_Detected = true;
                 /* try again or abort? */
@@ -287,20 +394,16 @@ int main(
             /* increment timer - exit if timed out */
             elapsed_seconds += (current_seconds - last_seconds);
             if (elapsed_seconds > timeout_seconds) {
-                printf("\rError: APDU Timeout!\r\n");
+                //printf("\rError: APDU Timeout!\r\n");
                 Error_Detected = true;
                 break;
             }
         }
-
         /* returns 0 bytes on timeout */
         pdu_len = datalink_receive(&src, &Rx_Buf[0], MAX_MPDU, timeout);
-
         /* process */
-        if (pdu_len) {
+        if (pdu_len)
             npdu_handler(&src, &Rx_Buf[0], pdu_len);
-        }
-
         /* keep track of time for next check */
         last_seconds = current_seconds;
     }
