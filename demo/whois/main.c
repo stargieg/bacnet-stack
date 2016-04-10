@@ -477,3 +477,120 @@ int main(
 
     return 0;
 }
+
+
+
+
+//ADDED SECTION
+
+
+int whois(
+    int argc,
+    char *argv[])
+{
+    BACNET_ADDRESS src = {
+        0
+    };  /* address where message came from */
+    uint16_t pdu_len = 0;
+    unsigned timeout = 100;     /* milliseconds */
+    time_t total_seconds = 0;
+    time_t elapsed_seconds = 0;
+    time_t last_seconds = 0;
+    time_t current_seconds = 0;
+    time_t timeout_seconds = 0;
+    BACNET_ADDRESS dest;
+    int argi;
+
+    /* print help if requested */
+    for (argi = 1; argi < argc; argi++) {
+        if (strcmp(argv[argi], "--help") == 0) {
+            print_help(filename_remove_path(argv[0]));
+            return 0;
+        }
+    }
+
+    datalink_get_broadcast_address(&dest);
+
+    /* decode the command line parameters */
+    if (argc >= 2) {
+        char *s;
+        long v = strtol(argv[1], &s, 0);
+        if (*s++ == ':') {
+            if (argv[1][0] != ':')
+                dest.net = (uint16_t) v;
+            dest.mac_len = 0;
+            if (isdigit(*s))
+                parse_bac_address(&dest, s);
+        } else {
+            Target_Object_Instance_Min = Target_Object_Instance_Max = v;
+        }
+    }
+
+    if (argc <= 2) {
+        /* empty */
+    } else if (argc == 3) {
+        if (Target_Object_Instance_Min == -1)
+            Target_Object_Instance_Min = Target_Object_Instance_Max =
+                strtol(argv[2], NULL, 0);
+        else
+            Target_Object_Instance_Max = strtol(argv[2], NULL, 0);
+    } else if (argc == 4) {
+        Target_Object_Instance_Min = strtol(argv[2], NULL, 0);
+        Target_Object_Instance_Max = strtol(argv[3], NULL, 0);
+    } else {
+        print_usage(filename_remove_path(argv[0]));
+        return 1;
+    }
+
+    if (Target_Object_Instance_Min > BACNET_MAX_INSTANCE) {
+        fprintf(stderr, "device-instance-min=%u - it must be less than %u\r\n",
+            Target_Object_Instance_Min, BACNET_MAX_INSTANCE + 1);
+        return 1;
+    }
+    if (Target_Object_Instance_Max > BACNET_MAX_INSTANCE) {
+        fprintf(stderr, "device-instance-max=%u - it must be less than %u\r\n",
+            Target_Object_Instance_Max, BACNET_MAX_INSTANCE + 1);
+        return 1;
+    }
+
+    /* setup my info */
+    Device_Set_Object_Instance_Number(BACNET_MAX_INSTANCE);
+    init_service_handlers();
+    address_init();
+    dlenv_init();
+    atexit(datalink_cleanup);
+    /* configure the timeout values */
+    last_seconds = time(NULL);
+    timeout_seconds = apdu_timeout() / 1000;
+    /* send the request */
+    Send_WhoIs_To_Network(&dest, Target_Object_Instance_Min,
+        Target_Object_Instance_Max);
+    /* loop forever */
+    for (;;) {
+        /* increment timer - exit if timed out */
+        current_seconds = time(NULL);
+        /* returns 0 bytes on timeout */
+        pdu_len = datalink_receive(&src, &Rx_Buf[0], MAX_MPDU, timeout);
+        /* process */
+        if (pdu_len) {
+            npdu_handler(&src, &Rx_Buf[0], pdu_len);
+        }
+        if (Error_Detected)
+            break;
+        /* increment timer - exit if timed out */
+        elapsed_seconds = current_seconds - last_seconds;
+        if (elapsed_seconds) {
+#if defined(BACDL_BIP) && BBMD_ENABLED
+            bvlc_maintenance_timer(elapsed_seconds);
+#endif
+        }
+        total_seconds += elapsed_seconds;
+        if (total_seconds > timeout_seconds)
+            break;
+        /* keep track of time for next check */
+        last_seconds = current_seconds;
+    }
+    print_address_cache();
+
+    return 0;
+}
