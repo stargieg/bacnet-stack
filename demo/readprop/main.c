@@ -339,6 +339,9 @@ int readprop (
     }
 
     init_readprop();
+    elapsed_seconds = 0;
+    Request_Invoke_ID = 0;
+    
 
     /* configure the timeout values */
     last_seconds = time(NULL);
