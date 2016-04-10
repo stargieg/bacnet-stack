@@ -53,6 +53,8 @@
 #include "txbuf.h"
 #include "dlenv.h"
 
+#include <winsock2.h>
+
 /* buffer used for receive */
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
 
