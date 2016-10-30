@@ -22,6 +22,7 @@ BACNET_DEFINES ?= $(MY_BACNET_DEFINES)
 # un-comment the next line to build in uci integration
 #BACNET_DEFINES += -DBAC_UCI
 #UCI_LIB_DIR ?= /usr/local/lib
+#UCI_INCLUDE_DIR ?= /usr/local/include
 
 #BACDL_DEFINE=-DBACDL_ETHERNET=1
 #BACDL_DEFINE=-DBACDL_ARCNET=1
