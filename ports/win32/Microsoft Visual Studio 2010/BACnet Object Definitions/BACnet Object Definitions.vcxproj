@@ -86,7 +86,7 @@
     <ClCompile Include="..\..\..\..\demo\object\lc.c" />
     <ClCompile Include="..\..\..\..\demo\object\lo.c" />
     <ClCompile Include="..\..\..\..\demo\object\lsp.c" />
-    <ClCompile Include="..\..\..\..\demo\object\ms-input.c" />
+    <ClCompile Include="..\..\..\..\demo\object\msi.c" />
     <ClCompile Include="..\..\..\..\demo\object\mso.c" />
     <ClCompile Include="..\..\..\..\demo\object\msv.c" />
     <ClCompile Include="..\..\..\..\demo\object\osv.c" />
@@ -107,7 +107,7 @@
     <ClInclude Include="..\..\..\..\demo\object\lc.h" />
     <ClInclude Include="..\..\..\..\demo\object\lo.h" />
     <ClInclude Include="..\..\..\..\demo\object\lsp.h" />
-    <ClInclude Include="..\..\..\..\demo\object\ms-input.h" />
+    <ClInclude Include="..\..\..\..\demo\object\msi.h" />
     <ClInclude Include="..\..\..\..\demo\object\mso.h" />
     <ClInclude Include="..\..\..\..\demo\object\msv.h" />
     <ClInclude Include="..\..\..\..\demo\object\nc.h" />

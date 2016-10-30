@@ -328,7 +328,9 @@ int main(
             bvlc_maintenance_timer(elapsed_seconds);
 #endif
             dlenv_maintenance_timer(elapsed_seconds);
+#if defined(LC)
             Load_Control_State_Machine_Handler();
+#endif
             elapsed_milliseconds = elapsed_seconds * 1000;
             tsm_timer_milliseconds(elapsed_milliseconds);
         }

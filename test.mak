@@ -217,7 +217,7 @@ wp: logfile test/wp.mak
 	$(MAKE) -s -C test -f wp.mak clean
 
 objects: ai ao av bi bo bv csv lc lo lso lsp \
-	mso msv ms-input osv piv command \
+	mso msv msi osv piv command \
 	access_credential access_door access_point access_rights \
 	access_user access_zone credential_data_input
 
@@ -320,10 +320,10 @@ lsp: logfile demo/object/lsp.mak
 	( ./demo/object/life_safety_point >> ${LOGFILE} )
 	$(MAKE) -s -C demo/object -f lsp.mak clean
 
-ms-input: logfile demo/object/ms-input.mak
-	$(MAKE) -s -C demo/object -f ms-input.mak clean all
+msi: logfile demo/object/msi.mak
+	$(MAKE) -s -C demo/object -f msi.mak clean all
 	( ./demo/object/multistate_input >> ${LOGFILE} )
-	$(MAKE) -s -C demo/object -f ms-input.mak clean
+	$(MAKE) -s -C demo/object -f msi.mak clean
 
 mso: logfile demo/object/mso.mak
 	$(MAKE) -s -C demo/object -f mso.mak clean all

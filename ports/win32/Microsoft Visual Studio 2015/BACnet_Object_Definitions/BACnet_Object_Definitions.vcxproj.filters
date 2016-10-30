@@ -63,7 +63,7 @@
     <ClCompile Include="..\..\..\..\demo\object\lsp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\demo\object\ms-input.c">
+    <ClCompile Include="..\..\..\..\demo\object\msi.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\demo\object\mso.c">
@@ -125,7 +125,7 @@
     <ClInclude Include="..\..\..\..\demo\object\lsp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\demo\object\ms-input.h">
+    <ClInclude Include="..\..\..\..\demo\object\msi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\demo\object\mso.h">

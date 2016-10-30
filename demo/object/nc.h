@@ -26,7 +26,13 @@
 #define NC_H
 
 #include "event.h"
-
+#include <stdbool.h>
+#include <stdint.h>
+#include "bacdef.h"
+#include "cov.h"
+#include "bacerror.h"
+#include "rp.h"
+#include "wp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,7 +49,6 @@ extern "C" {
         RECIPIENT_TYPE_DEVICE = 1,
         RECIPIENT_TYPE_ADDRESS = 2
     } NC_RECIPIENT_TYPE;
-
 
 #if defined(INTRINSIC_REPORTING)
 /* BACnetRecipient structure */
@@ -75,11 +80,15 @@ BACnetRecipient ::= CHOICE {
 
 
 /* Structure containing configuration for a Notification Class */
-    typedef struct Notification_Class_info {
+    typedef struct notification_class_descr {
+        uint32_t Instance;
+        char Object_Name[64];
+        char Object_Description[64];
+        bool Disable;
         uint8_t Priority[MAX_BACNET_EVENT_TRANSITION];  /* BACnetARRAY[3] of Unsigned */
         uint8_t Ack_Required;   /* BACnetEventTransitionBits */
         BACNET_DESTINATION Recipient_List[NC_MAX_RECIPIENTS];   /* List of BACnetDestination */
-    } NOTIFICATION_CLASS_INFO;
+    } NOTIFICATION_CLASS_DESCR;
 
 
 /* Indicates whether the transaction has been confirmed */
@@ -96,6 +105,27 @@ BACnetRecipient ::= CHOICE {
     } ACK_NOTIFICATION;
 
 
+/* value/name tuples */
+struct nc_inst_tuple {
+	char idx[18];
+	struct nc_inst_tuple *next;
+};
+
+typedef struct nc_inst_tuple nc_inst_tuple_t;
+
+/* structure to hold tuple-list and uci context during iteration */
+struct nc_inst_itr_ctx {
+	struct nc_inst_tuple *list;
+	struct uci_context *ctx;
+	char *section;
+};
+
+
+	void Notification_Class_Load_UCI_List(
+		const char *sec_idx,
+		struct nc_inst_itr_ctx *itr);
+
+
 
     void Notification_Class_Property_Lists(
         const int **pRequired,
@@ -107,18 +137,30 @@ BACnetRecipient ::= CHOICE {
 
     bool Notification_Class_Valid_Instance(
         uint32_t object_instance);
+
     unsigned Notification_Class_Count(
         void);
+
     uint32_t Notification_Class_Index_To_Instance(
         unsigned index);
+
     unsigned Notification_Class_Instance_To_Index(
         uint32_t object_instance);
+
     bool Notification_Class_Object_Name(
         uint32_t object_instance,
         BACNET_CHARACTER_STRING * object_name);
 
+    bool Notification_Class_Name_Set(
+        uint32_t object_instance,
+        char *new_name);
+
     int Notification_Class_Read_Property(
         BACNET_READ_PROPERTY_DATA * rpdata);
+
+    bool Notification_Class_Description_Set(
+        uint32_t object_instance,
+        char *text_string);
 
     bool Notification_Class_Write_Property(
         BACNET_WRITE_PROPERTY_DATA * wp_data);

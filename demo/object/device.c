@@ -28,6 +28,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>     /* for getenv */
 #include <string.h>     /* for memmove */
 #include <time.h>       /* for timezone, localtime */
 #include "bacdef.h"
@@ -48,25 +49,64 @@
 #include "timer.h"
 /* include the device object */
 #include "device.h"
+#if defined(AI)
 #include "ai.h"
+#endif
+#if defined(AO)
 #include "ao.h"
+#endif
+#if defined(AV)
 #include "av.h"
+#endif
+#if defined(BI)
 #include "bi.h"
+#endif
+#if defined(BO)
 #include "bo.h"
+#endif
+#if defined(BV)
 #include "bv.h"
+#endif
+#if (BACNET_PROTOCOL_REVISION >= 14) && defined(CHANNEL)
 #include "channel.h"
+#endif
+#if defined(COMMAND)
 #include "command.h"
+#endif
+#if defined(CSV)
 #include "csv.h"
+#endif
+#if defined(IV)
 #include "iv.h"
+#endif
+#if defined(LC)
 #include "lc.h"
+#endif
+#if (BACNET_PROTOCOL_REVISION >= 14) && defined(LO)
+#include "lo.h"
+#endif
 #include "lsp.h"
+#if defined(MSI)
 #include "msi.h"
+#endif
+#if defined(MSO)
 #include "mso.h"
+#endif
+#if defined(MSV)
 #include "msv.h"
+#endif
+#if defined(OSV)
 #include "osv.h"
+#endif
+#if defined(PIV)
 #include "piv.h"
+#endif
+#if defined(SCHEDULE)
 #include "schedule.h"
+#endif
+#if defined(TRENDLOG)
 #include "trendlog.h"
+#endif
 #if defined(INTRINSIC_REPORTING)
 #include "nc.h"
 #endif /* defined(INTRINSIC_REPORTING) */
@@ -97,6 +137,10 @@ extern bool Routed_Device_Write_Property_Local(
 /* may be overridden by outside table */
 static object_functions_t *Object_Table;
 
+#if defined(BAC_UCI)
+struct uci_context *ctx;
+#endif /* defined(BAC_UCI) */
+
 static object_functions_t My_Object_Table[] = {
     {OBJECT_DEVICE,
             NULL /* Init - don't init Device or it will recourse! */ ,
@@ -113,6 +157,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#if defined(AI)
     {OBJECT_ANALOG_INPUT,
             Analog_Input_Init,
             Analog_Input_Count,
@@ -128,6 +173,8 @@ static object_functions_t My_Object_Table[] = {
             Analog_Input_Change_Of_Value,
             Analog_Input_Change_Of_Value_Clear,
         Analog_Input_Intrinsic_Reporting},
+#endif
+#if defined(AO)
     {OBJECT_ANALOG_OUTPUT,
             Analog_Output_Init,
             Analog_Output_Count,
@@ -139,10 +186,12 @@ static object_functions_t My_Object_Table[] = {
             Analog_Output_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+            Analog_Output_Encode_Value_List,
+            Analog_Output_Change_Of_Value,
+            Analog_Output_Change_Of_Value_Clear,
+        Analog_Output_Intrinsic_Reporting},
+#endif
+#if defined(AV)
     {OBJECT_ANALOG_VALUE,
             Analog_Value_Init,
             Analog_Value_Count,
@@ -154,10 +203,12 @@ static object_functions_t My_Object_Table[] = {
             Analog_Value_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
+            Analog_Value_Encode_Value_List,
+            Analog_Value_Change_Of_Value,
+            Analog_Value_Change_Of_Value_Clear,
         Analog_Value_Intrinsic_Reporting},
+#endif
+#if defined(BI)
     {OBJECT_BINARY_INPUT,
             Binary_Input_Init,
             Binary_Input_Count,
@@ -172,7 +223,9 @@ static object_functions_t My_Object_Table[] = {
             Binary_Input_Encode_Value_List,
             Binary_Input_Change_Of_Value,
             Binary_Input_Change_Of_Value_Clear,
-        NULL /* Intrinsic Reporting */ },
+        Binary_Input_Intrinsic_Reporting},
+#endif
+#if defined(BO)
     {OBJECT_BINARY_OUTPUT,
             Binary_Output_Init,
             Binary_Output_Count,
@@ -184,10 +237,12 @@ static object_functions_t My_Object_Table[] = {
             Binary_Output_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+            Binary_Output_Encode_Value_List,
+            Binary_Output_Change_Of_Value,
+            Binary_Output_Change_Of_Value_Clear,
+        Binary_Output_Intrinsic_Reporting},
+#endif
+#if defined(BV)
     {OBJECT_BINARY_VALUE,
             Binary_Value_Init,
             Binary_Value_Count,
@@ -199,10 +254,12 @@ static object_functions_t My_Object_Table[] = {
             Binary_Value_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+            Binary_Value_Encode_Value_List,
+            Binary_Value_Change_Of_Value,
+            Binary_Value_Change_Of_Value_Clear,
+        Binary_Input_Intrinsic_Reporting},
+#endif
+#if defined(CSV)
     {OBJECT_CHARACTERSTRING_VALUE,
             CharacterString_Value_Init,
             CharacterString_Value_Count,
@@ -218,6 +275,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
+#if defined(COMMAND)
     {OBJECT_COMMAND,
             Command_Init,
             Command_Count,
@@ -233,6 +292,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
+#if defined(IV)
     {OBJECT_INTEGER_VALUE,
             Integer_Value_Init,
             Integer_Value_Count,
@@ -248,6 +309,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
 #if defined(INTRINSIC_REPORTING)
     {OBJECT_NOTIFICATION_CLASS,
             Notification_Class_Init,
@@ -265,6 +327,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
 #endif
+#if defined(LSP)
     {OBJECT_LIFE_SAFETY_POINT,
             Life_Safety_Point_Init,
             Life_Safety_Point_Count,
@@ -280,6 +343,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
+#if defined(LC)
     {OBJECT_LOAD_CONTROL,
             Load_Control_Init,
             Load_Control_Count,
@@ -295,6 +360,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
+#if defined(MSI)
     {OBJECT_MULTI_STATE_INPUT,
             Multistate_Input_Init,
             Multistate_Input_Count,
@@ -306,10 +373,12 @@ static object_functions_t My_Object_Table[] = {
             Multistate_Input_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+            Multistate_Input_Encode_Value_List,
+            Multistate_Input_Change_Of_Value,
+            Multistate_Input_Change_Of_Value_Clear,
+        Multistate_Input_Intrinsic_Reporting },
+#endif
+#if defined(MSO)
     {OBJECT_MULTI_STATE_OUTPUT,
             Multistate_Output_Init,
             Multistate_Output_Count,
@@ -321,10 +390,12 @@ static object_functions_t My_Object_Table[] = {
             Multistate_Output_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+            Multistate_Output_Encode_Value_List,
+            Multistate_Output_Change_Of_Value,
+            Multistate_Output_Change_Of_Value_Clear,
+        Multistate_Output_Intrinsic_Reporting },
+#endif
+#if defined(MSV)
     {OBJECT_MULTI_STATE_VALUE,
             Multistate_Value_Init,
             Multistate_Value_Count,
@@ -336,10 +407,12 @@ static object_functions_t My_Object_Table[] = {
             Multistate_Value_Property_Lists,
             NULL /* ReadRangeInfo */ ,
             NULL /* Iterator */ ,
-            NULL /* Value_Lists */ ,
-            NULL /* COV */ ,
-            NULL /* COV Clear */ ,
-        NULL /* Intrinsic Reporting */ },
+            Multistate_Value_Encode_Value_List,
+            Multistate_Value_Change_Of_Value,
+            Multistate_Value_Change_Of_Value_Clear,
+        Multistate_Value_Intrinsic_Reporting },
+#endif
+#if defined(TRENDLOG)
     {OBJECT_TRENDLOG,
             Trend_Log_Init,
             Trend_Log_Count,
@@ -355,7 +428,9 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
 #if (BACNET_PROTOCOL_REVISION >= 14)
+#if defined(LO)
     {OBJECT_LIGHTING_OUTPUT,
             Lighting_Output_Init,
             Lighting_Output_Count,
@@ -371,6 +446,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
+#if defined(CHANNEL)
     {OBJECT_CHANNEL,
             Channel_Init,
             Channel_Count,
@@ -386,6 +463,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
 #endif
 #if defined(BACFILE)
     {OBJECT_FILE,
@@ -404,6 +482,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
 #endif
+#if defined(OSV)
     {OBJECT_OCTETSTRING_VALUE,
             OctetString_Value_Init,
             OctetString_Value_Count,
@@ -419,6 +498,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
+#if defined(PIV)
     {OBJECT_POSITIVE_INTEGER_VALUE,
             PositiveInteger_Value_Init,
             PositiveInteger_Value_Count,
@@ -434,6 +515,8 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
+#if defined(SCHEDULE)
     {OBJECT_SCHEDULE,
             Schedule_Init,
             Schedule_Count,
@@ -449,6 +532,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
     {MAX_BACNET_OBJECT_TYPE,
             NULL /* Init */ ,
             NULL /* Count */ ,
@@ -575,37 +659,67 @@ bool Device_Reinitialize(
     BACNET_REINITIALIZE_DEVICE_DATA * rd_data)
 {
     bool status = false;
+    const char *password = "Jesus";
 
-    if (characterstring_ansi_same(&rd_data->password, "Jesus")) {
-        switch (rd_data->state) {
-            case BACNET_REINIT_COLDSTART:
-            case BACNET_REINIT_WARMSTART:
-                dcc_set_status_duration(COMMUNICATION_ENABLE, 0);
-                break;
-            case BACNET_REINIT_STARTBACKUP:
-                break;
-            case BACNET_REINIT_ENDBACKUP:
-                break;
-            case BACNET_REINIT_STARTRESTORE:
-                break;
-            case BACNET_REINIT_ENDRESTORE:
-                break;
-            case BACNET_REINIT_ABORTRESTORE:
-                break;
-            default:
-                break;
-        }
-        /* Note: you could use a mix of state
-           and password to multiple things */
-        /* note: you probably want to restart *after* the
-           simple ack has been sent from the return handler
-           so just set a flag from here */
-        status = true;
+#if defined(BAC_UCI)
+    bool enable_pw = false;
+    char *pEnv = getenv("UCI_SECTION");
+    if (!pEnv) {
+    	pEnv = "0";
+#if PRINT_ENABLED
+        fprintf(stderr,  "Failed to getenv(UCI_SECTION)\n");
     } else {
-        rd_data->error_class = ERROR_CLASS_SECURITY;
-        rd_data->error_code = ERROR_CODE_PASSWORD_FAILURE;
+		fprintf(stderr,  "load config file bacnet_dev %s\n",pEnv);
+#endif
     }
 
+    ctx = ucix_init("bacnet_dev");
+    if(ctx) {
+        enable_pw = ucix_get_option_int(ctx, "bacnet_dev", pEnv,
+            "enable_pw", false);
+        if (enable_pw) {
+            password = ucix_get_option(ctx, "bacnet_dev", pEnv, "password");
+        }
+#if PRINT_ENABLED
+    } else {
+        fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
+    }
+
+    if (enable_pw) {
+#endif /* defined(BAC_UCI) */
+        if (characterstring_ansi_same(&rd_data->password, password)) {
+            switch (rd_data->state) {
+                case BACNET_REINIT_COLDSTART:
+                case BACNET_REINIT_WARMSTART:
+                    dcc_set_status_duration(COMMUNICATION_ENABLE, 0);
+                    break;
+                case BACNET_REINIT_STARTBACKUP:
+                    break;
+                case BACNET_REINIT_ENDBACKUP:
+                    break;
+                case BACNET_REINIT_STARTRESTORE:
+                    break;
+                case BACNET_REINIT_ENDRESTORE:
+                    break;
+                case BACNET_REINIT_ABORTRESTORE:
+                    break;
+                default:
+                    break;
+            }
+            /* Note: you could use a mix of state
+               and password to multiple things */
+            /* note: you probably want to restart *after* the
+               simple ack has been sent from the return handler
+               so just set a flag from here */
+            status = true;
+        } else {
+            rd_data->error_class = ERROR_CLASS_SECURITY;
+            rd_data->error_code = ERROR_CODE_PASSWORD_FAILURE;
+        }
+#if defined(BAC_UCI)
+    }
+#endif /* defined(BAC_UCI) */
     return status;
 }
 
@@ -735,7 +849,7 @@ unsigned Device_Count(
 uint32_t Device_Index_To_Instance(
     unsigned index)
 {
-    index = index;
+    //index = index;
     return Object_Instance_Number;
 }
 
@@ -800,6 +914,28 @@ bool Device_Set_Object_Name(
         /* Make the change and update the database revision */
         status = characterstring_copy(&My_Object_Name, object_name);
         Device_Inc_Database_Revision();
+#if defined(BAC_UCI)
+        char *pEnv = getenv("UCI_SECTION");
+        if (!pEnv) {
+        	pEnv = "0";
+#if PRINT_ENABLED
+            fprintf(stderr,  "Failed to getenv(UCI_SECTION)\n");
+        } else {
+		    fprintf(stderr,  "load config file bacnet_dev %s\n",pEnv);
+#endif
+        }
+
+        ctx = ucix_init("bacnet_dev");
+        if(ctx) {
+            ucix_add_option(ctx, "bacnet_dev", pEnv, "name", object_name->value);
+            ucix_commit(ctx, "bacnet_dev");
+            ucix_cleanup(ctx);
+#if PRINT_ENABLED
+        } else {
+            fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
+        }
+#endif /* defined(BAC_UCI) */
     }
 
     return status;
@@ -966,6 +1102,28 @@ bool Device_Set_Description(
     if (length < sizeof(Description)) {
         memmove(Description, name, length);
         Description[length] = 0;
+#if defined(BAC_UCI)
+        char *pEnv = getenv("UCI_SECTION");
+        if (!pEnv) {
+        	pEnv = "0";
+#if PRINT_ENABLED
+            fprintf(stderr,  "Failed to getenv(UCI_SECTION)\n");
+        } else {
+		    fprintf(stderr,  "load config file bacnet_dev %s\n",pEnv);
+#endif
+        }
+
+        ctx = ucix_init("bacnet_dev");
+        if(ctx) {
+            ucix_add_option(ctx, "bacnet_dev", pEnv, "description", name);
+            ucix_commit(ctx, "bacnet_dev");
+            ucix_cleanup(ctx);
+#if PRINT_ENABLED
+        } else {
+            fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
+        }
+#endif /* defined(BAC_UCI) */
         status = true;
     }
 
@@ -987,6 +1145,28 @@ bool Device_Set_Location(
     if (length < sizeof(Location)) {
         memmove(Location, name, length);
         Location[length] = 0;
+#if defined(BAC_UCI)
+        char *pEnv = getenv("UCI_SECTION");
+        if (!pEnv) {
+        	pEnv = "0";
+#if PRINT_ENABLED
+            fprintf(stderr,  "Failed to getenv(UCI_SECTION)\n");
+        } else {
+		    fprintf(stderr,  "load config file bacnet_dev %s\n",pEnv);
+#endif
+        }
+
+        ctx = ucix_init("bacnet_dev");
+        if(ctx) {
+            ucix_add_option(ctx, "bacnet_dev", pEnv, "location", name);
+            ucix_commit(ctx, "bacnet_dev");
+            ucix_cleanup(ctx);
+#if PRINT_ENABLED
+        } else {
+            fprintf(stderr,  "Failed to open config file bacnet_dev\n");
+#endif
+        }
+#endif /* defined(BAC_UCI) */
         status = true;
     }
 
@@ -1674,7 +1854,9 @@ bool Device_Write_Property_Local(
     BACNET_APPLICATION_DATA_VALUE value;
     int object_type = 0;
     uint32_t object_instance = 0;
+#if defined(BACNET_TIME_MASTER)
     uint32_t minutes = 0;
+#endif
     int temp;
 
     /* decode the some of the request */
@@ -2135,21 +2317,54 @@ void Device_Init(
 {
     struct object_functions *pObject = NULL;
 #if defined(BAC_UCI)
-    const char *uciname;
     struct uci_context *ctx;
-    fprintf(stderr, "Device_Init\n");
-    ctx = ucix_init("bacnet_dev");
-    if (!ctx)
-        fprintf(stderr, "Failed to load config file bacnet_dev\n");
-    uciname = ucix_get_option(ctx, "bacnet_dev", "0", "Name");
-    if (uciname != 0) {
-        characterstring_init_ansi(&My_Object_Name, uciname);
-    } else {
-#endif /* defined(BAC_UCI) */
-        characterstring_init_ansi(&My_Object_Name, "SimpleServer");
+
+    const char *uci_name;
+    const char *uci_location;
+    const char *uci_description;
+    const char *uci_modelname;
+    const char *uci_app_ver;
+#endif
+    characterstring_init_ansi(&My_Object_Name, "SimpleServer");
 #if defined(BAC_UCI)
+    char *pEnv = getenv("UCI_SECTION");
+    if (!pEnv) {
+       	pEnv = "0";
+#if PRINT_ENABLED
+        fprintf(stderr,  "Failed to getenv(UCI_SECTION)\n");
+    } else {
+	    fprintf(stderr,  "load config file bacnet_dev %s\n",pEnv);
+#endif
     }
-    ucix_cleanup(ctx);
+
+    ctx = ucix_init("bacnet_dev");
+#if PRINT_ENABLED
+    if(!ctx)
+        fprintf(stderr,  "Failed to load config file bacnet_dev\n");
+#endif
+
+    uci_name = ucix_get_option(ctx, "bacnet_dev", pEnv, "name");
+    if (uci_name)
+        characterstring_init_ansi(&My_Object_Name, uci_name);
+
+    uci_location = ucix_get_option(ctx, "bacnet_dev", pEnv, "location");
+    if (uci_location != 0)
+        sprintf(Location, "%s", uci_location);
+
+    uci_description = ucix_get_option(ctx, "bacnet_dev", pEnv, "description");
+    if (uci_description != 0)
+        sprintf(Description, "%s", uci_description);
+
+    uci_modelname = ucix_get_option(ctx, "bacnet_dev", pEnv, "modelname");
+    if (uci_modelname != 0)
+        sprintf(Model_Name, "%s", uci_modelname);
+
+    uci_app_ver = ucix_get_option(ctx, "bacnet_dev", pEnv, "app_ver");
+    if (uci_app_ver != 0)
+        sprintf(Application_Software_Version, "%s", uci_app_ver);
+
+    if(ctx)
+        ucix_cleanup(ctx);
 #endif /* defined(BAC_UCI) */
 
     if (object_table) {

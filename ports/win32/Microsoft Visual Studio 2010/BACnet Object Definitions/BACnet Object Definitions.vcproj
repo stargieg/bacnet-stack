@@ -194,7 +194,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\..\demo\object\ms-input.c"
+				RelativePath="..\..\..\..\demo\object\msi.c"
 				>
 			</File>
 			<File
