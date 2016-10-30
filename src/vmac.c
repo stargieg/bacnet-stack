@@ -41,6 +41,10 @@
 #include "keylist.h"
 /* me! */
 #include "vmac.h"
+#ifndef DEBUG_ENABLED
+#define DEBUG_ENABLED 0
+#endif
+#include "debug.h"
 
 /** @file
     Handle VMAC address binding */
@@ -90,7 +94,7 @@ bool VMAC_Add(uint32_t device_id, struct vmac_data *src)
             index = Keylist_Data_Add(VMAC_List, device_id, pVMAC);
             if (index >= 0) {
                 status = true;
-                printf("VMAC %u added.\n", device_id);
+                debug_printf("VMAC %u added.\n", device_id);
             }
         }
     }
@@ -259,7 +263,7 @@ void VMAC_Init(void)
     VMAC_List = Keylist_Create();
     if (VMAC_List) {
         atexit(VMAC_Cleanup);
-        printf("VMAC List initialized.\n");
+        debug_printf("VMAC List initialized.\n");
     }
 }
 
