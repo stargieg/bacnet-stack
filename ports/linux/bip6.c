@@ -398,7 +398,8 @@ bool bip6_init(
     debug_printf("BIP6: IPv6 UDP port: 0x%04X\n", htons(BIP6_Addr.port));
     if (BIP6_Broadcast_Addr.address[0] == 0) {
         bvlc6_address_set(&BIP6_Broadcast_Addr,
-                BIP6_MULTICAST_SITE_LOCAL, 0, 0, 0, 0, 0, 0,
+                BIP6_MULTICAST_GLOBAL, 0, 0, 0, 0, 0, 0,
+                //BIP6_MULTICAST_SITE_LOCAL, 0, 0, 0, 0, 0, 0,
                 BIP6_MULTICAST_GROUP_ID);
     }
     /* assumes that the driver has already been initialized */

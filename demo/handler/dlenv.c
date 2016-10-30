@@ -254,7 +254,8 @@ void dlenv_init(
         bip6_set_broadcast_addr(&addr);
     } else {
         bvlc6_address_set(&addr,
-                BIP6_MULTICAST_SITE_LOCAL, 0, 0, 0, 0, 0, 0,
+                BIP6_MULTICAST_GLOBAL, 0, 0, 0, 0, 0, 0,
+                //BIP6_MULTICAST_SITE_LOCAL, 0, 0, 0, 0, 0, 0,
                 BIP6_MULTICAST_GROUP_ID);
         bip6_set_broadcast_addr(&addr);
     }
