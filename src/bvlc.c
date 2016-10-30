@@ -1654,6 +1654,7 @@ BACNET_BVLC_FUNCTION bvlc_get_function_code(
     return BVLC_Function_Code;
 }
 
+#if defined(BBMD_ENABLED) && BBMD_ENABLED
 /** Get handle to broadcast distribution table (BDT).
  *
  *  Do not modify the table using the returned pointer,
@@ -1734,6 +1735,7 @@ bool bvlc_add_bdt_entry_local(
 
     return true;
 }
+#endif
 
 /** Enable NAT handling and set the global IP address
  * @param [in] - Global IP address visible to peer BBMDs and foreign devices
