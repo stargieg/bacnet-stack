@@ -291,10 +291,11 @@ uint16_t MSTP_Get_Send(
         return 0;
     }
     /* load destination MAC address */
-    if (Transmit_Packet.address.mac_len == 1) {
+    /* load destination MAC address */
+    if (Transmit_Packet.address.mac_len) {
         destination = Transmit_Packet.address.mac[0];
     } else {
-        return 0;
+        destination = MSTP_BROADCAST_ADDRESS;
     }
     if ((MAX_HEADER + Transmit_Packet.pdu_len) > MAX_MPDU) {
         return 0;
@@ -412,9 +413,13 @@ bool dlmstp_compare_data_expecting_reply(
     if (request.npdu_data.protocol_version != reply.npdu_data.protocol_version) {
         return false;
     }
+#if 0
+    /* the NDPU priority doesn't get passed through the stack, and
+       all outgoing messages have NORMAL priority */
     if (request.npdu_data.priority != reply.npdu_data.priority) {
         return false;
     }
+#endif
     if (!bacnet_address_same(&request.address, &reply.address)) {
         return false;
     }

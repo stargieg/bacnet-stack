@@ -9,6 +9,17 @@
 #
 # Assumes rm and cp are available
 
+BACNET_PORT_DIR = ../ports/${BACNET_PORT}
+BACNET_OBJECT = ../demo/object
+BACNET_HANDLER = ../demo/handler
+BACNET_CORE = ../src
+BACNET_INCLUDE = ../include
+# compiler configuration
+#STANDARDS = -std=c99
+INCLUDE1 = -I$(BACNET_PORT_DIR) -I$(BACNET_OBJECT) -I$(BACNET_HANDLER)
+INCLUDE2 = -I$(BACNET_INCLUDE)
+INCLUDES = $(INCLUDE1) $(INCLUDE2)
+
 # target
 TARGET = bacnet
 LIBRARY = lib$(TARGET).a
@@ -23,6 +34,7 @@ CORE_SRC = \
 	$(BACNET_CORE)/bacapp.c \
 	$(BACNET_CORE)/bacprop.c \
 	$(BACNET_CORE)/bactext.c \
+	$(BACNET_CORE)/bactimevalue.c \
 	$(BACNET_CORE)/datetime.c \
 	$(BACNET_CORE)/indtext.c \
 	$(BACNET_CORE)/key.c \
@@ -61,8 +73,14 @@ CORE_SRC = \
 	$(BACNET_CORE)/get_alarm_sum.c \
 	$(BACNET_CORE)/readrange.c \
 	$(BACNET_CORE)/timestamp.c \
-	$(BACNET_CORE)/version.c \
-	$(BACNET_CORE)/ucix.c
+	$(BACNET_CORE)/lighting.c \
+	$(BACNET_CORE)/bacsec.c \
+	$(BACNET_CORE)/access_rule.c \
+	$(BACNET_CORE)/assigned_access_rights.c \
+	$(BACNET_CORE)/authentication_factor_format.c \
+	$(BACNET_CORE)/authentication_factor.c \
+	$(BACNET_CORE)/credential_authentication_factor.c \
+	$(BACNET_CORE)/version.c
 
 HANDLER_SRC = \
 	$(BACNET_HANDLER)/dlenv.c \
@@ -76,6 +94,7 @@ HANDLER_SRC = \
 	$(BACNET_HANDLER)/h_rpm.c \
 	$(BACNET_HANDLER)/h_rpm_a.c \
 	$(BACNET_HANDLER)/h_rr.c \
+	$(BACNET_HANDLER)/h_rr_a.c \
 	$(BACNET_HANDLER)/h_wp.c  \
 	$(BACNET_HANDLER)/h_wpm.c \
 	$(BACNET_HANDLER)/h_alarm_ack.c  \
@@ -93,45 +112,35 @@ HANDLER_SRC = \
 	$(BACNET_HANDLER)/h_getevent.c  \
 	$(BACNET_HANDLER)/h_gas_a.c  \
 	$(BACNET_HANDLER)/h_get_alarm_sum.c  \
+	$(BACNET_HANDLER)/h_getevent_a.c  \
 	$(BACNET_HANDLER)/h_pt.c  \
 	$(BACNET_HANDLER)/h_pt_a.c  \
 	$(BACNET_HANDLER)/h_upt.c  \
+	$(BACNET_HANDLER)/s_abort.c \
 	$(BACNET_HANDLER)/s_arfs.c \
 	$(BACNET_HANDLER)/s_awfs.c \
 	$(BACNET_HANDLER)/s_dcc.c \
+	$(BACNET_HANDLER)/s_error.c \
 	$(BACNET_HANDLER)/s_ihave.c \
+	$(BACNET_HANDLER)/s_get_alarm_sum.c  \
+	$(BACNET_HANDLER)/s_get_event.c  \
 	$(BACNET_HANDLER)/s_iam.c  \
 	$(BACNET_HANDLER)/s_cov.c  \
 	$(BACNET_HANDLER)/s_ptransfer.c \
 	$(BACNET_HANDLER)/s_rd.c \
-	$(BACNET_HANDLER)/s_router.c \
 	$(BACNET_HANDLER)/s_rp.c  \
+	$(BACNET_HANDLER)/s_readrange.c  \
 	$(BACNET_HANDLER)/s_rpm.c  \
 	$(BACNET_HANDLER)/s_ts.c \
 	$(BACNET_HANDLER)/s_cevent.c  \
+	$(BACNET_HANDLER)/s_router.c  \
 	$(BACNET_HANDLER)/s_uevent.c  \
 	$(BACNET_HANDLER)/s_whohas.c \
 	$(BACNET_HANDLER)/s_whois.c  \
+	$(BACNET_HANDLER)/s_wpm.c  \
 	$(BACNET_HANDLER)/s_upt.c \
-	$(BACNET_HANDLER)/s_wp.c
-
-OBJECT_SRC = \
-	$(BACNET_OBJECT)/device.c \
-	$(BACNET_OBJECT)/ai.c \
-	$(BACNET_OBJECT)/ao.c \
-	$(BACNET_OBJECT)/av.c \
-	$(BACNET_OBJECT)/bi.c \
-	$(BACNET_OBJECT)/bo.c \
-	$(BACNET_OBJECT)/bv.c \
-	$(BACNET_OBJECT)/csv.c \
-	$(BACNET_OBJECT)/lc.c \
-	$(BACNET_OBJECT)/lsp.c \
-	$(BACNET_OBJECT)/msi.c \
-	$(BACNET_OBJECT)/mso.c \
-	$(BACNET_OBJECT)/msv.c \
-	$(BACNET_OBJECT)/nc.c  \
-	$(BACNET_OBJECT)/trendlog.c \
-	$(BACNET_OBJECT)/bacfile.c
+	$(BACNET_HANDLER)/s_wp.c \
+	$(BACNET_HANDLER)/s_getevent.c
 
 PORT_ARCNET_SRC = \
 	$(BACNET_PORT_DIR)/arcnet.c
@@ -154,22 +163,24 @@ PORT_BIP_SRC = \
 	$(BACNET_CORE)/bvlc.c \
 	$(BACNET_CORE)/bip.c
 
+PORT_BIP6_SRC = \
+	$(BACNET_HANDLER)/h_bbmd6.c \
+	$(BACNET_PORT_DIR)/bip6.c \
+	$(BACNET_CORE)/vmac.c \
+	$(BACNET_CORE)/bvlc6.c
+
 PORT_ALL_SRC = \
-	$(BACNET_PORT_DIR)/arcnet.c \
-	$(BACNET_PORT_DIR)/dlmstp.c \
-	$(BACNET_PORT_DIR)/rs485.c \
-	$(BACNET_PORT_DIR)/timer.c \
-	$(BACNET_CORE)/ringbuf.c \
-	$(BACNET_CORE)/fifo.c \
-	$(BACNET_CORE)/mstp.c \
-	$(BACNET_CORE)/crc.c \
-	$(BACNET_PORT_DIR)/ethernet.c \
-	$(BACNET_PORT_DIR)/bip-init.c \
-	$(BACNET_CORE)/bvlc.c \
-	$(BACNET_CORE)/bip.c
+	$(PORT_ARCNET_SRC) \
+	$(PORT_MSTP_SRC) \
+	$(PORT_ETHERNET_SRC) \
+	$(PORT_BIP_SRC) \
+	$(PORT_BIP6_SRC)
 
 ifeq (${BACDL_DEFINE},-DBACDL_BIP=1)
 PORT_SRC = ${PORT_BIP_SRC}
+endif
+ifeq (${BACDL_DEFINE},-DBACDL_BIP6=1)
+PORT_SRC = ${PORT_BIP6_SRC}
 endif
 ifeq (${BACDL_DEFINE},-DBACDL_MSTP=1)
 PORT_SRC = ${PORT_MSTP_SRC}
@@ -183,20 +194,16 @@ endif
 ifdef BACDL_ALL
 PORT_SRC = ${PORT_ALL_SRC}
 endif
-
-
-ifneq (,$(findstring -DBAC_ROUTING,$(BACNET_DEFINES)))
-ROUTING_SRC = \
-	$(BACNET_HANDLER)/h_routed_npdu.c \
-	$(BACNET_HANDLER)/s_router.c  \
-	$(BACNET_OBJECT)/gw_device.c
-else
-ROUTING_SRC =
+ifneq (,$(findstring -DBAC_UCI,$(BACNET_DEFINES)))
+UCI_SRC = $(BACNET_CORE)/ucix.c
 endif
 
-SRCS = ${CORE_SRC} ${PORT_SRC} ${HANDLER_SRC} ${OBJECT_SRC} ${ROUTING_SRC}
+SRCS = ${CORE_SRC} ${PORT_SRC} ${HANDLER_SRC}
 
 OBJS = ${SRCS:.c=.o}
+
+# use local includes, but other values from calling Makefile
+CFLAGS  = $(WARNINGS) $(DEBUGGING) $(OPTIMIZATION) $(STANDARDS) $(INCLUDES) $(DEFINES)
 
 all: $(LIBRARY)
 

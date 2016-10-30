@@ -53,7 +53,7 @@
 #include "lc.h"
 #include "lsp.h"
 #include "mso.h"
-#include "msi.h"
+#include "ms-input.h"
 #include "trendlog.h"
 #if defined(BACFILE)
 #include "bacfile.h"    /* object list dependency */
@@ -61,7 +61,7 @@
 /* os specfic includes */
 #include "timer.h"
 
-#if defined(__BORLANDC__)
+#if defined(__BORLANDC__) || defined(_WIN32)
 /* seems to not be defined in time.h as specified by The Open Group */
 /* difference from UTC and local standard time  */
 long int timezone;
@@ -79,7 +79,11 @@ bool Routed_Device_Write_Property_Local(
 
 
 #if !defined(BAC_ROUTING)
+#ifdef _MSC_VER
+#pragma message This file should not be included in the build unless BAC_ROUTING is enabled.
+#else
 #warning This file should not be included in the build unless BAC_ROUTING is enabled.
+#endif
 #endif
 
 /****************************************************************************
@@ -410,7 +414,7 @@ bool Routed_Device_Name(
             pDev->bacObj.Object_Name);
     }
 
-    return FALSE;
+    return false;
 }
 
 /** Manages ReadProperty service for fields which are different for routed

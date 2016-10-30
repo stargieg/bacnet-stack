@@ -333,9 +333,13 @@ static bool dlmstp_compare_data_expecting_reply(
     if (request.npdu_data.protocol_version != reply.npdu_data.protocol_version) {
         return false;
     }
+#if 0
+    /* the NDPU priority doesn't get passed through the stack, and
+       all outgoing messages have NORMAL priority */
     if (request.npdu_data.priority != reply.npdu_data.priority) {
         return false;
     }
+#endif
     if (!bacnet_address_same(&request.address, &reply.address)) {
         return false;
     }
@@ -1194,15 +1198,22 @@ int dlmstp_send_pdu(
     struct mstp_pdu_packet *pkt;
     uint16_t i = 0;
 
-    pkt = (struct mstp_pdu_packet *) Ringbuf_Alloc(&PDU_Queue);
+    pkt = (struct mstp_pdu_packet *) Ringbuf_Data_Peek(&PDU_Queue);
     if (pkt) {
         pkt->data_expecting_reply = npdu_data->data_expecting_reply;
         for (i = 0; i < pdu_len; i++) {
             pkt->buffer[i] = pdu[i];
         }
         pkt->length = pdu_len;
-        pkt->destination_mac = dest->mac[0];
-        bytes_sent = pdu_len;
+        if (dest && dest->mac_len) {
+            pkt->destination_mac = dest->mac[0];
+        } else {
+            /* mac_len = 0 is a broadcast address */
+            pkt->destination_mac = MSTP_BROADCAST_ADDRESS;
+        }
+        if (Ringbuf_Data_Put(&PDU_Queue, (uint8_t *)pkt)) {
+            bytes_sent = pdu_len;
+        }
     }
 
     return bytes_sent;

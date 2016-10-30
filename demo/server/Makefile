@@ -1,4 +1,4 @@
-#Makefile to build BACnet Application for the Linux Port
+#Makefile to build BACnet Application for the GCC port
 
 # tools - only if you need them.
 # Most platforms have this already defined
@@ -9,7 +9,41 @@ TARGET = bacserv
 
 TARGET_BIN = ${TARGET}$(TARGET_EXT)
 
-SRCS = main.c
+SRC = main.c
+
+OBJECT_SRC = \
+	$(BACNET_OBJECT)/device.c \
+	$(BACNET_OBJECT)/ai.c \
+	$(BACNET_OBJECT)/ao.c \
+	$(BACNET_OBJECT)/av.c \
+	$(BACNET_OBJECT)/bi.c \
+	$(BACNET_OBJECT)/bo.c \
+	$(BACNET_OBJECT)/bv.c \
+	$(BACNET_OBJECT)/channel.c \
+	$(BACNET_OBJECT)/command.c \
+	$(BACNET_OBJECT)/csv.c \
+	$(BACNET_OBJECT)/iv.c \
+	$(BACNET_OBJECT)/lc.c \
+	$(BACNET_OBJECT)/lo.c \
+	$(BACNET_OBJECT)/lsp.c \
+	$(BACNET_OBJECT)/msi.c \
+	$(BACNET_OBJECT)/mso.c \
+	$(BACNET_OBJECT)/msv.c \
+	$(BACNET_OBJECT)/osv.c \
+	$(BACNET_OBJECT)/piv.c \
+	$(BACNET_OBJECT)/nc.c  \
+	$(BACNET_OBJECT)/trendlog.c \
+	$(BACNET_OBJECT)/schedule.c \
+	$(BACNET_OBJECT)/access_credential.c \
+	$(BACNET_OBJECT)/access_door.c \
+	$(BACNET_OBJECT)/access_point.c \
+	$(BACNET_OBJECT)/access_rights.c \
+	$(BACNET_OBJECT)/access_user.c \
+	$(BACNET_OBJECT)/access_zone.c \
+	$(BACNET_OBJECT)/credential_data_input.c \
+	$(BACNET_OBJECT)/bacfile.c
+
+SRCS = ${SRC} ${OBJECT_SRC}
 
 OBJS = ${SRCS:.c=.o}
 

@@ -280,7 +280,7 @@ typedef enum {
     PROP_AUTHENTICATION_FACTORS = 257,
     PROP_AUTHENTICATION_POLICY_LIST = 258,
     PROP_AUTHENTICATION_POLICY_NAMES = 259,
-    PROP_AUTHORIZATION_STATUS = 260,
+    PROP_AUTHENTICATION_STATUS = 260,
     PROP_AUTHORIZATION_MODE = 261,
     PROP_BELONGS_TO = 262,
     PROP_CREDENTIAL_DISABLE = 263,
@@ -290,7 +290,7 @@ typedef enum {
     PROP_DAYS_REMAINING = 267,
     PROP_ENTRY_POINTS = 268,
     PROP_EXIT_POINTS = 269,
-    PROP_EXPIRY_TIME = 270,
+    PROP_EXPIRATION_TIME = 270,
     PROP_EXTENDED_TIME_ENABLE = 271,
     PROP_FAILED_ATTEMPT_EVENTS = 272,
     PROP_FAILED_ATTEMPTS = 273,
@@ -399,7 +399,7 @@ typedef enum {
     PROP_DEFAULT_FADE_TIME = 374,
     PROP_DEFAULT_RAMP_RATE = 375,
     PROP_DEFAULT_STEP_INCREMENT = 376,
-    PROP_EGRESS_TIMER = 377,
+    PROP_EGRESS_TIME = 377,
     PROP_IN_PROGRESS = 378,
     PROP_INSTANTANEOUS_POWER = 379,
     PROP_LIGHTING_COMMAND = 380,
@@ -408,18 +408,51 @@ typedef enum {
     PROP_MIN_ACTUAL_VALUE = 383,
     PROP_POWER = 384,
     PROP_TRANSITION = 385,
-    PROP_EGRESS_ACTIVE = 386
-        /* The special property identifiers all, optional, and required  */
-        /* are reserved for use in the ReadPropertyConditional and */
-        /* ReadPropertyMultiple services or services not defined in this standard. */
-        /* Enumerated values 0-511 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 512-4194303 may be used by others subject to the  */
-        /* procedures and constraints described in Clause 23.  */
+    PROP_EGRESS_ACTIVE = 386,
+	/* enumerations 399-427 are defined in Addendum 2012-ai */
+    PROP_APDU_LENGTH = 399,
+    PROP_IP_ADDRESS = 400,
+    PROP_IP_DEFAULT_GATEWAY = 401,
+    PROP_IP_DHCP_ENABLE = 402,
+    PROP_IP_DHCP_LEASE_TIME = 403,
+    PROP_IP_DHCP_LEASE_TIME_REMAINING = 404,
+    PROP_IP_DHCP_SERVER = 405,
+    PROP_IP_DNS_SERVER = 406,
+    PROP_BACNET_IP_GLOBAL_ADDRESS = 407,
+    PROP_BACNET_IP_MODE = 408,
+    PROP_BACNET_IP_MULTICAST_ADDRESS = 409,
+    PROP_BACNET_IP_NAT_TRAVERSAL = 410,
+    PROP_IP_SUBNET_MASK = 411,
+    PROP_BACNET_IP_UDP_PORT = 412,
+    PROP_BBMD_ACCEPT_FD_REGISTRATIONS = 413,
+    PROP_BBMD_BROADCAST_DISTRIBUTION_TABLE = 414,
+    PROP_BBMD_FOREIGN_DEVICE_TABLE = 415,
+	PROP_CHANGES_PENDING = 416,
+    PROP_COMMAND = 417,
+    PROP_FD_BBMD_ADDRESS = 418,
+    PROP_FD_SUBSCRIPTION_LIFETIME = 419,
+	PROP_LINK_SPEED = 420,
+	PROP_LINK_SPEEDS = 421,
+    PROP_LINK_SPEED_AUTONEGOTIATE = 422,
+	PROP_MAC_ADDRESS = 423,
+    PROP_NETWORK_INTERFACE_NAME = 424,
+	PROP_NETWORK_NUMBER = 425,
+	PROP_NETWORK_NUMBER_QUALITY = 426,
+	PROP_NETWORK_TYPE = 427,
+    PROP_ROUTING_TABLE = 428,
+    PROP_VIRTUAL_MAC_ADDRESS_TABLE = 429,
+    /* The special property identifiers all, optional, and required  */
+    /* are reserved for use in the ReadPropertyConditional and */
+    /* ReadPropertyMultiple services or services not defined in this standard. */
+    /* Enumerated values 0-511 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 512-4194303 may be used by others subject to the  */
+    /* procedures and constraints described in Clause 23.  */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    MAX_BACNET_PROPERTY_ID = 4194303
 } BACNET_PROPERTY_ID;
 
-/* do the MAX as define rather than enumeration for devices
-   and compilers that want to use smaller datatype for enum */
-#define MAX_BACNET_PROPERTY_ID 4194303
 
 typedef enum {
     EVENT_LOW_LIMIT_ENABLE = 1,
@@ -494,6 +527,9 @@ typedef enum {
     UNITS_AMPERES_PER_METER = 167,
     UNITS_AMPERES_PER_SQUARE_METER = 168,
     UNITS_AMPERE_SQUARE_METERS = 169,
+    UNITS_DECIBELS = 199,
+    UNITS_DECIBELS_MILLIVOLT = 200,
+    UNITS_DECIBELS_VOLT = 201,
     UNITS_FARADS = 170,
     UNITS_HENRYS = 171,
     UNITS_OHMS = 4,
@@ -501,6 +537,8 @@ typedef enum {
     UNITS_MILLIOHMS = 145,
     UNITS_KILOHMS = 122,
     UNITS_MEGOHMS = 123,
+    UNITS_MICROSIEMENS = 190,
+    UNITS_MILLISIEMENS = 202,
     UNITS_SIEMENS = 173,        /* 1 mho equals 1 siemens */
     UNITS_SIEMENS_PER_METER = 174,
     UNITS_TESLAS = 175,
@@ -527,6 +565,9 @@ typedef enum {
     UNITS_WATT_HOURS = 18,
     UNITS_KILOWATT_HOURS = 19,
     UNITS_MEGAWATT_HOURS = 146,
+    UNITS_WATT_HOURS_REACTIVE = 203,
+    UNITS_KILOWATT_HOURS_REACTIVE = 204,
+    UNITS_MEGAWATT_HOURS_REACTIVE = 205,
     UNITS_BTUS = 20,
     UNITS_KILO_BTUS = 147,
     UNITS_MEGA_BTUS = 148,
@@ -556,8 +597,10 @@ typedef enum {
     UNITS_GRAMS_OF_WATER_PER_KILOGRAM_DRY_AIR = 28,
     UNITS_PERCENT_RELATIVE_HUMIDITY = 29,
     /* Length */
+    UNITS_MICROMETERS = 194,
     UNITS_MILLIMETERS = 30,
     UNITS_CENTIMETERS = 118,
+    UNITS_KILOMETERS = 193,
     UNITS_METERS = 31,
     UNITS_INCHES = 32,
     UNITS_FEET = 33,
@@ -570,6 +613,8 @@ typedef enum {
     UNITS_LUXES = 37,
     UNITS_FOOT_CANDLES = 38,
     /* Mass */
+    UNITS_MILLIGRAMS = 196,
+    UNITS_GRAMS = 195,
     UNITS_KILOGRAMS = 39,
     UNITS_POUNDS_MASS = 40,
     UNITS_TONS = 41,
@@ -599,6 +644,7 @@ typedef enum {
     UNITS_MILLIBARS = 134,
     UNITS_BARS = 55,
     UNITS_POUNDS_FORCE_PER_SQUARE_INCH = 56,
+    UNITS_MILLIMETERS_OF_WATER = 206,
     UNITS_CENTIMETERS_OF_WATER = 57,
     UNITS_INCHES_OF_WATER = 58,
     UNITS_MILLIMETERS_OF_MERCURY = 59,
@@ -640,19 +686,23 @@ typedef enum {
     UNITS_CUBIC_FEET = 79,
     UNITS_CUBIC_METERS = 80,
     UNITS_IMPERIAL_GALLONS = 81,
+    UNITS_MILLILITERS = 197,
     UNITS_LITERS = 82,
     UNITS_US_GALLONS = 83,
     /* Volumetric Flow */
     UNITS_CUBIC_FEET_PER_SECOND = 142,
     UNITS_CUBIC_FEET_PER_MINUTE = 84,
+    UNITS_CUBIC_FEET_PER_HOUR = 191,
     UNITS_CUBIC_METERS_PER_SECOND = 85,
     UNITS_CUBIC_METERS_PER_MINUTE = 165,
     UNITS_CUBIC_METERS_PER_HOUR = 135,
     UNITS_IMPERIAL_GALLONS_PER_MINUTE = 86,
+    UNITS_MILLILITERS_PER_SECOND = 198,
     UNITS_LITERS_PER_SECOND = 87,
     UNITS_LITERS_PER_MINUTE = 88,
     UNITS_LITERS_PER_HOUR = 136,
     UNITS_US_GALLONS_PER_MINUTE = 89,
+    UNITS_US_GALLONS_PER_HOUR = 192,
     /* Other */
     UNITS_DEGREES_ANGULAR = 90,
     UNITS_DEGREES_CELSIUS_PER_HOUR = 91,
@@ -683,11 +733,45 @@ typedef enum {
     UNITS_SQUARE_METERS_PER_NEWTON = 185,
     UNITS_WATTS_PER_METER_PER_DEGREE_KELVIN = 189,
     UNITS_WATTS_PER_SQUARE_METER_DEGREE_KELVIN = 141,
+    UNITS_PER_MILLE = 207,
+    UNITS_GRAMS_PER_GRAM = 208,
+    UNITS_KILOGRAMS_PER_KILOGRAM = 209,
+    UNITS_GRAMS_PER_KILOGRAM = 210,
+    UNITS_MILLIGRAMS_PER_GRAM = 211,
+    UNITS_MILLIGRAMS_PER_KILOGRAM = 212,
+    UNITS_GRAMS_PER_MILLILITER = 213,
+    UNITS_GRAMS_PER_LITER = 214,
+    UNITS_MILLIGRAMS_PER_LITER = 215,
+    UNITS_MICROGRAMS_PER_LITER = 216,
+    UNITS_GRAMS_PER_CUBIC_METER = 217,
+    UNITS_MILLIGRAMS_PER_CUBIC_METER = 218,
+    UNITS_MICROGRAMS_PER_CUBIC_METER = 219,
+    UNITS_NANOGRAMS_PER_CUBIC_METER = 220,
+    UNITS_GRAMS_PER_CUBIC_CENTIMETER = 221,
+    UNITS_BECQUERELS = 222,
+    UNITS_MEGABECQUERELS = 224,
+    UNITS_GRAY = 225,
+    UNITS_MILLIGRAY = 226,
+    UNITS_MICROGRAY = 227,
+    UNITS_SIEVERTS = 228,
+    UNITS_MILLISIEVERTS = 229,
+    UNITS_MICROSIEVERTS = 230,
+    UNITS_MICROSIEVERTS_PER_HOUR = 231,
+    UNITS_DECIBELS_A = 232,
+    UNITS_NEPHELOMETRIC_TURBIDITY_UNIT = 233,
+    UNITS_PH = 234,
+    UNITS_GRAMS_PER_SQUARE_METER = 235,
+    UNITS_MINUTES_PER_DEGREE_KELVIN = 236,
     /* Enumerated values 0-255 are reserved for definition by ASHRAE. */
     /* Enumerated values 256-65535 may be used by others subject to */
     /* the procedures and constraints described in Clause 23. */
-    /* The last enumeration used in this version is 189. */
-    MAX_UNITS = 190
+    /* The last enumeration used in this version is 236. */
+    MAX_UNITS = 237,
+    /* do the proprietary range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    UNITS_PROPRIETARY_RANGE_MIN = 256,
+    UNITS_PROPRIETARY_RANGE_MAX = 65535
 } BACNET_ENGINEERING_UNITS;
 
 typedef enum {
@@ -719,10 +803,15 @@ typedef enum {
     PROGRAM_ERROR_LOAD_FAILED = 1,
     PROGRAM_ERROR_INTERNAL = 2,
     PROGRAM_ERROR_PROGRAM = 3,
-    PROGRAM_ERROR_OTHER = 4
-        /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 64-65535 may be used by others subject to  */
-        /* the procedures and constraints described in Clause 23. */
+    PROGRAM_ERROR_OTHER = 4,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 64-65535 may be used by others subject to  */
+    /* the procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    PROGRAM_ERROR_PROPRIETARY_MIN = 64,
+    PROGRAM_ERROR_PROPRIETARY_MAX = 65535
 } BACNET_PROGRAM_ERROR;
 
 typedef enum {
@@ -733,10 +822,15 @@ typedef enum {
     RESTART_REASON_DETECTED_POWER_OFF = 4,
     RESTART_REASON_HARDWARE_WATCHDOG = 5,
     RESTART_REASON_SOFTWARE_WATCHDOG = 6,
-    RESTART_REASON_SUSPENDED = 7
+    RESTART_REASON_SUSPENDED = 7,
 /* Enumerated values 0-63 are reserved for definition by ASHRAE.
    Enumerated values 64-255 may be used by others subject to the
    procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    RESTART_REASON_PROPRIETARY_MIN = 64,
+    RESTART_REASON_PROPRIETARY_MAX = 255
 } BACNET_RESTART_REASON;
 
 typedef enum {
@@ -790,10 +884,15 @@ typedef enum {
     RELIABILITY_CONFIGURATION_ERROR = 10,
     RELIABILITY_MEMBER_FAULT = 11,
     RELIABILITY_COMMUNICATION_FAILURE = 12,
-    RELIABILITY_TRIPPED = 13
-        /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 64-65535 may be used by others subject to  */
-        /* the procedures and constraints described in Clause 23. */
+    RELIABILITY_TRIPPED = 13,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 64-65535 may be used by others subject to  */
+    /* the procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    RELIABILITY_PROPRIETARY_MIN = 64,
+    RELIABILITY_PROPRIETARY_MAX = 65535
 } BACNET_RELIABILITY;
 
 typedef enum {
@@ -808,14 +907,29 @@ typedef enum {
     EVENT_CHANGE_OF_LIFE_SAFETY = 8,
     EVENT_EXTENDED = 9,
     EVENT_BUFFER_READY = 10,
-    EVENT_UNSIGNED_RANGE = 11
-        /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 64-65535 may be used by others subject to  */
-        /* the procedures and constraints described in Clause 23.  */
-        /* It is expected that these enumerated values will correspond to  */
-        /* the use of the complex-event-type CHOICE [6] of the  */
-        /* BACnetNotificationParameters production. */
-        /* The last enumeration used in this version is 11. */
+    EVENT_UNSIGNED_RANGE = 11,
+    EVENT_ACCESS_EVENT = 13,
+    EVENT_DOUBLE_OUT_OF_RANGE = 14,
+    EVENT_SIGNED_OUT_OF_RANGE = 15,
+    EVENT_UNSIGNED_OUT_OF_RANGE = 16,
+    EVENT_CHANGE_OF_CHARACTERSTRING = 17,
+    EVENT_CHANGE_OF_STATUS_FLAGS = 18,
+    EVENT_CHANGE_OF_RELIABILITY = 19,
+    EVENT_NONE = 20,
+    EVENT_CHANGE_OF_DISCRETE_VALUE = 21,
+    EVENT_CHANGE_OF_TIMER = 22,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 64-65535 may be used by others subject to  */
+    /* the procedures and constraints described in Clause 23.  */
+    /* It is expected that these enumerated values will correspond to  */
+    /* the use of the complex-event-type CHOICE [6] of the  */
+    /* BACnetNotificationParameters production. */
+    /* The last enumeration used in this version is 22. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    EVENT_PROPRIETARY_MIN = 64,
+    EVENT_PROPRIETARY_MAX = 65535
 } BACNET_EVENT_TYPE;
 
 typedef enum {
@@ -841,10 +955,15 @@ typedef enum {
     LIFE_SAFETY_MODE_DISABLED = 12,
     LIFE_SAFETY_MODE_AUTOMATIC_RELEASE_DISABLED = 13,
     LIFE_SAFETY_MODE_DEFAULT = 14,
-    MAX_LIFE_SAFETY_MODE = 15
-        /* Enumerated values 0-255 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 256-65535 may be used by others subject to  */
-        /* procedures and constraints described in Clause 23. */
+    MAX_LIFE_SAFETY_MODE = 15,
+    /* Enumerated values 0-255 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 256-65535 may be used by others subject to  */
+    /* procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    LIFE_SAFETY_MODE_PROPRIETARY_MIN = 256,
+    LIFE_SAFETY_MODE_PROPRIETARY_MAX = 65535
 } BACNET_LIFE_SAFETY_MODE;
 
 typedef enum {
@@ -857,10 +976,15 @@ typedef enum {
     LIFE_SAFETY_OP_RESET_FAULT = 6,
     LIFE_SAFETY_OP_UNSILENCE = 7,
     LIFE_SAFETY_OP_UNSILENCE_AUDIBLE = 8,
-    LIFE_SAFETY_OP_UNSILENCE_VISUAL = 9
-        /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 64-65535 may be used by others subject to  */
-        /* procedures and constraints described in Clause 23. */
+    LIFE_SAFETY_OP_UNSILENCE_VISUAL = 9,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 64-65535 may be used by others subject to  */
+    /* procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    LIFE_SAFETY_OP_PROPRIETARY_MIN = 64,
+    LIFE_SAFETY_OP_PROPRIETARY_MAX = 65535
 } BACNET_LIFE_SAFETY_OPERATION;
 
 typedef enum {
@@ -889,30 +1013,45 @@ typedef enum {
     LIFE_SAFETY_STATE_GENERAL_ALARM = 21,
     LIFE_SAFETY_STATE_SUPERVISORY = 22,
     LIFE_SAFETY_STATE_TEST_SUPERVISORY = 23,
-    MAX_LIFE_SAFETY_STATE = 24
-        /* Enumerated values 0-255 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 256-65535 may be used by others subject to  */
-        /* procedures and constraints described in Clause 23. */
+    MAX_LIFE_SAFETY_STATE = 24,
+    /* Enumerated values 0-255 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 256-65535 may be used by others subject to  */
+    /* procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    LIFE_SAFETY_STATE_PROPRIETARY_MIN = 256,
+    LIFE_SAFETY_STATE_PROPRIETARY_MAX = 65535
 } BACNET_LIFE_SAFETY_STATE;
 
 typedef enum {
     SILENCED_STATE_UNSILENCED = 0,
     SILENCED_STATE_AUDIBLE_SILENCED = 1,
     SILENCED_STATE_VISIBLE_SILENCED = 2,
-    SILENCED_STATE_ALL_SILENCED = 3
-        /* Enumerated values 0-63 are reserved for definition by ASHRAE. */
-        /* Enumerated values 64-65535 may be used by others subject to */
-        /* procedures and constraints described in Clause 23. */
+    SILENCED_STATE_ALL_SILENCED = 3,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE. */
+    /* Enumerated values 64-65535 may be used by others subject to */
+    /* procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    SILENCED_STATE_PROPRIETARY_MIN = 64,
+    SILENCED_STATE_PROPRIETARY_MAX = 65535
 } BACNET_SILENCED_STATE;
 
 typedef enum {
     MAINTENANCE_NONE = 0,
     MAINTENANCE_PERIODIC_TEST = 1,
     MAINTENANCE_NEED_SERVICE_OPERATIONAL = 2,
-    MAINTENANCE_NEED_SERVICE_INOPERATIVE = 3
-        /* Enumerated values 0-255 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 256-65535 may be used by others subject to  */
-        /* procedures and constraints described in Clause 23. */
+    MAINTENANCE_NEED_SERVICE_INOPERATIVE = 3,
+    /* Enumerated values 0-255 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 256-65535 may be used by others subject to  */
+    /* procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    MAINTENANCE_PROPRIETARY_MIN = 256,
+    MAINTENANCE_PROPRIETARY_MAX = 65535
 } BACNET_MAINTENANCE;
 
 typedef enum {
@@ -953,7 +1092,8 @@ typedef enum {
     OBJECT_LOAD_CONTROL = 28,
     OBJECT_STRUCTURED_VIEW = 29,
     OBJECT_ACCESS_DOOR = 30,
-    /* 31 was lighting output, but BACnet editor changed it... */
+    OBJECT_TIMER = 31,
+    /* Note: 31 was lighting output, but BACnet editor changed it... */
     OBJECT_ACCESS_CREDENTIAL = 32,      /* Addendum 2008-j */
     OBJECT_ACCESS_POINT = 33,
     OBJECT_ACCESS_RIGHTS = 34,
@@ -977,12 +1117,17 @@ typedef enum {
     OBJECT_ALERT_ENROLLMENT = 52,       /* Addendum 2010-af */
     OBJECT_CHANNEL = 53,        /* Addendum 2010-aa */
     OBJECT_LIGHTING_OUTPUT = 54,        /* Addendum 2010-i */
-    /* used for bit string loop */
-    PROPRIETARY_BACNET_OBJECT_TYPE = 128,
+    OBJECT_BINARY_LIGHTING_OUTPUT = 55, /* Addendum 135-2012az */
+    OBJECT_NETWORK_PORT = 56,   /* Addendum 135-2012az */
+    /* Enumerated values 0-127 are reserved for definition by ASHRAE. */
+    /* Enumerated values 128-1023 may be used by others subject to  */
+    /* the procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    OBJECT_PROPRIETARY_MIN = 128,
+    OBJECT_PROPRIETARY_MAX = 1023,
     MAX_BACNET_OBJECT_TYPE = 1024
-        /* Enumerated values 0-127 are reserved for definition by ASHRAE. */
-        /* Enumerated values 128-1023 may be used by others subject to  */
-        /* the procedures and constraints described in Clause 23. */
 } BACNET_OBJECT_TYPE;
 
 typedef enum {
@@ -1000,10 +1145,15 @@ typedef enum {
     VT_CLASS_DEC_VT100 = 3,
     VT_CLASS_DEC_VT220 = 4,
     VT_CLASS_HP_700_94 = 5,     /* real name is HP 700/94 */
-    VT_CLASS_IBM_3130 = 6
-        /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
-        /* Enumerated values 64-65535 may be used by others subject to  */
-        /* the procedures and constraints described in Clause 23. */
+    VT_CLASS_IBM_3130 = 6,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
+    /* Enumerated values 64-65535 may be used by others subject to  */
+    /* the procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    VT_CLASS_PROPRIETARY_MIN = 64,
+    VT_CLASS_PROPRIETARY_MAX = 65535
 } BACNET_VT_CLASS;
 
 typedef enum {
@@ -1034,7 +1184,44 @@ typedef enum {
     BACNET_APPLICATION_TAG_RESERVE1 = 13,
     BACNET_APPLICATION_TAG_RESERVE2 = 14,
     BACNET_APPLICATION_TAG_RESERVE3 = 15,
-    MAX_BACNET_APPLICATION_TAG = 16
+    MAX_BACNET_APPLICATION_TAG = 16,
+
+    /* Extra stuff - complex tagged data - not specifically enumerated */
+
+    /* Means : "nothing", an empty list, not even a null character */
+    BACNET_APPLICATION_TAG_EMPTYLIST,
+    /* BACnetWeeknday */
+    BACNET_APPLICATION_TAG_WEEKNDAY,
+    /* BACnetDateRange */
+    BACNET_APPLICATION_TAG_DATERANGE,
+    /* BACnetDateTime */
+    BACNET_APPLICATION_TAG_DATETIME,
+    /* BACnetTimeStamp */
+    BACNET_APPLICATION_TAG_TIMESTAMP,
+    /* Error Class, Error Code */
+    BACNET_APPLICATION_TAG_ERROR,
+    /* BACnetDeviceObjectPropertyReference */
+    BACNET_APPLICATION_TAG_DEVICE_OBJECT_PROPERTY_REFERENCE,
+    /* BACnetDeviceObjectReference */
+    BACNET_APPLICATION_TAG_DEVICE_OBJECT_REFERENCE,
+    /* BACnetObjectPropertyReference */
+    BACNET_APPLICATION_TAG_OBJECT_PROPERTY_REFERENCE,
+    /* BACnetDestination (Recipient_List) */
+    BACNET_APPLICATION_TAG_DESTINATION,
+    /* BACnetRecipient */
+    BACNET_APPLICATION_TAG_RECIPIENT,
+    /* BACnetCOVSubscription */
+    BACNET_APPLICATION_TAG_COV_SUBSCRIPTION,
+    /* BACnetCalendarEntry */
+    BACNET_APPLICATION_TAG_CALENDAR_ENTRY,
+    /* BACnetWeeklySchedule */
+    BACNET_APPLICATION_TAG_WEEKLY_SCHEDULE,
+    /* BACnetSpecialEvent */
+    BACNET_APPLICATION_TAG_SPECIAL_EVENT,
+    /* BACnetReadAccessSpecification */
+    BACNET_APPLICATION_TAG_READ_ACCESS_SPECIFICATION,
+    /* BACnetLightingCommand */
+    BACNET_APPLICATION_TAG_LIGHTING_COMMAND
 } BACNET_APPLICATION_TAG;
 
 /* note: these are not the real values, */
@@ -1183,7 +1370,8 @@ typedef enum {
     BVLC_DISTRIBUTE_BROADCAST_TO_NETWORK = 9,
     BVLC_ORIGINAL_UNICAST_NPDU = 10,
     BVLC_ORIGINAL_BROADCAST_NPDU = 11,
-    MAX_BVLC_FUNCTION = 12
+    BVLC_SECURE_BVLL = 12,
+    MAX_BVLC_FUNCTION = 13
 } BACNET_BVLC_FUNCTION;
 
 typedef enum {
@@ -1274,10 +1462,31 @@ typedef enum {
     NETWORK_MESSAGE_INIT_RT_TABLE_ACK = 7,
     NETWORK_MESSAGE_ESTABLISH_CONNECTION_TO_NETWORK = 8,
     NETWORK_MESSAGE_DISCONNECT_CONNECTION_TO_NETWORK = 9,
-    /* X'0A' to X'7F': Reserved for use by ASHRAE, */
+    NETWORK_MESSAGE_CHALLENGE_REQUEST = 10,
+    NETWORK_MESSAGE_SECURITY_PAYLOAD = 11,
+    NETWORK_MESSAGE_SECURITY_RESPONSE = 12,
+    NETWORK_MESSAGE_REQUEST_KEY_UPDATE = 13,
+    NETWORK_MESSAGE_UPDATE_KEY_SET = 14,
+    NETWORK_MESSAGE_UPDATE_DISTRIBUTION_KEY = 15,
+    NETWORK_MESSAGE_REQUEST_MASTER_KEY = 16,
+    NETWORK_MESSAGE_SET_MASTER_KEY = 17,
+    NETWORK_MESSAGE_WHAT_IS_NETWORK_NUMBER = 18,
+    NETWORK_MESSAGE_NETWORK_NUMBER_IS = 19,
+    /* X'14' to X'7F': Reserved for use by ASHRAE, */
     /* X'80' to X'FF': Available for vendor proprietary messages */
     NETWORK_MESSAGE_INVALID = 0x100
 } BACNET_NETWORK_MESSAGE_TYPE;
+
+typedef enum {
+    REINITIALIZED_STATE_COLD_START = 0,
+    REINITIALIZED_STATE_WARM_START = 1,
+    REINITIALIZED_STATE_START_BACKUP = 2,
+    REINITIALIZED_STATE_END_BACKUP = 3,
+    REINITIALIZED_STATE_START_RESTORE = 4,
+    REINITIALIZED_STATE_END_RESTORE = 5,
+    REINITIALIZED_STATE_ABORT_RESTORE = 6,
+    REINITIALIZED_STATE_IDLE = 255
+} BACNET_REINITIALIZED_STATE_OF_DEVICE;
 
 typedef enum {
     ABORT_REASON_OTHER = 0,
@@ -1285,13 +1494,17 @@ typedef enum {
     ABORT_REASON_INVALID_APDU_IN_THIS_STATE = 2,
     ABORT_REASON_PREEMPTED_BY_HIGHER_PRIORITY_TASK = 3,
     ABORT_REASON_SEGMENTATION_NOT_SUPPORTED = 4,
+    ABORT_REASON_SECURITY_ERROR = 5,
+    ABORT_REASON_INSUFFICIENT_SECURITY = 6,
     /* Enumerated values 0-63 are reserved for definition by ASHRAE. */
     /* Enumerated values 64-65535 may be used by others subject to */
     /* the procedures and constraints described in Clause 23. */
-    MAX_BACNET_ABORT_REASON = 5
+    MAX_BACNET_ABORT_REASON = 7,
+    /* do the MAX here instead of outside of enum so that
+       compilers will allocate adequate sized datatype for enum */
+    ABORT_REASON_PROPRIETARY_FIRST = 64,
+    ABORT_REASON_PROPRIETARY_LAST = 65535
 } BACNET_ABORT_REASON;
-#define FIRST_PROPRIETARY_ABORT_REASON 64
-#define LAST_PROPRIETARY_ABORT_REASON 65535
 
 typedef enum {
     REJECT_REASON_OTHER = 0,
@@ -1307,10 +1520,12 @@ typedef enum {
     /* Enumerated values 0-63 are reserved for definition by ASHRAE. */
     /* Enumerated values 64-65535 may be used by others subject to */
     /* the procedures and constraints described in Clause 23. */
-    MAX_BACNET_REJECT_REASON = 10
+    MAX_BACNET_REJECT_REASON = 10,
+    /* do the MAX here instead of outside of enum so that
+       compilers will allocate adequate sized datatype for enum */
+    REJECT_REASON_PROPRIETARY_FIRST = 64,
+    REJECT_REASON_PROPRIETARY_LAST = 65535
 } BACNET_REJECT_REASON;
-#define FIRST_PROPRIETARY_REJECT_REASON 64
-#define LAST_PROPRIETARY_REJECT_REASON 65535
 
 typedef enum {
     ERROR_CLASS_DEVICE = 0,
@@ -1324,10 +1539,12 @@ typedef enum {
     /* Enumerated values 0-63 are reserved for definition by ASHRAE. */
     /* Enumerated values 64-65535 may be used by others subject to */
     /* the procedures and constraints described in Clause 23. */
-    MAX_BACNET_ERROR_CLASS = 8
+    MAX_BACNET_ERROR_CLASS = 8,
+    /* do the MAX here instead of outside of enum so that
+       compilers will allocate adequate sized datatype for enum */
+    ERROR_CLASS_PROPRIETARY_FIRST = 64,
+    ERROR_CLASS_PROPRIETARY_LAST = 65535
 } BACNET_ERROR_CLASS;
-#define FIRST_PROPRIETARY_ERROR_CLASS 64
-#define LAST_PROPRIETARY_ERROR_CLASS 65535
 
 /* These are sorted in the order given in
    Clause 18. ERROR, REJECT AND ABORT CODES
@@ -1389,7 +1606,7 @@ typedef enum {
     ERROR_CODE_INCONSISTENT_PARAMETERS = 7,
     ERROR_CODE_INVALID_CONFIGURATION_DATA = 46,
     ERROR_CODE_INVALID_FILE_ACCESS_METHOD = 10,
-    ERROR_CODE_ERROR_CODE_INVALID_FILE_START_POSITION = 11,
+    ERROR_CODE_INVALID_FILE_START_POSITION = 11,
     ERROR_CODE_INVALID_PARAMETER_DATA_TYPE = 13,
     ERROR_CODE_INVALID_TIME_STAMP = 14,
     ERROR_CODE_MISSING_REQUIRED_PARAMETER = 16,
@@ -1437,17 +1654,74 @@ typedef enum {
     ERROR_CODE_NOT_CONFIGURED_FOR_TRIGGERED_LOGGING = 78,
     ERROR_CODE_UNKNOWN_SUBSCRIPTION = 79,
     ERROR_CODE_PARAMETER_OUT_OF_RANGE = 80,
-    ERROR_CODE_UNKNOWN_FILE_SIZE = 81,
+    ERROR_CODE_LIST_ELEMENT_NOT_FOUND = 81,
     ERROR_CODE_BUSY = 82,
     ERROR_CODE_COMMUNICATION_DISABLED = 83,
-    MAX_BACNET_ERROR_CODE = 84
-        /* Enumerated values 0-255 are reserved for definition by ASHRAE. */
-        /* Enumerated values 256-65535 may be used by others subject to */
-        /* the procedures and constraints described in Clause 23. */
-        /* The last enumeration used in this version is 50. */
+    ERROR_CODE_SUCCESS = 84,
+    ERROR_CODE_ACCESS_DENIED = 85,
+    ERROR_CODE_BAD_DESTINATION_ADDRESS = 86,
+    ERROR_CODE_BAD_DESTINATION_DEVICE_ID = 87,
+    ERROR_CODE_BAD_SIGNATURE = 88,
+    ERROR_CODE_BAD_SOURCE_ADDRESS = 89,
+    ERROR_CODE_BAD_TIMESTAMP = 90,
+    ERROR_CODE_CANNOT_USE_KEY = 91,
+    ERROR_CODE_CANNOT_VERIFY_MESSAGE_ID = 92,
+    ERROR_CODE_CORRECT_KEY_REVISION = 93,
+    ERROR_CODE_DESTINATION_DEVICE_ID_REQUIRED = 94,
+    ERROR_CODE_DUPLICATE_MESSAGE = 95,
+    ERROR_CODE_ENCRYPTION_NOT_CONFIGURED = 96,
+    ERROR_CODE_ENCRYPTION_REQUIRED = 97,
+    ERROR_CODE_INCORRECT_KEY = 98,
+    ERROR_CODE_INVALID_KEY_DATA = 99,
+    ERROR_CODE_KEY_UPDATE_IN_PROGRESS = 100,
+    ERROR_CODE_MALFORMED_MESSAGE = 101,
+    ERROR_CODE_NOT_KEY_SERVER = 102,
+    ERROR_CODE_SECURITY_NOT_CONFIGURED = 103,
+    ERROR_CODE_SOURCE_SECURITY_REQUIRED = 104,
+    ERROR_CODE_TOO_MANY_KEYS = 105,
+    ERROR_CODE_UNKNOWN_AUTHENTICATION_TYPE = 106,
+    ERROR_CODE_UNKNOWN_KEY = 107,
+    ERROR_CODE_UNKNOWN_KEY_REVISION = 108,
+    ERROR_CODE_UNKNOWN_SOURCE_MESSAGE = 109,
+    ERROR_CODE_NOT_ROUTER_TO_DNET = 110,
+    ERROR_CODE_ROUTER_BUSY = 111,
+    ERROR_CODE_UNKNOWN_NETWORK_MESSAGE = 112,
+    ERROR_CODE_MESSAGE_TOO_LONG = 113,
+    ERROR_CODE_SECURITY_ERROR = 114,
+    ERROR_CODE_ADDRESSING_ERROR = 115,
+    ERROR_CODE_WRITE_BDT_FAILED = 116,
+    ERROR_CODE_READ_BDT_FAILED = 117,
+    ERROR_CODE_REGISTER_FOREIGN_DEVICE_FAILED = 118,
+    ERROR_CODE_READ_FDT_FAILED = 119,
+    ERROR_CODE_DELETE_FDT_ENTRY_FAILED = 120,
+    ERROR_CODE_DISTRIBUTE_BROADCAST_FAILED = 121,
+    ERROR_CODE_UNKNOWN_FILE_SIZE = 122,
+    ERROR_CODE_ABORT_APDU_TOO_LONG = 123,
+    ERROR_CODE_ABORT_APPLICATION_EXCEEDED_REPLY_TIME = 124,
+    ERROR_CODE_ABORT_OUT_OF_RESOURCES = 125,
+    ERROR_CODE_ABORT_TSM_TIMEOUT = 126,
+    ERROR_CODE_ABORT_WINDOW_SIZE_OUT_OF_RANGE = 127,
+    ERROR_CODE_FILE_FULL = 128,
+    ERROR_CODE_INCONSISTENT_CONFIGURATION = 129,
+    ERROR_CODE_INCONSISTENT_OBJECT_TYPE = 130,
+    ERROR_CODE_INTERNAL_ERROR = 131,
+    ERROR_CODE_NOT_CONFIGURED = 132,
+    ERROR_CODE_OUT_OF_MEMORY = 133,
+    ERROR_CODE_VALUE_TOO_LONG = 134,
+    ERROR_CODE_ABORT_INSUFFICIENT_SECURITY = 135,
+    ERROR_CODE_ABORT_SECURITY_ERROR = 136,
+
+    MAX_BACNET_ERROR_CODE = 137,
+
+    /* Enumerated values 0-255 are reserved for definition by ASHRAE. */
+    /* Enumerated values 256-65535 may be used by others subject to */
+    /* the procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    ERROR_CODE_PROPRIETARY_FIRST = 256,
+    ERROR_CODE_PROPRIETARY_LAST = 65535
 } BACNET_ERROR_CODE;
-#define FIRST_PROPRIETARY_ERROR_CODE 256
-#define LAST_PROPRIETARY_ERROR_CODE 65535
 
 typedef enum {
     BACNET_REINIT_COLDSTART = 0,
@@ -1484,22 +1758,45 @@ typedef enum BACnetShedState {
 } BACNET_SHED_STATE;
 
 typedef enum BACnetLightingOperation {
-    BACNET_LIGHTS_STOP = 0,
+    BACNET_LIGHTS_NONE = 0,
     BACNET_LIGHTS_FADE_TO = 1,
-    BACNET_LIGHTS_FADE_TO_OVER = 2,
-    BACNET_LIGHTS_RAMP_TO = 3,
-    BACNET_LIGHTS_RAMP_TO_AT_RATE = 4,
-    BACNET_LIGHTS_RAMP_UP = 5,
-    BACNET_LIGHTS_RAMP_UP_AT_RATE = 6,
-    BACNET_LIGHTS_RAMP_DOWN = 7,
-    BACNET_LIGHTS_RAMP_DOWN_AT_RATE = 8,
-    BACNET_LIGHTS_STEP_UP = 9,
-    BACNET_LIGHTS_STEP_DOWN = 10,
-    BACNET_LIGHTS_STEP_UP_BY = 11,
-    BACNET_LIGHTS_STEP_DOWN_BY = 12,
-    BACNET_LIGHTS_GOTO_LEVEL = 13,
-    BACNET_LIGHTS_RELINQUISH = 14
+    BACNET_LIGHTS_RAMP_TO = 2,
+    BACNET_LIGHTS_STEP_UP = 3,
+    BACNET_LIGHTS_STEP_DOWN = 4,
+    BACNET_LIGHTS_STEP_ON = 5,
+    BACNET_LIGHTS_STEP_OFF = 6,
+    BACNET_LIGHTS_WARN = 7,
+    BACNET_LIGHTS_WARN_OFF = 8,
+    BACNET_LIGHTS_WARN_RELINQUISH = 9,
+    BACNET_LIGHTS_STOP = 10,
+    MAX_BACNET_LIGHTING_OPERATION = 11,
+    /* Enumerated values 0-255 are reserved for definition by ASHRAE.
+       Enumerated values 256-65535 may be used by others subject to
+       the procedures and constraints described in Clause 23 */
+    BACNET_LIGHTS_PROPRIETARY_FIRST = 256,
+    BACNET_LIGHTS_PROPRIETARY_LAST = 65535
 } BACNET_LIGHTING_OPERATION;
+
+typedef enum BACnetLightingInProgress {
+    BACNET_LIGHTING_IDLE = 0,
+    BACNET_LIGHTING_FADE_ACTIVE = 1,
+    BACNET_LIGHTING_RAMP_ACTIVE = 2,
+    BACNET_LIGHTING_NOT_CONTROLLED = 3,
+    BACNET_LIGHTING_OTHER = 4,
+    MAX_BACNET_LIGHTING_IN_PROGRESS = 5
+} BACNET_LIGHTING_IN_PROGRESS;
+
+typedef enum BACnetLightingTransition {
+    BACNET_LIGHTING_TRANSITION_IDLE = 0,
+    BACNET_LIGHTING_TRANSITION_FADE = 1,
+    BACNET_LIGHTING_TRANSITION_RAMP = 2,
+    MAX_BACNET_LIGHTING_TRANSITION = 3,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.
+       Enumerated values 64-255 may be used by others subject to
+       the procedures and constraints described in Clause 23. */
+    BACNET_LIGHTING_TRANSITION_PROPRIETARY_FIRST = 64,
+    BACNET_LIGHTING_TRANSITION_PROPRIETARY_LAST = 255
+} BACNET_LIGHTING_TRANSITION;
 
 /* NOTE: BACNET_DAYS_OF_WEEK is different than BACNET_WEEKDAY */
 /* 0=Monday-6=Sunday */
@@ -1528,6 +1825,178 @@ typedef enum BACnetEventTransitionMask {
     TRANSITION_TO_NORMAL_MASKED = 4
 } BACNET_EVENT_TRANSITION_MASK;
 
+/* Access Enumerations */
+/* Door Alarm State */
+typedef enum {
+    DOOR_ALARM_STATE_NORMAL = 0,
+    DOOR_ALARM_STATE_ALARM = 1,
+    DOOR_ALARM_STATE_DOOR_OPEN_TOO_LONG = 2,
+    DOOR_ALARM_STATE_FORCED_OPEN = 3,
+    DOOR_ALARM_STATE_TAMPER = 4,
+    DOOR_ALARM_STATE_DOOR_FAULT = 5,
+    DOOR_ALARM_STATE_LOCK_DOWN = 6,
+    DOOR_ALARM_STATE_FREE_ACCESS = 7,
+    DOOR_ALARM_STATE_EGRESS_OPEN = 8
+} BACNET_DOOR_ALARM_STATE;
+
+/* Door Secured Status */
+typedef enum {
+    DOOR_SECURED_STATUS_SECURED = 0,
+    DOOR_SECURED_STATUS_UNSECURED = 1,
+    DOOR_SECURED_STATUS_UNKNOWN = 2
+} BACNET_DOOR_SECURED_STATUS;
+
+/* Door Status */
+typedef enum {
+    DOOR_STATUS_CLOSED = 0,
+    DOOR_STATUS_OPENED = 1,
+    DOOR_STATUS_UNKNOWN = 2,
+    DOOR_STATUS_DOOR_FAULT = 4,
+    DOOR_STATUS_UNUSED = 5
+} BACNET_DOOR_STATUS;
+
+/* Door Value */
+typedef enum {
+    DOOR_VALUE_LOCK = 0,
+    DOOR_VALUE_UNLOCK = 1,
+    DOOR_VALUE_PULSE_UNLOCK = 2,
+    DOOR_VALUE_EXTENDED_PULSE_UNLOCK = 3
+} BACNET_DOOR_VALUE;
+
+/* Lock Status */
+typedef enum {
+    LOCK_STATUS_LOCKED = 0,
+    LOCK_STATUS_UNLOCKED = 1,
+    LOCK_STATUS_LOCK_FAULT = 2,
+    LOCK_STATUS_UNUSED = 3,
+    LOCK_STATUS_UNKNOWN = 4
+} BACNET_LOCK_STATUS;
+
+/* Access Event */
+typedef enum {
+    ACCESS_EVENT_NONE = 0,
+    ACCESS_EVENT_GRANTED = 1,
+    ACCESS_EVENT_MUSTER = 2,
+    ACCESS_EVENT_PASSBACK_DETECTED = 3,
+    ACCESS_EVENT_DURESS = 4,
+    ACCESS_EVENT_TRACE = 5,
+    ACCESS_EVENT_LOCKOUT_MAX_ATTEMPTS = 6,
+    ACCESS_EVENT_LOCKOUT_OTHER = 7,
+    ACCESS_EVENT_LOCKOUT_RELINQUISHED = 8,
+    ACCESS_EVENT_LOCKED_BY_HIGHER_AUTHORITY = 9,
+    ACCESS_EVENT_OUT_OF_SERVICE = 10,
+    ACCESS_EVENT_OUT_OF_SERVICE_RELINQUISHED = 11,
+    ACCESS_EVENT_ACCOMPANIMENT_BY = 12,
+    ACCESS_EVENT_AUTHENTICATION_FACTOR_READ = 13,
+    ACCESS_EVENT_AUTHORIZATION_DELAYED = 14,
+    ACCESS_EVENT_VERIFICATION_REQUIRED = 15,
+    /* values over 128 indicate that access is denied */
+    ACCESS_EVENT_DENIED_DENY_ALL = 128,
+    ACCESS_EVENT_DENIED_UNKNOWN_CREDENTIAL = 129,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_UNAVAILABLE = 130,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_FACTOR_TIMEOUT = 131,
+    ACCESS_EVENT_DENIED_INCORRECT_AUTHENTICATION_FACTOR = 132,
+    ACCESS_EVENT_DENIED_ZONE_NO_ACCESS_RIGHTS = 133,
+    ACCESS_EVENT_DENIED_POINT_NO_ACCESS_RIGHTS = 134,
+    ACCESS_EVENT_DENIED_NO_ACCESS_RIGHTS = 135,
+    ACCESS_EVENT_DENIED_OUT_OF_TIME_RANGE = 136,
+    ACCESS_EVENT_DENIED_THREAT_LEVEL = 137,
+    ACCESS_EVENT_DENIED_PASSBACK = 138,
+    ACCESS_EVENT_DENIED_UNEXPECTED_LOCATION_USAGE = 139,
+    ACCESS_EVENT_DENIED_MAX_ATTEMPTS = 140,
+    ACCESS_EVENT_DENIED_LOWER_OCCUPANCY_LIMIT = 141,
+    ACCESS_EVENT_DENIED_UPPER_OCCUPANCY_LIMIT = 142,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_FACTOR_LOST = 143,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_FACTOR_STOLEN = 144,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_FACTOR_DAMAGED = 145,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_FACTOR_DESTROYED = 146,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_FACTOR_DISABLED = 147,
+    ACCESS_EVENT_DENIED_AUTHENTICATION_FACTOR_ERROR = 148,
+    ACCESS_EVENT_DENIED_CREDENTIAL_UNASSIGNED = 149,
+    ACCESS_EVENT_DENIED_CREDENTIAL_NOT_PROVISIONED = 150,
+    ACCESS_EVENT_DENIED_CREDENTIAL_NOT_YET_ACTIVE = 151,
+    ACCESS_EVENT_DENIED_CREDENTIAL_EXPIRED = 152,
+    ACCESS_EVENT_DENIED_CREDENTIAL_MANUAL_DISABLE = 153,
+    ACCESS_EVENT_DENIED_CREDENTIAL_LOCKOUT = 154,
+    ACCESS_EVENT_DENIED_CREDENTIAL_MAX_DAYS = 155,
+    ACCESS_EVENT_DENIED_CREDENTIAL_MAX_USES = 156,
+    ACCESS_EVENT_DENIED_CREDENTIAL_INACTIVITY = 157,
+    ACCESS_EVENT_DENIED_CREDENTIAL_DISABLED = 158,
+    ACCESS_EVENT_DENIED_NO_ACCOMPANIMENT = 159,
+    ACCESS_EVENT_DENIED_INCORRECT_ACCOMPANIMENT = 160,
+    ACCESS_EVENT_DENIED_LOCKOUT = 161,
+    ACCESS_EVENT_DENIED_VERIFICATION_FAILED = 162,
+    ACCESS_EVENT_DENIED_VERIFICATION_TIMEOUT = 163,
+    ACCESS_EVENT_DENIED_OTHER = 164
+} BACNET_ACCESS_EVENT;
+
+/* Authentication Status */
+typedef enum {
+    AUTHENTICATION_STATUS_NOT_READY = 0,
+    AUTHENTICATION_STATUS_READY = 1,
+    AUTHENTICATION_STATUS_DISABLED = 2,
+    AUTHENTICATION_STATUS_WAITING_FOR_AUTHENTICATION_FACTOR = 3,
+    AUTHENTICATION_STATUS_WAITING_FOR_ACCOMPANIMENT = 4,
+    AUTHENTICATION_STATUS_WAITING_FOR_VERIFICATION = 5,
+    AUTHENTICATION_STATUS_IN_PROGRESS = 6
+} BACNET_AUTHENTICATION_STATUS;
+
+/* Authorization Mode */
+typedef enum {
+    AUTHORIZATION_MODE_AUTHORIZE = 0,
+    AUTHORIZATION_MODE_GRANT_ACTIVE = 1,
+    AUTHORIZATION_MODE_DENY_ALL = 2,
+    AUTHORIZATION_MODE_VERIFICATION_REQUIRED = 3,
+    AUTHORIZATION_MODE_AUTHORIZATION_DELAYED = 4,
+    AUTHORIZATION_MODE_NONE = 5
+} BACNET_AUTHORIZATION_MODE;
+
+/* Access Passback Mode */
+typedef enum {
+    ACCESS_PASSBACK_MODE_PASSBACK_OFF = 0,
+    ACCESS_PASSBACK_MODE_HARD_PASSBACK = 1,
+    ACCESS_PASSBACK_MODE_SOFT_PASSBACK = 2
+} BACNET_ACCESS_PASSBACK_MODE;
+
+/* Access Zone Occupancy State */
+typedef enum {
+    ACCESS_ZONE_OCCUPANCY_STATE_NORMAL = 0,
+    ACCESS_ZONE_OCCUPANCY_STATE_BELOW_LOWER_LIMIT = 1,
+    ACCESS_ZONE_OCCUPANCY_STATE_AT_LOWER_LIMIT = 2,
+    ACCESS_ZONE_OCCUPANCY_STATE_AT_UPPER_LIMIT = 3,
+    ACCESS_ZONE_OCCUPANCY_STATE_ABOVE_UPPER_LIMIT = 4,
+    ACCESS_ZONE_OCCUPANCY_STATE_DISABLED = 5,
+    ACCESS_ZONE_OCCUPANCY_STATE_NOT_SUPPORTED = 6
+} BACNET_ACCESS_ZONE_OCCUPANCY_STATE;
+
+/* Access User Type */
+typedef enum {
+    ACCESS_USER_TYPE_ASSET = 0,
+    ACCESS_USER_TYPE_GROUP = 1,
+    ACCESS_USER_TYPE_PERSON = 2
+} BACNET_ACCESS_USER_TYPE;
+
+/* Access Authentication Factor Disable */
+typedef enum {
+    ACCESS_AUTHENTICATION_FACTOR_DISABLE_NONE = 0,
+    ACCESS_AUTHENTICATION_FACTOR_DISABLE_DISABLED = 1,
+    ACCESS_AUTHENTICATION_FACTOR_DISABLE_DISABLED_LOST = 2,
+    ACCESS_AUTHENTICATION_FACTOR_DISABLE_DISABLED_STOLEN = 3,
+    ACCESS_AUTHENTICATION_FACTOR_DISABLE_DISABLED_DAMAGED = 4,
+    ACCESS_AUTHENTICATION_FACTOR_DISABLE_DISABLED_DESTROYED = 5
+} BACNET_ACCESS_AUTHENTICATION_FACTOR_DISABLE;
+
+/* Authorization Exemption */
+typedef enum {
+    AUTHORIZATION_EXEMPTION_PASSBACK = 0,
+    AUTHORIZATION_EXEMPTION_OCCUPANCY_CHECK = 1,
+    AUTHORIZATION_EXEMPTION_ACCESS_RIGHTS = 2,
+    AUTHORIZATION_EXEMPTION_LOCKOUT = 3,
+    AUTHORIZATION_EXEMPTION_DENY = 4,
+    AUTHORIZATION_EXEMPTION_VERIFICATION = 5,
+    AUTHORIZATION_EXEMPTION_AUTHORIZATION_DELAY = 6
+} BACNET_AUTHORIZATION_EXEMPTION;
+
 /* The Network Reject Reasons  for NETWORK_MESSAGE_REJECT_MESSAGE_TO_NETWORK */
 typedef enum {
     NETWORK_REJECT_UNKNOWN_ERROR = 0,
@@ -1535,9 +2004,241 @@ typedef enum {
     NETWORK_REJECT_ROUTER_BUSY = 2,
     NETWORK_REJECT_UNKNOWN_MESSAGE_TYPE = 3,
     NETWORK_REJECT_MESSAGE_TOO_LONG = 4,
+    NETWORK_REJECT_BACNET_SECURITY = 5,
+    NETWORK_REJECT_BAD_ADDRESS = 6,
     /* Reasons this value or above we don't know about */
     NETWORK_REJECT_REASON_INVALID
 } BACNET_NETWORK_REJECT_REASONS;
 
+typedef enum BACnetWriteStatus {
+    BACNET_WRITE_STATUS_IDLE = 0,
+    BACNET_WRITE_STATUS_IN_PROGRESS = 1,
+    BACNET_WRITE_STATUS_SUCCESSFUL = 2,
+    BACNET_WRITE_STATUS_FAILED = 3
+} BACNET_WRITE_STATUS;
+
+/* BACnetNetworkType ::= ENUMERATED */
+typedef enum {
+    PORT_TYPE_ETHERNET = 0,
+    PORT_TYPE_ARCNET = 1,
+    PORT_TYPE_MSTP = 2,
+    PORT_TYPE_PTP = 3,
+    PORT_TYPE_LONTALK = 4,
+    PORT_TYPE_BIP = 5,
+    PORT_TYPE_ZIGBEE = 6,
+    PORT_TYPE_VIRTUAL = 7,
+    PORT_TYPE_NON_BACNET = 8
+        /* Enumerated values 0-63 are reserved for definition by ASHRAE.
+           Enumerated values 64-255 may be used by others subject to the
+           procedures and constraints described in Clause 23. */
+} BACNET_PORT_TYPE;
+
+/* BACnetNetworkNumberQuality ::= ENUMERATED */
+typedef enum {
+    PORT_QUALITY_UNKNOWN = 0,
+    PORT_QUALITY_LEARNED = 1,
+    PORT_QUALITY_LEARNED_CONFIGURED = 2,
+    PORT_QUALITY_CONFIGURED = 3
+} BACNET_PORT_QUALITY;
+
+/* BACnetNetworkPortCommand :: = ENUMERATED */
+typedef enum {
+    PORT_COMMAND_IDLE = 0,
+    PORT_COMMAND_DISCARD_CHANGES = 1,
+    PORT_COMMAND_RENEW_FD_REGISTRATION = 2,
+    PORT_COMMAND_RESTART_SLAVE_DISCOVERY = 3,
+    PORT_COMMAND_RENEW_DHCP = 4,
+    PORT_COMMAND_RESTART_AUTONEGOTIATION = 5,
+    PORT_COMMAND_DISCONNECT = 6,
+    PORT_COMMAND_RESTART_PORT = 7
+        /* Enumerated values 0-127 are reserved for definition by ASHRAE.
+           Enumerated values 128-255 may be used by others subject to the
+           procedures and constraints described in Clause 23. */
+} BACNET_PORT_COMMAND;
+
+typedef enum {
+    BACNET_SECURITY_LEVEL_INCAPABLE = 0,
+    BACNET_SECURITY_LEVEL_PLAIN = 1,
+    BACNET_SECURITY_LEVEL_SIGNED = 2,
+    BACNET_SECURITY_LEVEL_ENCRYPTED = 3,
+    BACNET_SECURITY_LEVEL_SIGNED_END_TO_END = 4,
+    BACNET_SECURITY_LEVEL_ENCRYPTED_END_TO_END = 5
+} BACNET_SECURITY_LEVEL;
+
+typedef enum {
+    BACNET_SECURITY_POLICY_PLAIN_NOT_TRUSTED = 0,
+    BACNET_SECURITY_POLICY_PLAIN_TRUSTED = 1,
+    BACNET_SECURITY_POLICY_SIGNED_TRUSTED = 2,
+    BACNET_SECURITY_POLICY_ENCRYPTED_TRUSTED = 3
+} BACNET_SECURITY_POLICY;
+
+typedef enum {
+    KIA_AES_MD5 = 0,
+    KIA_AES_SHA256 = 1,
+    /* 2-255 reserved */
+    KIA_MAX_KEY_IDENTIFIER_ALGORITHM = 255
+} BACNET_KEY_IDENTIFIER_ALGORITHM;
+
+typedef enum {
+    KIKN_NOT_USED = 0,
+    KIKN_DEVICE_MASTER = 1,
+    KIKN_DISTRIBUTION = 2,
+    KIKN_INSTALLATION = 3,
+    KIKN_GENERAL_NETWORK_ACCESS = 4,
+    KIKN_USER_AUTHENTICATED = 5,
+    KIKN_MIN_APPLICATION_SPECIFIC = 6,
+    KIKN_MAX_APPLICATION_SPECIFIC = 127,
+    /* 128-255 reserved */
+    KIKN_MAX_KEY_IDENTIFIER_KEY_NUMBER = 255
+} BACNET_KEY_IDENTIFIER_KEY_NUMBER;
+
+typedef enum {
+    SEC_RESP_SUCCESS = 0,
+    SEC_RESP_ACCESS_DENIED = 1,
+    SEC_RESP_BAD_DESTINATION_ADDRESS = 2,
+    SEC_RESP_BAD_DESTINATION_DEVICE_ID = 3,
+    SEC_RESP_BAD_SIGNATURE = 4,
+    SEC_RESP_BAD_SOURCE_ADDRESS = 5,
+    SEC_RESP_BAD_TIMESTAMP = 6,
+    SEC_RESP_CANNOT_USE_KEY = 7,
+    SEC_RESP_CANNOT_VERIFY_MESSAGE_ID = 8,
+    SEC_RESP_CORRECT_KEY_REVISION = 9,
+    SEC_RESP_DESTINATION_DEVICE_ID_REQUIRED = 10,
+    SEC_RESP_DUPLICATE_MESSAGE = 11,
+    SEC_RESP_ENCRYPTION_NOT_CONFIGURED = 12,
+    SEC_RESP_ENCRYPTION_REQUIRED = 13,
+    SEC_RESP_INCORRECT_KEY = 14,
+    SEC_RESP_INVALID_KEY_DATA = 15,
+    SEC_RESP_KEY_UPDATE_IN_PROGRESS = 16,
+    SEC_RESP_MALFORMED_MESSAGE = 17,
+    SEC_RESP_NOT_KEY_SERVER = 18,
+    SEC_RESP_SECURITY_NOT_CONFIGURED = 19,
+    SEC_RESP_SOURCE_SECURITY_REQUIRED = 20,
+    SEC_RESP_TOO_MANY_KEYS = 21,
+    SEC_RESP_UNKNOWN_AUTHENTICATION_TYPE = 22,
+    SEC_RESP_UNKNOWN_KEY = 23,
+    SEC_RESP_UNKNOWN_KEY_REVISION = 24,
+    SEC_RESP_UNKNOWN_SOURCE_MESSAGE = 25
+} BACNET_SECURITY_RESPONSE_CODE;
+
+typedef enum {
+    ACCESS_CREDENTIAL_DISABLE_NONE = 0,
+    ACCESS_CREDENTIAL_DISABLE = 1,
+    ACCESS_CREDENTIAL_DISABLE_MANUAL = 2,
+    ACCESS_CREDENTIAL_DISABLE_LOCKOUT = 3,
+    ACCESS_CREDENTIAL_DISABLE_MAX = 4
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.
+       Enumerated values 64-65535 may be used by others subject to
+       the procedures and constraints described in Clause 23. */
+} BACNET_ACCESS_CREDENTIAL_DISABLE;
+
+typedef enum {
+    CREDENTIAL_DISABLED = 0,
+    CREDENTIAL_DISABLED_NEEDS_PROVISIONING = 1,
+    CREDENTIAL_DISABLED_UNASSIGNED = 2,
+    CREDENTIAL_DISABLED_NOT_YET_ACTIVE = 3,
+    CREDENTIAL_DISABLED_EXPIRED = 4,
+    CREDENTIAL_DISABLED_LOCKOUT = 5,
+    CREDENTIAL_DISABLED_MAX_DAYS = 6,
+    CREDENTIAL_DISABLED_MAX_USES = 7,
+    CREDENTIAL_DISABLED_INACTIVITY = 8,
+    CREDENTIAL_DISABLED_MANUAL = 9,
+    CREDENTIAL_DISABLED_MAX = 10
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.
+       Enumerated values 64-65535 may be used by others subject to
+       the procedures and constraints described in Clause 23. */
+} BACNET_ACCESS_CREDENTIAL_DISABLE_REASON;
+
+typedef enum {
+    AUTHENTICATION_NONE = 0,
+    AUTHENTICATION_DISABLED = 1,
+    AUTHENTICATION_DISABLED_LOST = 2,
+    AUTHENTICATION_DISABLED_STOLEN = 3,
+    AUTHENTICATION_DISABLED_DAMAGED = 4,
+    AUTHENTICATION_DISABLED_DESTROYED = 5,
+    AUTHENTICATION_DISABLED_MAX = 6
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.
+       Enumerated values 64-65535 may be used by others subject to
+       the procedures and constraints described in Clause 23. */
+} BACNET_AUTHENTICATION_DISABLE_REASON;
+
+typedef enum {
+    AUTHENTICATION_FACTOR_UNDEFINED = 0,
+    AUTHENTICATION_FACTOR_ERROR = 1,
+    AUTHENTICATION_FACTOR_CUSTOM = 2,
+    AUTHENTICATION_FACTOR_SIMPLE_NUMBER16 = 3,
+    AUTHENTICATION_FACTOR_SIMPLE_NUMBER32 = 4,
+    AUTHENTICATION_FACTOR_SIMPLE_NUMBER56 = 5,
+    AUTHENTICATION_FACTOR_SIMPLE_ALPHA_NUMERIC = 6,
+    AUTHENTICATION_FACTOR_ABA_TRACK2 = 7,
+    AUTHENTICATION_FACTOR_WIEGAND26 = 8,
+    AUTHENTICATION_FACTOR_WIEGAND37 = 9,
+    AUTHENTICATION_FACTOR_WIEGAND37_FACILITY = 10,
+    AUTHENTICATION_FACTOR_FACILITY16_CARD32 = 11,
+    AUTHENTICATION_FACTOR_FACILITY32_CARD32 = 12,
+    AUTHENTICATION_FACTOR_FASC_N = 13,
+    AUTHENTICATION_FACTOR_FASC_N_BCD = 14,
+    AUTHENTICATION_FACTOR_FASC_N_LARGE = 15,
+    AUTHENTICATION_FACTOR_FASC_N_LARGE_BCD = 16,
+    AUTHENTICATION_FACTOR_GSA75 = 17,
+    AUTHENTICATION_FACTOR_CHUID = 18,
+    AUTHENTICATION_FACTOR_CHUID_FULL = 19,
+    AUTHENTICATION_FACTOR_GUID = 20,
+    AUTHENTICATION_FACTOR_CBEFF_A = 21,
+    AUTHENTICATION_FACTOR_CBEFF_B = 22,
+    AUTHENTICATION_FACTOR_CBEFF_C = 23,
+    AUTHENTICATION_FACTOR_USER_PASSWORD = 24,
+    AUTHENTICATION_FACTOR_MAX = 25
+} BACNET_AUTHENTICATION_FACTOR_TYPE;
+
+typedef enum {
+    NETWORK_TYPE_ETHERNET = 0,
+    NETWORK_TYPE_ARCNET = 1,
+    NETWORK_TYPE_MSTP = 2,
+    NETWORK_TYPE_PTP = 3,
+    NETWORK_TYPE_LONTALK = 4,
+    NETWORK_TYPE_BACNET_IPV4 = 5,
+    NETWORK_TYPE_ZIGBEE = 6,
+    NETWORK_TYPE_VIRTUAL = 7,
+    /* (8), removed in version 1 revision 18 */
+    NETWORK_TYPE_BACNET_IPV6 = 9,
+    NETWORK_TYPE_SERIAL = 10,
+/* Enumerated values 0-63 are reserved for definition by ASHRAE.
+   Enumerated values 64-255 may be used by others subject to the
+   procedures and constraints described in Clause 23. */
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    NETWORK_TYPE_PROPRIETARY_MIN = 64,
+    NETWORK_TYPE_PROPRIETARY_MAX = 255
+} BACNET_NETWORK_TYPE;
+
+/* Network Number Quality, Addendum 135-2012az */
+typedef enum {
+    NETWORK_NUMBER_QUALITIY_UNKNOWN = 0,
+    NETWORK_NUMBER_QUALITIY_LEARNED = 1,
+    NETWORK_NUMBER_QUALITIY_LEARNED_CONFIGURED = 2,
+    NETWORK_NUMBER_QUALITIY_CONFIGURED = 3
+} BACNET_NETWORK_NUMBER_QUALITY;
+
+typedef enum BACnetNetworkPortCommand_T {
+    NETWORK_PORT_COMMAND_IDLE = 0,
+    NETWORK_PORT_COMMAND_DISCARD_CHANGES = 1,
+    NETWORK_PORT_COMMAND_RENEW_FD_REGISTRATION = 2,
+    NETWORK_PORT_COMMAND_RESTART_SLAVE_DISCOVERY = 3,
+    NETWORK_PORT_COMMAND_RENEW_DHCP = 4,
+    NETWORK_PORT_COMMAND_RESTART_AUTONEGOTIATION = 5,
+    NETWORK_PORT_COMMAND_DISCONNECT = 6,
+    NETWORK_PORT_COMMAND_RESTART_PORT = 7,
+    /* Enumerated values 0-127 are reserved for definition 
+       by ASHRAE. Enumerated values 128-255 may be used 
+       by others subject to the procedures and constraints 
+       described in Clause 23.*/
+    /* do the max range inside of enum so that
+       compilers will allocate adequate sized datatype for enum
+       which is used to store decoding */
+    NETWORK_PORT_COMMAND_PROPRIETARY_MIN = 128,
+    NETWORK_PORT_COMMAND_PROPRIETARY_MAX = 255
+} BACNET_NETWORK_PORT_COMMAND;
 
 #endif /* end of BACENUM_H */

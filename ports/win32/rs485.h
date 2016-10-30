@@ -68,6 +68,12 @@ extern "C" {
     void RS485_Print_Error(
         void);
 
+    bool RS485_Interface_Valid(
+        unsigned port_number);
+    void RS485_Print_Ports(
+        void);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

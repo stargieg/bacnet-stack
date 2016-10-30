@@ -55,14 +55,10 @@ void handler_who_is(
         &high_limit);
     if (len == 0) {
         Send_I_Am_Flag = true;
-    } else if (len != -1) {
+    } else if (len != BACNET_STATUS_ERROR) {
         /* is my device id within the limits? */
         target_device = Device_Object_Instance_Number();
-        if (((target_device >= low_limit) && (target_device <= high_limit))
-            ||
-            /* BACnet wildcard is the max instance number - everyone responds */
-            ((BACNET_MAX_INSTANCE >= (uint32_t) low_limit) &&
-                (BACNET_MAX_INSTANCE <= (uint32_t) high_limit))) {
+        if (((target_device >= low_limit) && (target_device <= high_limit)) {
             Send_I_Am_Flag = true;
         }
     }

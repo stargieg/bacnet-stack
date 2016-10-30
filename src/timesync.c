@@ -162,11 +162,11 @@ int timesync_encode_timesync_recipients(
             }
         } else if (pRecipient->tag == 1) {
             if (pRecipient->type.address.net) {
-                len = 1 + 3 + 2 + pRecipient->type.address.net + 1;
+                len = 1 + 3 + 2 + pRecipient->type.address.len + 1;
             } else {
                 len = 1 + 3 + 2 + pRecipient->type.address.mac_len + 1;
             }
-            if (max_apdu >= len) {
+            if (max_apdu >= (unsigned)len) {
                 /* CHOICE - address [1] BACnetAddress - opening */
                 len = encode_opening_tag(&apdu[apdu_len], 1);
                 apdu_len += len;

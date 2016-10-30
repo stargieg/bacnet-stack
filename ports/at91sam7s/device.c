@@ -279,28 +279,15 @@ bool Device_Write_Property(
     return status;
 }
 
-static unsigned property_list_count(
-    const int *pList)
-{
-    unsigned property_count = 0;
-
-    if (pList) {
-        while (*pList != -1) {
-            property_count++;
-            pList++;
-        }
-    }
-
-    return property_count;
-}
-
 /* for a given object type, returns the special property list */
 void Device_Objects_Property_List(
     BACNET_OBJECT_TYPE object_type,
+    uint32_t object_instance,
     struct special_property_list_t *pPropertyList)
 {
     struct my_object_functions *pObject = NULL;
 
+    (void)object_instance;
     pPropertyList->Required.pList = NULL;
     pPropertyList->Optional.pList = NULL;
     pPropertyList->Proprietary.pList = NULL;
@@ -648,7 +635,7 @@ int Device_Read_Property_Local(
         return 0;
     }
     apdu = rpdata->application_data;
-    switch (rpdata->object_property) {
+    switch ((int) rpdata->object_property) {
         case PROP_DESCRIPTION:
             characterstring_init_ansi(&char_string, "BACnet Demo");
             apdu_len =
@@ -851,7 +838,7 @@ bool Device_Write_Property_Local(
         wp_data->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         return false;
     }
-    switch (wp_data->object_property) {
+    switch ((int) wp_data->object_property) {
         case PROP_OBJECT_IDENTIFIER:
             if (value.tag == BACNET_APPLICATION_TAG_OBJECT_ID) {
                 if ((value.type.Object_Id.type == OBJECT_DEVICE) &&

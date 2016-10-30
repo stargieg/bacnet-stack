@@ -40,7 +40,7 @@
 /* Although this stack can implement a later revision,
  * sometimes another revision is desired */
 #ifndef BACNET_PROTOCOL_REVISION
-#define BACNET_PROTOCOL_REVISION 12
+#define BACNET_PROTOCOL_REVISION 14
 #endif
 
 /* there are a few dependencies on the BACnet Protocol-Revision */
@@ -90,10 +90,23 @@
 #elif (BACNET_PROTOCOL_REVISION == 13)
 #define MAX_ASHRAE_OBJECT_TYPE 53
 #define MAX_BACNET_SERVICES_SUPPORTED 40
-#elif (BACNET_PROTOCOL_REVISION == 14)
+#elif (BACNET_PROTOCOL_REVISION == 14) || (BACNET_PROTOCOL_REVISION == 15)
     /* from 135-2012 version of the BACnet Standard */
 #define MAX_ASHRAE_OBJECT_TYPE 55
 #define MAX_BACNET_SERVICES_SUPPORTED 41
+#elif (BACNET_PROTOCOL_REVISION == 16)
+    /* Addendum 135-2012an, 135-2012at, 135-2012au,
+       135-2012av, 135-2012aw, 135-2012ax, 135-2012az */
+#define MAX_ASHRAE_OBJECT_TYPE 56
+#define MAX_BACNET_SERVICES_SUPPORTED 41
+#elif (BACNET_PROTOCOL_REVISION == 17)
+    /* Addendum 135-2012ai */
+#define MAX_ASHRAE_OBJECT_TYPE 57
+#define MAX_BACNET_SERVICES_SUPPORTED 41
+#elif (BACNET_PROTOCOL_REVISION == 18) || (BACNET_PROTOCOL_REVISION == 19)
+    /* from 135-2016 version of the BACnet Standard */
+#define MAX_ASHRAE_OBJECT_TYPE 60
+#define MAX_BACNET_SERVICES_SUPPORTED 44
 #else
 #error MAX_ASHRAE_OBJECT_TYPE and MAX_BACNET_SERVICES_SUPPORTED not defined!
 #endif
@@ -107,6 +120,9 @@
 /* Array index 0=size of array, n=array element n,  MAX=all array elements */
 /* 32-bit MAX, to use with uint32_t */
 #define BACNET_ARRAY_ALL 0xFFFFFFFFU
+/* For device object property references with no device id defined */
+#define BACNET_NO_DEV_ID   0xFFFFFFFFu
+#define BACNET_NO_DEV_TYPE 0xFFFFu
 /* Priority Array for commandable objects */
 #define BACNET_NO_PRIORITY 0
 #define BACNET_MIN_PRIORITY 1
@@ -134,6 +150,12 @@ struct BACnet_Device_Address {
     uint8_t adr[MAX_MAC_LEN];   /* hwaddr (MAC) address */
 };
 typedef struct BACnet_Device_Address BACNET_ADDRESS;
+/* define a MAC address for manipulation */
+struct BACnet_MAC_Address {
+    uint8_t len;        /* length of MAC address */
+    uint8_t adr[MAX_MAC_LEN];
+};
+typedef struct BACnet_MAC_Address BACNET_MAC_ADDRESS;
 
 /* note: with microprocessors having lots more code space than memory,
    it might be better to have a packed encoding with a library to

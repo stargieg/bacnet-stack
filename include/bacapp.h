@@ -30,6 +30,13 @@
 #include "bacdef.h"
 #include "bacstr.h"
 #include "datetime.h"
+#if defined (BACAPP_LIGHTING_COMMAND)
+#include "lighting.h"
+#endif
+#if defined (BACAPP_DEVICE_OBJECT_PROP_REF)
+#include "bacdevobjpropref.h"
+#endif
+
 
 struct BACnet_Application_Data_Value;
 typedef struct BACnet_Application_Data_Value {
@@ -73,6 +80,13 @@ typedef struct BACnet_Application_Data_Value {
 #endif
 #if defined (BACAPP_OBJECT_ID)
         BACNET_OBJECT_ID Object_Id;
+#endif
+#if defined (BACAPP_LIGHTING_COMMAND)
+        BACNET_LIGHTING_COMMAND Lighting_Command;
+#endif
+#if defined (BACAPP_DEVICE_OBJECT_PROP_REF)
+        BACNET_DEVICE_OBJECT_PROPERTY_REFERENCE
+            Device_Object_Property_Reference;
 #endif
     } type;
     /* simple linked list if needed */

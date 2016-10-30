@@ -325,7 +325,7 @@ void handler_read_property_multiple(
                 } else {
                     special_object_property = rpmdata.object_property;
                     Device_Objects_Property_List(rpmdata.object_type,
-                        &property_list);
+                        rpmdata.object_instance, &property_list);
                     property_count =
                         RPM_Object_Property_Count(&property_list,
                         special_object_property);
@@ -453,11 +453,9 @@ void handler_read_property_multiple(
     bytes_sent =
         datalink_send_pdu(src, &npdu_data, &Handler_Transmit_Buffer[0],
         pdu_len);
-#if PRINT_ENABLED
     if (bytes_sent <= 0) {
+#if PRINT_ENABLED
         fprintf(stderr, "RPM: Failed to send PDU (%s)!\n", strerror(errno));
-    }
-#else
-    bytes_sent = bytes_sent;
 #endif
+    }
 }

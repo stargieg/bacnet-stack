@@ -85,7 +85,7 @@ int DNET_list[2] = {
  * @param first_object_instance Set the first (gateway) Device to this
             instance number, and subsequent devices to incremented values.
  */
-void Devices_Init(
+static void Devices_Init(
     uint32_t first_object_instance)
 {
     int i;
@@ -176,27 +176,27 @@ static void Init_Service_Handlers(
  * device.) This is sure to be unique! The port number stays the same.
  * - For MS/TP, [Steve inserts a good idea here]
  */
-void Initialize_Device_Addresses(
+static void Initialize_Device_Addresses(
     )
 {
     int i = 0;  /* First entry is Gateway Device */
     uint32_t virtual_mac = 0;
     DEVICE_OBJECT_DATA *pDev = NULL;
     /* Setup info for the main gateway device first */
+    pDev = Get_Routed_Device_Object(i);
 #if defined(BACDL_BIP)
     uint16_t myPort;
     struct in_addr *netPtr;     /* Lets us cast to this type */
     uint8_t *gatewayMac = NULL;
     uint32_t myAddr = bip_get_addr();
-    pDev = Get_Routed_Device_Object(i);
     gatewayMac = pDev->bacDevAddr.mac;  /* Keep pointer to the main MAC */
     memcpy(pDev->bacDevAddr.mac, &myAddr, 4);
     myPort = bip_get_port();
     memcpy(&pDev->bacDevAddr.mac[4], &myPort, 2);
     pDev->bacDevAddr.mac_len = 6;
 #elif defined(BACDL_MSTP)
-    /* Todo: */
-    pDev->bacDevAddr.mac_len = 2;
+    pDev->bacDevAddr.mac_len = 1;
+    pDev->bacDevAddr.mac[0] = dlmstp_mac_address();
 #else
 #error "No support for this Data Link Layer type "
 #endif
@@ -330,9 +330,9 @@ int main(
             dlenv_maintenance_timer(elapsed_seconds);
             Load_Control_State_Machine_Handler();
             elapsed_milliseconds = elapsed_seconds * 1000;
-            handler_cov_task();
             tsm_timer_milliseconds(elapsed_milliseconds);
         }
+        handler_cov_task();
         /* output */
 
         /* blink LEDs, Turn on or off outputs, etc */

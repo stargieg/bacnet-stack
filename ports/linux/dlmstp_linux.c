@@ -151,7 +151,7 @@ int dlmstp_send_pdu(
         return 0;
     }
 
-    pkt = (struct mstp_pdu_packet *) Ringbuf_Alloc(&poSharedData->PDU_Queue);
+    pkt = (struct mstp_pdu_packet *) Ringbuf_Data_Peek(&poSharedData->PDU_Queue);
     if (pkt) {
         pkt->data_expecting_reply =
             BACNET_DATA_EXPECTING_REPLY(pdu[BACNET_PDU_CONTROL_BYTE_OFFSET]);
@@ -160,7 +160,9 @@ int dlmstp_send_pdu(
         }
         pkt->length = pdu_len;
         pkt->destination_mac = dest->mac[0];
-        bytes_sent = pdu_len;
+        if (Ringbuf_Data_Put(&poSharedData->PDU_Queue, (uint8_t *)pkt)) {
+            bytes_sent = pdu_len;
+        }
     }
 
     return bytes_sent;
@@ -532,6 +534,9 @@ bool dlmstp_compare_data_expecting_reply(
 #endif
         return false;
     }
+#if 0
+    /* the NDPU priority doesn't get passed through the stack, and
+       all outgoing messages have NORMAL priority */
     if (request.npdu_data.priority != reply.npdu_data.priority) {
 #if PRINT_ENABLED
         fprintf(stderr,
@@ -539,6 +544,7 @@ bool dlmstp_compare_data_expecting_reply(
 #endif
         return false;
     }
+#endif
     if (!bacnet_address_same(&request.address, &reply.address)) {
 #if PRINT_ENABLED
         fprintf(stderr,
@@ -875,9 +881,8 @@ bool dlmstp_init(
         return false;
     }
 
-    poSharedData =
-        (SHARED_MSTP_DATA *) ((struct mstp_port_struct_t *) mstp_port)->
-        UserData;
+    poSharedData = (SHARED_MSTP_DATA *) ((struct mstp_port_struct_t *)
+        mstp_port)->UserData;
     if (!poSharedData) {
         return false;
     }

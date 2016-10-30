@@ -207,7 +207,7 @@ bool bitstring_same(
     int bytes_used = 0;
     uint8_t compare_mask = 0;
 
-    if (bitstring1 && bitstring1) {
+    if (bitstring1 && bitstring2) {
         if ((bitstring1->bits_used == bitstring2->bits_used) &&
             (bitstring1->bits_used / 8 <= MAX_BITSTRING_BYTES)) {
             bytes_used = (int) (bitstring1->bits_used / 8);
@@ -229,6 +229,53 @@ bool bitstring_same(
 
     return false;
 }
+
+#if PRINT_ENABLED
+/* converts an null terminated ASCII string to an bitstring.
+   Expects "1,0,1,0,1,1" or "101011" as the bits
+   returns true if successfully converted and fits; false if too long */
+bool bitstring_init_ascii(
+    BACNET_BIT_STRING * bit_string,
+    const char *ascii)
+{
+    bool status = false;        /* return value */
+    unsigned index = 0; /* offset into buffer */
+    uint8_t bit_number = 0;
+
+    if (bit_string) {
+        bitstring_init(bit_string);
+        if (ascii[0] == 0) {
+            /* nothing to decode, so success! */
+            status = true;
+        } else {
+            while (ascii[index] != 0) {
+                if (bit_number > bitstring_bits_capacity(bit_string)) {
+                    /* too long of a string */
+                    status = false;
+                    break;
+                }
+                if (ascii[index] == '1') {
+                    bitstring_set_bit(bit_string, bit_number, true);
+                    bit_number++;
+                    status = true;
+                } else if (ascii[index] == '0') {
+                    bitstring_set_bit(bit_string, bit_number, false);
+                    bit_number++;
+                    status = true;
+                } else {
+                    /* skip non-numeric or alpha */
+                    index++;
+                    continue;
+                }
+                /* next character */
+                index++;
+            }
+        }
+    }
+
+    return status;
+}
+#endif
 
 #define CHARACTER_STRING_CAPACITY (MAX_CHARACTER_STRING_BYTES - 1)
 /* returns false if the string exceeds capacity
@@ -649,25 +696,23 @@ bool octetstring_init(
     bool status = false;        /* return value */
     size_t i;   /* counter */
 
-    if (octet_string) {
+    if (octet_string && (length <= MAX_OCTET_STRING_BYTES)) {
         octet_string->length = 0;
-        if (length <= MAX_OCTET_STRING_BYTES) {
-            if (value) {
-                for (i = 0; i < length; i++) {
-                    if (i < length) {
-                        octet_string->value[octet_string->length] = value[i];
-                        octet_string->length++;
-                    } else {
-                        octet_string->value[i] = 0;
-                    }
-                }
-            } else {
-                for (i = 0; i < MAX_OCTET_STRING_BYTES; i++) {
+        if (value) {
+            for (i = 0; i < MAX_OCTET_STRING_BYTES; i++) {
+                if (i < length) {
+                    octet_string->value[i] = value[i];
+                } else {
                     octet_string->value[i] = 0;
                 }
             }
-            status = true;
+            octet_string->length = length;
+        } else {
+            for (i = 0; i < MAX_OCTET_STRING_BYTES; i++) {
+                octet_string->value[i] = 0;
+            }
         }
+        status = true;
     }
 
     return status;

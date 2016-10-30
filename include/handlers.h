@@ -31,6 +31,7 @@
 #include "bacdef.h"
 #include "apdu.h"
 #include "bacapp.h"
+#include "ptransfer.h"
 #include "rd.h"
 #include "rp.h"
 #include "rpm.h"
@@ -189,14 +190,11 @@ extern "C" {
     int handler_timesync_encode_recipients(
         uint8_t * apdu,
         int max_apdu);
-    void handler_timesync_task(
-        void);
+    void handler_timesync_task(BACNET_DATE_TIME *bdatetime);
     void handler_timesync_init(
         void);
     bool handler_timesync_recipient_write(
         BACNET_WRITE_PROPERTY_DATA * wp_data);
-    bool handler_timesync_interval_set(
-        uint32_t minutes);
     bool handler_timesync_recipient_address_set(
         unsigned index,
         BACNET_ADDRESS * address);
@@ -221,6 +219,8 @@ extern "C" {
     /* print the RP Ack data to stdout */
     void rp_ack_print_data(
         BACNET_READ_PROPERTY_DATA * data);
+    /* print the GE Ack data to stdout */
+    void ge_ack_print_data(BACNET_GET_EVENT_INFORMATION_DATA * data, uint32_t device_id);
     /* print the RPM Ack data to stdout */
     void rpm_ack_print_data(
         BACNET_READ_ACCESS_DATA * rpm_data);
@@ -230,6 +230,8 @@ extern "C" {
         uint16_t service_len,
         BACNET_ADDRESS * src,
         BACNET_CONFIRMED_SERVICE_DATA * service_data);
+    bool handler_cov_fsm(
+        void);
     void handler_cov_task(
         void);
     void handler_cov_timer_seconds(
@@ -283,6 +285,9 @@ extern "C" {
         uint16_t service_len,
         BACNET_ADDRESS * src);
 
+    void private_transfer_print_data(
+        BACNET_PRIVATE_TRANSFER_DATA *private_data);
+
     void handler_read_range(
         uint8_t * service_request,
         uint16_t service_len,
@@ -320,6 +325,12 @@ extern "C" {
         uint16_t service_len,
         BACNET_ADDRESS * src,
         BACNET_CONFIRMED_SERVICE_ACK_DATA * service_data);
+
+    void get_event_ack_handler(
+        uint8_t *service_request,
+        uint16_t service_len,
+        BACNET_ADDRESS *src,
+        BACNET_CONFIRMED_SERVICE_ACK_DATA *service_data);
 
 
 #ifdef __cplusplus

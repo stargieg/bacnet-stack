@@ -41,7 +41,7 @@
 
 /** @file linux/bip-init.c  Initializes BACnet/IP interface (BSD/MAC OS X). */
 
-bool BIP_Debug = false;
+bool BIP_Debug = true;
 
 void *get_addr_ptr(
     struct sockaddr *sockaddr_ptr)
@@ -90,11 +90,9 @@ static int get_local_address(
     struct ifaddrs *ifaddrs_ptr;
     int status;
     status = getifaddrs(&ifaddrs_ptr);
-    if (BIP_Debug) {
-        if (status == -1) {
-            fprintf(stderr, "Error in 'getifaddrs': %d (%s)\n", errno,
-                strerror(errno));
-        }
+    if (status == -1) {
+        fprintf(stderr, "Error in 'getifaddrs': %d (%s)\n", errno,
+            strerror(errno));
     }
     while (ifaddrs_ptr) {
         if ((ifaddrs_ptr->ifa_addr->sa_family == AF_INET) &&
@@ -186,14 +184,9 @@ bool bip_init(
 
     if (ifname) {
         bip_set_interface(ifname);
-        if (BIP_Debug) {
-            printf("interface %s\n", ifname);
-        }
+        printf("interface %s", ifname);
     } else {
         bip_set_interface("en0");
-        if (BIP_Debug) {
-            printf("interface default en0\n");
-        }
     }
     /* assumes that the driver has already been initialized */
     sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -264,9 +257,7 @@ int bip_get_local_netmask(
     char *ifname = getenv("BACNET_IFACE");      /* will probably be null */
     if (ifname == NULL)
         ifname = "en0";
-    if (BIP_Debug) {
-        printf("ifname %s", ifname);
-    }
+    printf("ifname %s", ifname);
     char *request = "netmask";
     rv = get_local_address(ifname, netmask, request);
 

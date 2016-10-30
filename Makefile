@@ -15,19 +15,22 @@ MY_BACNET_DEFINES = -DPRINT_ENABLED=1
 MY_BACNET_DEFINES += -DBACAPP_ALL
 MY_BACNET_DEFINES += -DBACFILE
 MY_BACNET_DEFINES += -DINTRINSIC_REPORTING
+MY_BACNET_DEFINES += -DBACNET_TIME_MASTER
+MY_BACNET_DEFINES += -DBACNET_PROPERTY_LISTS=1
 BACNET_DEFINES ?= $(MY_BACNET_DEFINES)
 
-# un-comment the next line to build the routing demo application
-#BACNET_DEFINES += -DBAC_ROUTING
+# un-comment the next line to build in uci integration
+#BACNET_DEFINES += -DBAC_UCI
+#UCI_LIB_DIR ?= /usr/local/lib
 
 #BACDL_DEFINE=-DBACDL_ETHERNET=1
 #BACDL_DEFINE=-DBACDL_ARCNET=1
 #BACDL_DEFINE=-DBACDL_MSTP=1
-#BACDL_DEFINE?=-DBACDL_BIP=1
+BACDL_DEFINE?=-DBACDL_BIP=1
 
 # Declare your level of BBMD support
-#BBMD_DEFINE ?=-DBBMD_ENABLED=1
-BBMD_DEFINE ?= -DBBMD_ENABLED=0
+BBMD_DEFINE ?=-DBBMD_ENABLED=1
+#BBMD_DEFINE ?= -DBBMD_ENABLED=0
 #BBMD_DEFINE ?= -DBBMD_CLIENT_ENABLED
 
 # Passing parameters via command line
@@ -37,19 +40,10 @@ MAKE_DEFINE ?=
 DEFINES = $(BACNET_DEFINES) $(BACDL_DEFINE) $(BBMD_DEFINE) -DWEAK_FUNC=
 DEFINES += $(MAKE_DEFINE)
 
-# directories
+# BACnet Ports Directory
 BACNET_PORT ?= linux
-BACNET_PORT_DIR = ../ports/${BACNET_PORT}
 
-BACNET_OBJECT = ../demo/object
-BACNET_HANDLER = ../demo/handler
-BACNET_CORE = ../src
-BACNET_INCLUDE = ../include
-# compiler configuration
-#STANDARDS = -std=c99
-INCLUDE1 = -I$(BACNET_PORT_DIR) -I$(BACNET_OBJECT) -I$(BACNET_HANDLER)
-INCLUDE2 = -I$(BACNET_INCLUDE)
-INCLUDES = $(INCLUDE1) $(INCLUDE2)
+# Default compiler settings
 OPTIMIZATION = -Os
 DEBUGGING =
 WARNINGS = -Wall -Wmissing-prototypes
@@ -73,10 +67,37 @@ library:
 	$(MAKE) -s -C lib all
 
 demos:
-	$(MAKE) -s -C demo all
+	$(MAKE) -C demo all
 
-router:
+gateway:
+	$(MAKE) -B -s -C demo gateway
+
+server:
+	$(MAKE) -B -C demo server
+
+mstpcap:
+	$(MAKE) -B -C demo mstpcap
+
+mstpcrc: library
+	$(MAKE) -B -C demo mstpcrc
+
+iam:
+	$(MAKE) -B -C demo iam
+
+uevent:
+	$(MAKE) -B -C demo uevent
+
+abort:
+	$(MAKE) -B -C demo abort
+
+error:
+	$(MAKE) -B -C demo error
+
+router: library
 	$(MAKE) -s -C demo router
+
+router-ipv6:
+	$(MAKE) -B -s -C demo router-ipv6
 
 # Add "ports" to the build, if desired
 ports:	atmega168 bdk-atxx4-mstp at91sam7s
@@ -88,6 +109,9 @@ atmega168: ports/atmega168/Makefile
 at91sam7s: ports/at91sam7s/makefile
 	$(MAKE) -s -C ports/at91sam7s clean all
 
+mstpsnap: ports/linux/mstpsnap.mak
+	$(MAKE) -s -C ports/linux -f mstpsnap.mak clean all
+
 bdk-atxx4-mstp: ports/bdk-atxx4-mstp/Makefile
 	$(MAKE) -s -C ports/bdk-atxx4-mstp clean all
 
@@ -95,3 +119,5 @@ clean:
 	$(MAKE) -s -C lib clean
 	$(MAKE) -s -C demo clean
 	$(MAKE) -s -C demo/router clean
+	$(MAKE) -s -C demo/router-ipv6 clean
+	$(MAKE) -s -C demo/gateway clean

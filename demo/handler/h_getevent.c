@@ -43,6 +43,31 @@
 
 static get_event_info_function Get_Event_Info[MAX_BACNET_OBJECT_TYPE];
 
+
+/** print eventState
+ */
+void ge_ack_print_data(
+    BACNET_GET_EVENT_INFORMATION_DATA * data,
+    uint32_t device_id)
+{
+    BACNET_GET_EVENT_INFORMATION_DATA *act_data = data;
+    const char* state_strs[] = {"NO", "FA", "ON", "HL", "LL"};
+	printf("DeviceID\tType\tInstance\teventState\n");
+	    printf("--------------- ------- --------------- ---------------\n");
+	    int count = 0;
+	    while (act_data) {
+        	    printf("%u\t\t%u\t%u\t\t%s\n",
+                	   device_id,
+	                   act_data->objectIdentifier.type,
+        	           act_data->objectIdentifier.instance,
+	                   state_strs[data->eventState]
+        	           );
+	            act_data = act_data->next;
+            count++;
+        }
+    printf("\n%u\t Total\n",count);
+}
+
 void handler_get_event_information_set(
     BACNET_OBJECT_TYPE object_type,
     get_event_info_function pFunction)
@@ -146,18 +171,24 @@ void handler_get_event_information(
                         goto GET_EVENT_ERROR;
                     }
                     apdu_len += len;
-                    if (apdu_len >= service_data->max_resp - 2) {
-                        /* Device must be able to fit minimum one event information.
-                           Length of one event informations needs more than 50 octets. */
-                        if (service_data->max_resp < 128) {
+                    if ((apdu_len >= service_data->max_resp - 2)  ||
+                        (apdu_len >= MAX_APDU - 2)) {
+                        /* Device must be able to fit minimum
+                           one event information.
+                           Length of one event informations needs
+                           more than 50 octets. */
+                        if ((service_data->max_resp < 128) ||
+                            (MAX_APDU < 128)) {
                             len = BACNET_STATUS_ABORT;
                             error = true;
                             goto GET_EVENT_ERROR;
-                        } else
+                        } else {
                             more_events = true;
+                        }
                         break;
-                    } else
+                    } else {
                         pdu_len += len;
+                    }
                 } else if (valid_event < 0) {
                     break;
                 }
@@ -172,7 +203,7 @@ void handler_get_event_information(
         goto GET_EVENT_ERROR;
     }
 #if PRINT_ENABLED
-    fprintf(stderr, "GetEventInformation: Sending Ack!\n");
+    fprintf(stderr, "Got a GetEventInformation request: Sending Ack!\n");
 #endif
   GET_EVENT_ERROR:
     if (error) {

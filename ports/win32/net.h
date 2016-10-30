@@ -28,13 +28,31 @@
 
 #define WIN32_LEAN_AND_MEAN
 #define STRICT 1
+/* Windows XP minimum */
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x501
 
 #include <windows.h>
 #if (!defined(USE_INADDR) || (USE_INADDR == 0)) && \
  (!defined(USE_CLASSADDR) || (USE_CLASSADDR == 0))
 #include <iphlpapi.h>
 #endif
+#include <windows.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
+#ifndef IPPROTO_IPV6
+   // If the version of winsock does not by default include IPV6 then
+   // use the tech preview if it is avaliable.
+   #include <tpipv6.h>
+#endif
+#include <stdlib.h>
+#include <stdio.h>
+#ifdef __MINGW32__
+#include <ws2spi.h>
+#else
+#include <wspiapi.h>
+#endif
+
 #include <sys/timeb.h>
 
 #ifdef _MSC_VER

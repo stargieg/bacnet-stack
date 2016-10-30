@@ -77,7 +77,7 @@ uint8_t Send_Atomic_Write_File_Stream(
         data.object_instance = file_instance;
         data.access = FILE_STREAM_ACCESS;
         data.type.stream.fileStartPosition = fileStartPosition;
-        status = octetstring_copy(&data.fileData, fileData);
+        status = octetstring_copy(&data.fileData[0], fileData);
         if (status) {
             /* encode the NPDU portion of the packet */
             datalink_get_my_address(&my_address);

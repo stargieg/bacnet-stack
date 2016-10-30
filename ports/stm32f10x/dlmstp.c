@@ -126,13 +126,6 @@ static uint8_t Nmax_master = 127;
 /* larger values for this timeout, not to exceed 100 milliseconds.) */
 #define Tusage_timeout 60
 
-/* The number of tokens received or used before a Poll For Master cycle */
-/* is executed: 50. */
-#define Npoll 50
-
-/* The number of retries on sending Token: 1. */
-#define Nretry_token 1
-
 /* The minimum number of DataAvailable or ReceiveError events that must be */
 /* seen by a receiving node in order to declare the line "active": 4. */
 #define Nmin_octets 4
@@ -143,21 +136,14 @@ static uint8_t Nmax_master = 127;
 /* not to exceed 100 milliseconds.) */
 /* At 9600 baud, 60 bit times would be about 6.25 milliseconds */
 /* const uint16_t Tframe_abort = 1 + ((1000 * 60) / 9600); */
+/* At 115200 baud, 60 bit times would be about 0.5 milliseconds */
+/* const uint16_t Tframe_abort = 1 + ((1000 * 60) / 115200); */
 #define Tframe_abort 30
-
-/* The maximum idle time a sending node may allow to elapse between octets */
-/* of a frame the node is transmitting: 20 bit times. */
-#define Tframe_gap 20
-
-/* The maximum time after the end of the stop bit of the final */
-/* octet of a transmitted frame before a node must disable its */
-/* EIA-485 driver: 15 bit times. */
-#define Tpostdrive 15
 
 /* The maximum time a node may wait after reception of a frame that expects */
 /* a reply before sending the first octet of a reply or Reply Postponed */
 /* frame: 250 milliseconds. */
-#define Treply_delay 250
+#define Treply_delay (250-50)
 
 /* The width of the time slot within which a node may generate a token: */
 /* 10 milliseconds. */
@@ -212,8 +198,8 @@ void dlmstp_automac_hander(
 bool dlmstp_init(
     char *ifname)
 {
-    ifname = ifname;
-    Ringbuf_Init(&Transmit_Queue, (uint8_t *) & Transmit_Buffer,
+    (void)ifname;
+    Ringbuf_Init(&Transmit_Queue, (uint8_t *) Transmit_Buffer,
         sizeof(struct mstp_tx_packet), MSTP_TRANSMIT_PACKET_COUNT);
     Ringbuf_Init(&PDU_Queue, (uint8_t *) & PDU_Buffer,
         sizeof(struct mstp_pdu_packet), MSTP_PDU_PACKET_COUNT);
@@ -351,9 +337,13 @@ static bool dlmstp_compare_data_expecting_reply(
     if (request.npdu_data.protocol_version != reply.npdu_data.protocol_version) {
         return false;
     }
+#if 0
+    /* the NDPU priority doesn't get passed through the stack, and
+       all outgoing messages have NORMAL priority */
     if (request.npdu_data.priority != reply.npdu_data.priority) {
         return false;
     }
+#endif
     if (!bacnet_address_same(&request.address, &reply.address)) {
         return false;
     }
@@ -444,10 +434,10 @@ static void MSTP_Send_Frame(
 {       /* number of bytes of data (up to 501) */
     uint8_t crc8 = 0xFF;        /* used to calculate the crc value */
     uint16_t crc16 = 0xFFFF;    /* used to calculate the crc value */
-    static struct mstp_tx_packet *pkt;
+    struct mstp_tx_packet *pkt;
     uint16_t i = 0;     /* used to calculate CRC for data */
 
-    pkt = (struct mstp_tx_packet *) Ringbuf_Alloc(&Transmit_Queue);
+    pkt = (struct mstp_tx_packet *) Ringbuf_Data_Peek(&Transmit_Queue);
     if (pkt) {
         /* create the MS/TP header */
         pkt->buffer[0] = 0x55;
@@ -462,7 +452,7 @@ static void MSTP_Send_Frame(
         crc8 = CRC_Calc_Header(pkt->buffer[5], crc8);
         pkt->buffer[6] = data_len % 256;
         crc8 = CRC_Calc_Header(pkt->buffer[6], crc8);
-        pkt->buffer[7] = ~crc8;
+        pkt->buffer[7] = (uint8_t)(~crc8);
         pkt->length = 8;
         if (data_len) {
             /* calculate CRC for any data */
@@ -476,6 +466,7 @@ static void MSTP_Send_Frame(
             pkt->length += data_len;
             pkt->length += 2;
         }
+        Ringbuf_Data_Put(&Transmit_Queue, (uint8_t *)pkt);
     } else {
         pkt = NULL;
     }
@@ -1236,6 +1227,8 @@ static bool MSTP_Master_Node_FSM(
                 Master_State = MSTP_MASTER_STATE_IDLE;
                 /* clear our flag we were holding for comparison */
                 MSTP_Flag.ReceivedValidFrame = false;
+                /* clear the queue */
+                (void) Ringbuf_Pop(&PDU_Queue, NULL);
             } else if (rs485_silence_elapsed(Treply_delay) || (pkt != NULL)) {
                 /* DeferredReply */
                 /* If no reply will be available from the higher layers */
@@ -1272,18 +1265,36 @@ int dlmstp_send_pdu(
     struct mstp_pdu_packet *pkt;
     uint16_t i = 0;
 
-    pkt = (struct mstp_pdu_packet *) Ringbuf_Alloc(&PDU_Queue);
+    pkt = (struct mstp_pdu_packet *) Ringbuf_Data_Peek(&PDU_Queue);
     if (pkt) {
         pkt->data_expecting_reply = npdu_data->data_expecting_reply;
         for (i = 0; i < pdu_len; i++) {
             pkt->buffer[i] = pdu[i];
         }
         pkt->length = pdu_len;
-        pkt->destination_mac = dest->mac[0];
-        bytes_sent = pdu_len;
+        if (dest && dest->mac_len) {
+            pkt->destination_mac = dest->mac[0];
+        } else {
+            pkt->destination_mac = MSTP_BROADCAST_ADDRESS;
+        }
+        if (Ringbuf_Data_Put(&PDU_Queue, (uint8_t *)pkt)) {
+            bytes_sent = pdu_len;
+        }
     }
 
     return bytes_sent;
+}
+
+/* returns true if the Send PDU Queue is Empty */
+bool dlmstp_send_pdu_queue_empty(void)
+{
+    return Ringbuf_Empty(&PDU_Queue);
+}
+
+/* returns true if the Send PDU Queue is Full */
+bool dlmstp_send_pdu_queue_full(void)
+{
+    return Ringbuf_Full(&PDU_Queue);
 }
 
 /* master node FSM states */
@@ -1578,7 +1589,7 @@ uint8_t dlmstp_mac_address(
 void dlmstp_set_max_info_frames(
     uint8_t max_info_frames)
 {
-    if (max_info_frames >= 1) {
+    if (max_info_frames >= MSTP_PDU_PACKET_COUNT) {
         Nmax_info_frames = max_info_frames;
     }
 

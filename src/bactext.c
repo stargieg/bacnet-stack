@@ -163,116 +163,124 @@ const char *bactext_application_tag_name(
         ASHRAE_Reserved_String);
 }
 
+bool bactext_application_tag_index(
+    const char *search_name,
+    unsigned *found_index)
+{
+    return indtext_by_istring(bacnet_application_tag_names, search_name,
+        found_index);
+}
+
 INDTEXT_DATA bacnet_object_type_names[] = {
-    {OBJECT_ANALOG_INPUT, "Analog Input"}
+    {OBJECT_ANALOG_INPUT, "analog-input"}
     ,
-    {OBJECT_ANALOG_OUTPUT, "Analog Output"}
+    {OBJECT_ANALOG_OUTPUT, "analog-output"}
     ,
-    {OBJECT_ANALOG_VALUE, "Analog Value"}
+    {OBJECT_ANALOG_VALUE, "analog-value"}
     ,
-    {OBJECT_BINARY_INPUT, "Binary Input"}
+    {OBJECT_BINARY_INPUT, "binary-input"}
     ,
-    {OBJECT_BINARY_OUTPUT, "Binary Output"}
+    {OBJECT_BINARY_OUTPUT, "binary-output"}
     ,
-    {OBJECT_BINARY_VALUE, "Binary Value"}
+    {OBJECT_BINARY_VALUE, "binary-value"}
     ,
-    {OBJECT_CALENDAR, "Calendar"}
+    {OBJECT_CALENDAR, "calendar"}
     ,
-    {OBJECT_COMMAND, "Command"}
+    {OBJECT_COMMAND, "command"}
     ,
-    {OBJECT_DEVICE, "Device"}
+    {OBJECT_DEVICE, "device"}
     ,
-    {OBJECT_EVENT_ENROLLMENT, "Event Enrollment"}
+    {OBJECT_EVENT_ENROLLMENT, "event-enrollment"}
     ,
-    {OBJECT_FILE, "File"}
+    {OBJECT_FILE, "file"}
     ,
-    {OBJECT_GROUP, "Group"}
+    {OBJECT_GROUP, "group"}
     ,
-    {OBJECT_LOOP, "Loop"}
+    {OBJECT_LOOP, "loop"}
     ,
-    {OBJECT_MULTI_STATE_INPUT, "Multi-state Input"}
+    {OBJECT_MULTI_STATE_INPUT, "multi-state-input"}
     ,
-    {OBJECT_MULTI_STATE_OUTPUT, "Multi-state Output"}
+    {OBJECT_MULTI_STATE_OUTPUT, "multi-state-output"}
     ,
-    {OBJECT_NOTIFICATION_CLASS, "Notification Class"}
+    {OBJECT_NOTIFICATION_CLASS, "notification-class"}
     ,
-    {OBJECT_PROGRAM, "Program"}
+    {OBJECT_PROGRAM, "program"}
     ,
-    {OBJECT_SCHEDULE, "Schedule"}
+    {OBJECT_SCHEDULE, "schedule"}
     ,
-    {OBJECT_AVERAGING, "Averaging"}
+    {OBJECT_AVERAGING, "averaging"}
     ,
-    {OBJECT_MULTI_STATE_VALUE, "Multi-state Value"}
+    {OBJECT_MULTI_STATE_VALUE, "multi-state-value"}
     ,
-    {OBJECT_TRENDLOG, "TrendLog"}
+    {OBJECT_TRENDLOG, "trend-log"}
     ,
-    {OBJECT_LIFE_SAFETY_POINT, "Life Safety Point"}
+    {OBJECT_LIFE_SAFETY_POINT, "life-safety-point"}
     ,
-    {OBJECT_LIFE_SAFETY_ZONE, "Life Safety Zone"}
+    {OBJECT_LIFE_SAFETY_ZONE, "life-safety-zone"}
     ,
-    {OBJECT_ACCUMULATOR, "Accumulator"}
+    {OBJECT_ACCUMULATOR, "accumulator"}
     ,
-    {OBJECT_PULSE_CONVERTER, "Pulse Converter"}
+    {OBJECT_PULSE_CONVERTER, "pulse-converter"}
     ,
-    {OBJECT_EVENT_LOG, "Event Log"}
+    {OBJECT_EVENT_LOG, "event-log"}
     ,
-    {OBJECT_GLOBAL_GROUP, "Global Group"}
+    {OBJECT_GLOBAL_GROUP, "global-group"}
     ,
-    {OBJECT_TREND_LOG_MULTIPLE, "Trend Log Multiple"}
+    {OBJECT_TREND_LOG_MULTIPLE, "trend-log-multiple"}
     ,
-    {OBJECT_LOAD_CONTROL, "Load Control"}
+    {OBJECT_LOAD_CONTROL, "load-control"}
     ,
-    {OBJECT_STRUCTURED_VIEW, "Structured View"}
+    {OBJECT_STRUCTURED_VIEW, "structured-view"}
     ,
-    {OBJECT_ACCESS_DOOR, "Access Door"}
+    {OBJECT_ACCESS_DOOR, "access-door"}
     ,
-    {OBJECT_LIGHTING_OUTPUT, "Lighting Output"}
+    {OBJECT_LIGHTING_OUTPUT, "lighting-output"}
     ,
-    {OBJECT_ACCESS_CREDENTIAL, "Access Credential"}
+    {OBJECT_ACCESS_CREDENTIAL, "access-credential"}
     ,
-    {OBJECT_ACCESS_POINT, "Access Point"}
+    {OBJECT_ACCESS_POINT, "access-point"}
     ,
-    {OBJECT_ACCESS_RIGHTS, "Access Rights"}
+    {OBJECT_ACCESS_RIGHTS, "access-rights"}
     ,
-    {OBJECT_ACCESS_USER, "Access User"}
+    {OBJECT_ACCESS_USER, "access-user"}
     ,
-    {OBJECT_ACCESS_ZONE, "Access Zone"}
+    {OBJECT_ACCESS_ZONE, "access-zone"}
     ,
-    {OBJECT_CREDENTIAL_DATA_INPUT, "Credential Data Input"}
+    {OBJECT_CREDENTIAL_DATA_INPUT, "credential-data-input"}
     ,
-    {OBJECT_NETWORK_SECURITY, "Network Security"}
+    {OBJECT_NETWORK_SECURITY, "network-security"}
     ,
-    {OBJECT_BITSTRING_VALUE, "BitString Value"}
+    {OBJECT_BITSTRING_VALUE, "bitstring-value"}
     ,
-    {OBJECT_CHARACTERSTRING_VALUE, "CharacterString Value"}
+    {OBJECT_CHARACTERSTRING_VALUE, "characterstring-value"}
     ,
-    {OBJECT_DATE_PATTERN_VALUE, "Date Pattern Value"}
+    {OBJECT_DATE_PATTERN_VALUE, "date-pattern-value"}
     ,
-    {OBJECT_DATE_VALUE, "Date Value"}
+    {OBJECT_DATE_VALUE, "date-value"}
     ,
-    {OBJECT_DATETIME_PATTERN_VALUE, "DateTime Pattern Value"}
+    {OBJECT_DATETIME_PATTERN_VALUE, "datetime-pattern-value"}
     ,
-    {OBJECT_DATETIME_VALUE, "DateTime Value"}
+    {OBJECT_DATETIME_VALUE, "datetime-value"}
     ,
-    {OBJECT_INTEGER_VALUE, "Integer Value"}
+    {OBJECT_INTEGER_VALUE, "integer-value"}
     ,
-    {OBJECT_LARGE_ANALOG_VALUE, "Large Analog Value"}
+    {OBJECT_LARGE_ANALOG_VALUE, "large-analog-value"}
     ,
-    {OBJECT_OCTETSTRING_VALUE, "OctetString Value"}
+    {OBJECT_OCTETSTRING_VALUE, "octetstring-value"}
     ,
-    {OBJECT_POSITIVE_INTEGER_VALUE, "Positive Integer Value"}
+    {OBJECT_POSITIVE_INTEGER_VALUE, "positive-integer-value"}
     ,
-    {OBJECT_TIME_PATTERN_VALUE, "Time Pattern Value"}
+    {OBJECT_TIME_PATTERN_VALUE, "time-pattern-value"}
     ,
-    {OBJECT_TIME_VALUE, "Time Value"}
+    {OBJECT_TIME_VALUE, "time-value"}
     ,
-    {OBJECT_NOTIFICATION_FORWARDER, "Notification Forwarder"}
+    {OBJECT_NOTIFICATION_FORWARDER, "notification-forwarder"}
     ,
-    {OBJECT_ALERT_ENROLLMENT, "Alert Enrollment"}
+    {OBJECT_ALERT_ENROLLMENT, "alert-enrollment"}
     ,
-    {OBJECT_CHANNEL, "Channel"}
+    {OBJECT_CHANNEL, "channel"}
     ,
-    {OBJECT_LIGHTING_OUTPUT, "Lighting Output"}
+    {OBJECT_LIGHTING_OUTPUT, "lighting-output"}
     ,
     {0, NULL}
     /* Enumerated values 0-127 are reserved for definition by ASHRAE.
@@ -784,7 +792,7 @@ INDTEXT_DATA bacnet_property_names[] = {
     ,
     {PROP_AUTHENTICATION_POLICY_NAMES, "authentication-policy-names"}
     ,
-    {PROP_AUTHORIZATION_STATUS, "authentication-status"}
+    {PROP_AUTHENTICATION_STATUS, "authentication-status"}
     ,
     {PROP_AUTHORIZATION_MODE, "authorization-mode"}
     ,
@@ -804,7 +812,7 @@ INDTEXT_DATA bacnet_property_names[] = {
     ,
     {PROP_EXIT_POINTS, "exit-points"}
     ,
-    {PROP_EXPIRY_TIME, "expiry-time"}
+    {PROP_EXPIRATION_TIME, "expiration-time"}
     ,
     {PROP_EXTENDED_TIME_ENABLE, "extended-time-enable"}
     ,
@@ -1005,7 +1013,7 @@ INDTEXT_DATA bacnet_property_names[] = {
     ,
     {PROP_DEFAULT_STEP_INCREMENT, "default-step-increment"}
     ,
-    {PROP_EGRESS_TIMER, "egress-timer"}
+    {PROP_EGRESS_TIME, "egress-time"}
     ,
     {PROP_IN_PROGRESS, "in-progress"}
     ,
@@ -1014,7 +1022,7 @@ INDTEXT_DATA bacnet_property_names[] = {
     {PROP_LIGHTING_COMMAND, "lighting-command"}
     ,
     {PROP_LIGHTING_COMMAND_DEFAULT_PRIORITY,
-            "lighting-command-default-priority"}
+        "lighting-command-default-priority"}
     ,
     {PROP_MAX_ACTUAL_VALUE, "max-actual-value"}
     ,
@@ -1037,6 +1045,14 @@ const char *bactext_property_name(
 {
     return indtext_by_index_split_default(bacnet_property_names, index, 512,
         ASHRAE_Reserved_String, Vendor_Proprietary_String);
+}
+
+const char *bactext_property_name_default(
+    unsigned index,
+    const char *default_string)
+{
+    return indtext_by_index_default(bacnet_property_names, index,
+        default_string);
 }
 
 unsigned bactext_property_id(
@@ -1483,6 +1499,8 @@ INDTEXT_DATA bacnet_reject_reason_names[] = {
     ,
     {REJECT_REASON_UNRECOGNIZED_SERVICE, "Unrecognized Service"}
     ,
+    {REJECT_REASON_PROPRIETARY_FIRST, "Proprietary"}
+    ,
     {0, NULL}
 };
 
@@ -1490,7 +1508,7 @@ const char *bactext_reject_reason_name(
     unsigned index)
 {
     return indtext_by_index_split_default(bacnet_reject_reason_names, index,
-        FIRST_PROPRIETARY_REJECT_REASON, ASHRAE_Reserved_String,
+        REJECT_REASON_PROPRIETARY_FIRST, ASHRAE_Reserved_String,
         Vendor_Proprietary_String);
 }
 
@@ -1506,6 +1524,8 @@ INDTEXT_DATA bacnet_abort_reason_names[] = {
     ,
     {ABORT_REASON_SEGMENTATION_NOT_SUPPORTED, "Segmentation Not Supported"}
     ,
+    {ABORT_REASON_PROPRIETARY_FIRST, "Proprietary"}
+    ,
     {0, NULL}
 };
 
@@ -1513,7 +1533,7 @@ const char *bactext_abort_reason_name(
     unsigned index)
 {
     return indtext_by_index_split_default(bacnet_abort_reason_names, index,
-        FIRST_PROPRIETARY_ABORT_REASON, ASHRAE_Reserved_String,
+        ABORT_REASON_PROPRIETARY_FIRST, ASHRAE_Reserved_String,
         Vendor_Proprietary_String);
 }
 
@@ -1539,7 +1559,7 @@ const char *bactext_error_class_name(
     unsigned index)
 {
     return indtext_by_index_split_default(bacnet_error_class_names, index,
-        FIRST_PROPRIETARY_ERROR_CLASS, ASHRAE_Reserved_String,
+        ERROR_CLASS_PROPRIETARY_FIRST, ASHRAE_Reserved_String,
         Vendor_Proprietary_String);
 }
 
@@ -1581,7 +1601,7 @@ INDTEXT_DATA bacnet_error_code_names[] = {
     ,
     {ERROR_CODE_INVALID_FILE_ACCESS_METHOD, "invalid-file-access-method"}
     ,
-    {ERROR_CODE_ERROR_CODE_INVALID_FILE_START_POSITION,
+    {ERROR_CODE_INVALID_FILE_START_POSITION,
         "error-code-invalid-file-start-position"}
     ,
     {ERROR_CODE_INVALID_OPERATOR_NAME, "invalid-operator-name"}
@@ -1723,11 +1743,123 @@ INDTEXT_DATA bacnet_error_code_names[] = {
     ,
     {ERROR_CODE_PARAMETER_OUT_OF_RANGE, "parameter-out-of-range"}
     ,
-    {ERROR_CODE_UNKNOWN_FILE_SIZE, "unknown-file-size"}
+    {ERROR_CODE_LIST_ELEMENT_NOT_FOUND, "list-element-not-found"}
     ,
     {ERROR_CODE_BUSY, "busy"}
     ,
     {ERROR_CODE_COMMUNICATION_DISABLED, "communication-disabled"}
+    ,
+    {ERROR_CODE_COMMUNICATION_DISABLED, "access-denied"}
+    ,
+    {ERROR_CODE_SUCCESS, "success"}
+    ,
+    {ERROR_CODE_ACCESS_DENIED, "access-denied"}
+    ,
+    {ERROR_CODE_BAD_DESTINATION_ADDRESS, "bad-destination-address"}
+    ,
+    {ERROR_CODE_BAD_DESTINATION_DEVICE_ID, "bad-destination-device-id"}
+    ,
+    {ERROR_CODE_BAD_SIGNATURE, "bad-signature"}
+    ,
+    {ERROR_CODE_BAD_SOURCE_ADDRESS, "bad-source-address"}
+    ,
+    {ERROR_CODE_BAD_TIMESTAMP, "bad-timestamp"}
+    ,
+    {ERROR_CODE_CANNOT_USE_KEY, "cannot-use-key"}
+    ,
+    {ERROR_CODE_CANNOT_VERIFY_MESSAGE_ID, "cannot-verify-message-id"}
+    ,
+    {ERROR_CODE_CORRECT_KEY_REVISION, "correct-key-revision"}
+    ,
+    {ERROR_CODE_DESTINATION_DEVICE_ID_REQUIRED,
+        "destination-device-id-required"}
+    ,
+    {ERROR_CODE_DUPLICATE_MESSAGE, "duplicate-message"}
+    ,
+    {ERROR_CODE_ENCRYPTION_NOT_CONFIGURED, "encryption-not-configured"}
+    ,
+    {ERROR_CODE_ENCRYPTION_REQUIRED, "encryption-required"}
+    ,
+    {ERROR_CODE_INCORRECT_KEY, "incorrect-key"}
+    ,
+    {ERROR_CODE_INVALID_KEY_DATA, "invalid-key-data"}
+    ,
+    {ERROR_CODE_KEY_UPDATE_IN_PROGRESS, "key-update-in-progress"}
+    ,
+    {ERROR_CODE_MALFORMED_MESSAGE, "malformed-message"}
+    ,
+    {ERROR_CODE_NOT_KEY_SERVER, "not-key-server"}
+    ,
+    {ERROR_CODE_SECURITY_NOT_CONFIGURED, "security-not-configured"}
+    ,
+    {ERROR_CODE_SOURCE_SECURITY_REQUIRED, "source-security-required"}
+    ,
+    {ERROR_CODE_TOO_MANY_KEYS, "too-many-keys"}
+    ,
+    {ERROR_CODE_UNKNOWN_AUTHENTICATION_TYPE, "unknown-authentication-type"}
+    ,
+    {ERROR_CODE_UNKNOWN_KEY, "unknown-key"}
+    ,
+    {ERROR_CODE_UNKNOWN_KEY_REVISION, "unknown-key-revision"}
+    ,
+    {ERROR_CODE_UNKNOWN_SOURCE_MESSAGE, "unknown-source-message"}
+    ,
+    {ERROR_CODE_NOT_ROUTER_TO_DNET, "not-router-to-dnet"}
+    ,
+    {ERROR_CODE_ROUTER_BUSY, "router-busy"}
+    ,
+    {ERROR_CODE_UNKNOWN_NETWORK_MESSAGE, "unknown-network-message"}
+    ,
+    {ERROR_CODE_MESSAGE_TOO_LONG, "message-too-long"}
+    ,
+    {ERROR_CODE_SECURITY_ERROR, "security-error"}
+    ,
+    {ERROR_CODE_ADDRESSING_ERROR, "addressing-error"}
+    ,
+    {ERROR_CODE_WRITE_BDT_FAILED, "write-bdt-failed"}
+    ,
+    {ERROR_CODE_READ_BDT_FAILED, "read-bdt-failed"}
+    ,
+    {ERROR_CODE_REGISTER_FOREIGN_DEVICE_FAILED,
+        "register-foreign-device-failed"}
+    ,
+    {ERROR_CODE_READ_FDT_FAILED, "read-fdt-failed"}
+    ,
+    {ERROR_CODE_DELETE_FDT_ENTRY_FAILED, "delete-fdt-entry-failed"}
+    ,
+    {ERROR_CODE_DISTRIBUTE_BROADCAST_FAILED, "distribute-broadcast-failed"}
+    ,
+    {ERROR_CODE_UNKNOWN_FILE_SIZE, "unknown-file-size"}
+    ,
+    {ERROR_CODE_ABORT_APDU_TOO_LONG, "abort-apdu-too-long"}
+    ,
+    {ERROR_CODE_ABORT_APPLICATION_EXCEEDED_REPLY_TIME,
+        "abort-application-exceeded-reply-time"}
+    ,
+    {ERROR_CODE_ABORT_OUT_OF_RESOURCES, "abort-out-of-resources"}
+    ,
+    {ERROR_CODE_ABORT_TSM_TIMEOUT, "abort-tsm-timeout"}
+    ,
+    {ERROR_CODE_ABORT_WINDOW_SIZE_OUT_OF_RANGE,
+        "abort-window-size-out-of-range"}
+    ,
+    {ERROR_CODE_FILE_FULL, "file-full"}
+    ,
+    {ERROR_CODE_INCONSISTENT_CONFIGURATION, "inconsistent-configuration"}
+    ,
+    {ERROR_CODE_INCONSISTENT_OBJECT_TYPE, "inconsistent-object-type"}
+    ,
+    {ERROR_CODE_INTERNAL_ERROR, "internal-error"}
+    ,
+    {ERROR_CODE_NOT_CONFIGURED, "not-configured"}
+    ,
+    {ERROR_CODE_OUT_OF_MEMORY, "out-of-memory"}
+    ,
+    {ERROR_CODE_VALUE_TOO_LONG, "value-too-long"}
+    ,
+    {ERROR_CODE_ABORT_INSUFFICIENT_SECURITY, "abort-insufficient-security"}
+    ,
+    {ERROR_CODE_ABORT_SECURITY_ERROR, "abort-security-error"}
     ,
     {0, NULL}
 };
@@ -1736,7 +1868,7 @@ const char *bactext_error_code_name(
     unsigned index)
 {
     return indtext_by_index_split_default(bacnet_error_code_names, index,
-        FIRST_PROPRIETARY_ERROR_CLASS, ASHRAE_Reserved_String,
+        ERROR_CODE_PROPRIETARY_FIRST, ASHRAE_Reserved_String,
         Vendor_Proprietary_String);
 }
 
@@ -2034,6 +2166,14 @@ const char *bactext_segmentation_name(
         ASHRAE_Reserved_String);
 }
 
+bool bactext_segmentation_index(
+    const char *search_name,
+    unsigned *found_index)
+{
+    return indtext_by_istring(bacnet_segmentation_names, search_name,
+        found_index);
+}
+
 INDTEXT_DATA bacnet_node_type_names[] = {
     {BACNET_NODE_UNKNOWN, "unknown"}
     ,
@@ -2104,4 +2244,148 @@ const char *bactext_network_layer_msg_name(
         return Vendor_Proprietary_String;
     else
         return "Invalid Network Layer Message";
+}
+
+INDTEXT_DATA life_safety_state_names[] = {
+	{LIFE_SAFETY_STATE_QUIET, "quiet"}
+	,
+    {LIFE_SAFETY_STATE_PRE_ALARM, "pre-alarm"}
+	,
+    {LIFE_SAFETY_STATE_ALARM, "alarm"}
+	,
+    {LIFE_SAFETY_STATE_FAULT, "fault"}
+	,
+    {LIFE_SAFETY_STATE_FAULT_PRE_ALARM, "fault-pre-alarm"}
+	,
+    {LIFE_SAFETY_STATE_FAULT_ALARM, "fault-alarm"}
+	,
+    {LIFE_SAFETY_STATE_NOT_READY, "not-ready"}
+	,
+    {LIFE_SAFETY_STATE_ACTIVE, "active"}
+	,
+    {LIFE_SAFETY_STATE_TAMPER, "tamper"}
+	,
+    {LIFE_SAFETY_STATE_TEST_ALARM, "test-alarm"}
+	,
+    {LIFE_SAFETY_STATE_TEST_ACTIVE, "test-active"}
+	,
+    {LIFE_SAFETY_STATE_TEST_FAULT, "test-fault"}
+	,
+    {LIFE_SAFETY_STATE_TEST_FAULT_ALARM, "fault-alarm"}
+	,
+    {LIFE_SAFETY_STATE_HOLDUP, "holdupt"}
+	,
+    {LIFE_SAFETY_STATE_DURESS, "duress"}
+	,
+    {LIFE_SAFETY_STATE_TAMPER_ALARM, "tamper-alarm"}
+	,
+    {LIFE_SAFETY_STATE_ABNORMAL, "abnormal"}
+	,
+    {LIFE_SAFETY_STATE_EMERGENCY_POWER, "emergency-power"}
+	,
+    {LIFE_SAFETY_STATE_DELAYED, "delayed"}
+	,
+    {LIFE_SAFETY_STATE_BLOCKED, "blocked"}
+	,
+    {LIFE_SAFETY_STATE_LOCAL_ALARM, "local-alarm"}
+	,
+    {LIFE_SAFETY_STATE_GENERAL_ALARM, "general-alarm"}
+	,
+    {LIFE_SAFETY_STATE_SUPERVISORY, "supervisory"}
+	,
+    {LIFE_SAFETY_STATE_TEST_SUPERVISORY, "test-supervisory"}
+	,
+    {0, NULL}
+};
+
+const char *bactext_life_safety_state_name(
+        unsigned index)
+{
+	if (index < MAX_LIFE_SAFETY_STATE)
+        return indtext_by_index_default(life_safety_state_names, index,
+            ASHRAE_Reserved_String);
+    else
+        return "Invalid Safety State Message";
+}
+
+INDTEXT_DATA lighting_in_progress[] = {
+		{BACNET_LIGHTING_IDLE, "idle" }
+		,
+		{ BACNET_LIGHTING_FADE_ACTIVE, "fade" }
+		,
+		{ BACNET_LIGHTING_RAMP_ACTIVE, "ramp" }
+		,
+		{ BACNET_LIGHTING_NOT_CONTROLLED, "not" }
+		,
+		{BACNET_LIGHTING_OTHER, "other"}
+		,
+		{ 0, NULL }
+};
+
+const char *bactext_lighting_in_progress(
+	unsigned index)
+{
+	if (index < MAX_BACNET_LIGHTING_IN_PROGRESS)
+		return indtext_by_index_default(lighting_in_progress, index,
+		ASHRAE_Reserved_String);
+	else
+		return "Invalid Lighting In Progress Message";
+}
+
+INDTEXT_DATA lighting_transition[] = {
+		{ BACNET_LIGHTING_TRANSITION_IDLE, "idle" }
+		,
+		{ BACNET_LIGHTING_TRANSITION_FADE, "fade" }
+		,
+		{ BACNET_LIGHTING_TRANSITION_RAMP, "ramp" }
+		,
+		{ 0, NULL }
+};
+
+const char *bactext_lighting_transition(
+	unsigned index)
+{
+	if (index < MAX_BACNET_LIGHTING_TRANSITION)
+		return indtext_by_index_default(lighting_transition, index,
+		ASHRAE_Reserved_String);
+	else
+		return "Invalid Lighting Transition Message";
+}
+
+INDTEXT_DATA bacnet_lighting_operation_names[] = {
+    {BACNET_LIGHTS_NONE, "none"}
+    ,
+    {BACNET_LIGHTS_FADE_TO, "fade-to"}
+    ,
+    {BACNET_LIGHTS_RAMP_TO, "ramp-to"}
+    ,
+    {BACNET_LIGHTS_STEP_UP, "step-up"}
+    ,
+    {BACNET_LIGHTS_STEP_DOWN, "step-down"}
+    ,
+    {BACNET_LIGHTS_STEP_ON, "step-on"}
+    ,
+    {BACNET_LIGHTS_STEP_OFF, "step-off"}
+    ,
+    {BACNET_LIGHTS_WARN, "warn"}
+    ,
+    {BACNET_LIGHTS_WARN_OFF, "warn-off"}
+    ,
+    {BACNET_LIGHTS_WARN_RELINQUISH, "warn-relinquish"}
+    ,
+    {BACNET_LIGHTS_STOP, "stop"}
+    ,
+    {0, NULL}
+};
+
+const char *bactext_lighting_operation_name(
+    unsigned index)
+{
+    if (index < BACNET_LIGHTS_PROPRIETARY_FIRST)
+        return indtext_by_index_default(network_layer_msg_names, index,
+            ASHRAE_Reserved_String);
+    else if (index <= BACNET_LIGHTS_PROPRIETARY_LAST)
+        return Vendor_Proprietary_String;
+    else
+        return "Invalid BACnetLightingOperation";
 }

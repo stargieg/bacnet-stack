@@ -102,10 +102,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\object\lsp.h" />
-		<Unit filename="..\object\msi.c">
+		<Unit filename="..\object\ms-input.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\object\msi.h" />
+		<Unit filename="..\object\ms-input.h" />
 		<Unit filename="..\object\mso.c">
 			<Option compilerVar="CC" />
 		</Unit>

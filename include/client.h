@@ -34,6 +34,7 @@
 #include "bacapp.h"
 #include "bacenum.h"
 #include "rpm.h"
+#include "wpm.h"
 #include "cov.h"
 #include "event.h"
 #include "lso.h"
@@ -47,6 +48,12 @@ extern "C" {
 /* unconfirmed requests */
     void Send_I_Am(
         uint8_t * buffer);
+    void Send_I_Am_To_Network(
+        BACNET_ADDRESS * target_address,
+        uint32_t device_id,
+        unsigned int max_apdu,
+        int segmentation,
+        uint16_t vendor_id);
     int iam_encode_pdu(
         uint8_t * buffer,
         BACNET_ADDRESS * dest,
@@ -111,7 +118,11 @@ extern "C" {
         uint32_t device_id,
         BACNET_SUBSCRIBE_COV_DATA * cov_data);
 
-
+/* returns the invoke ID for confirmed request, or 0 if failed */
+    uint8_t Send_GetEvent(
+        BACNET_ADDRESS * target_address,
+        BACNET_OBJECT_ID *lastReceivedObjectIdentifier);
+    uint8_t Send_GetEvent_Global(void);
 
 /* returns the invoke ID for confirmed request, or 0 if failed */
     uint8_t Send_Read_Property_Request_Address(
@@ -151,6 +162,9 @@ extern "C" {
         int application_data_len,
         uint8_t priority,
         uint32_t array_index);
+    uint8_t Send_Write_Property_Multiple_Request_Data(
+        uint32_t device_id,
+        BACNET_WRITE_ACCESS_DATA * write_access_data);
 
 /* returns the invoke ID for confirmed request, or 0 if failed */
     uint8_t Send_Reinitialize_Device_Request(
@@ -175,6 +189,12 @@ extern "C" {
     void Send_TimeSyncUTC(
         BACNET_DATE * bdate,
         BACNET_TIME * btime);
+    void Send_TimeSyncUTC_Remote(
+        BACNET_ADDRESS * dest,
+        BACNET_DATE * bdate,
+        BACNET_TIME * btime);
+    void Send_TimeSyncUTC_Device(void);
+    void Send_TimeSync_Device(void);
 
     uint8_t Send_Atomic_Read_File_Stream(
         uint32_t device_id,
@@ -223,9 +243,59 @@ extern "C" {
         uint32_t device_id,
         BACNET_ALARM_ACK_DATA * data);
 
-    void Send_UnconfirmedPrivateTransfer(
+    int Send_UnconfirmedPrivateTransfer(
         BACNET_ADDRESS * dest,
         BACNET_PRIVATE_TRANSFER_DATA * private_data);
+
+    uint8_t Send_Get_Alarm_Summary_Address(
+        BACNET_ADDRESS *dest,
+        uint16_t max_apdu);
+
+    uint8_t Send_Get_Alarm_Summary(
+        uint32_t device_id);
+
+    uint8_t Send_Get_Event_Information_Address(
+        BACNET_ADDRESS *dest,
+        uint16_t max_apdu,
+        BACNET_OBJECT_ID * lastReceivedObjectIdentifier);
+
+    uint8_t Send_Get_Event_Information(
+        uint32_t device_id,
+        BACNET_OBJECT_ID * lastReceivedObjectIdentifier);
+
+    int Send_Abort_To_Network(
+        uint8_t * buffer,
+        BACNET_ADDRESS *dest,
+        uint8_t invoke_id,
+        BACNET_ABORT_REASON reason,
+        bool server);
+
+    int abort_encode_pdu(
+        uint8_t * buffer,
+        BACNET_ADDRESS * dest,
+        BACNET_ADDRESS * src,
+        BACNET_NPDU_DATA * npdu_data,
+        uint8_t invoke_id,
+        BACNET_ABORT_REASON reason,
+        bool server);
+
+    int Send_Error_To_Network(
+        uint8_t * buffer,
+        BACNET_ADDRESS *dest,
+        uint8_t invoke_id,
+        BACNET_CONFIRMED_SERVICE service,
+        BACNET_ERROR_CLASS error_class,
+        BACNET_ERROR_CODE error_code);
+
+    int error_encode_pdu(
+        uint8_t * buffer,
+        BACNET_ADDRESS * dest,
+        BACNET_ADDRESS * src,
+        BACNET_NPDU_DATA * npdu_data,
+        uint8_t invoke_id,
+        BACNET_CONFIRMED_SERVICE service,
+        BACNET_ERROR_CLASS error_class,
+        BACNET_ERROR_CODE error_code);
 
 #ifdef __cplusplus
 }

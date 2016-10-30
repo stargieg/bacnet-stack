@@ -235,6 +235,14 @@ extern "C" {
 
     void Device_getCurrentDateTime(
         BACNET_DATE_TIME * DateTime);
+    int32_t Device_UTC_Offset(void);
+    bool Device_Daylight_Savings_Status(void);
+    bool Device_Align_Intervals(void);
+    bool Device_Align_Intervals_Set(bool flag);
+    uint32_t Device_Time_Sync_Interval(void);
+    bool Device_Time_Sync_Interval_Set(uint32_t value);
+    uint32_t Device_Interval_Offset(void);
+    bool Device_Interval_Offset_Set(uint32_t value);
 
     void Device_Property_Lists(
         const int **pRequired,
@@ -242,6 +250,7 @@ extern "C" {
         const int **pProprietary);
     void Device_Objects_Property_List(
         BACNET_OBJECT_TYPE object_type,
+        uint32_t object_instance,
         struct special_property_list_t *pPropertyList);
     /* functions to support COV */
     bool Device_Encode_Value_List(
@@ -285,6 +294,7 @@ extern "C" {
         BACNET_OBJECT_TYPE object_type,
         uint32_t object_instance,
         BACNET_CHARACTER_STRING * object_name);
+    bool Device_Object_Name_ANSI_Init(const char * object_name);
 
     BACNET_DEVICE_STATUS Device_System_Status(
         void);
@@ -440,11 +450,11 @@ extern "C" {
  *  - The interface between the implemented Objects and the BAC-stack services,
  *    specifically the handlers, which are mediated through function calls to
  *    the Device object.
- *//** @defgroup ObjHelpers Object Helper Functions
+    *//** @defgroup ObjHelpers Object Helper Functions
  * @ingroup ObjFrmwk
  * This section describes the function templates for the helper functions that
  * provide common object support.
- *//** @defgroup ObjIntf Handler-to-Object Interface Functions
+    *//** @defgroup ObjIntf Handler-to-Object Interface Functions
  * @ingroup ObjFrmwk
  * This section describes the fairly limited set of functions that link the
  * BAC-stack handlers to the BACnet Object instances.  All of these calls are

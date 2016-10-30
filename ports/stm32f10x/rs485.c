@@ -86,7 +86,11 @@ static uint16_t rs485_turnaround_time(
     /* delay after reception before transmitting - per MS/TP spec */
     /* wait a minimum  40 bit times since reception */
     /* at least 2 ms for errors: rounding, clock tick */
-    return (2 + ((Tturnaround * 1000UL) / Baud_Rate));
+    if (Baud_Rate) {
+        return (2 + ((Tturnaround * 1000UL) / Baud_Rate));
+    } else {
+        return 2;
+    }
 }
 
 /*************************************************************************
@@ -112,7 +116,7 @@ bool rs485_receive_error(
     return false;
 }
 
-                                                                                                                                                                                                                     /*********************************************************************//**
+/*********************************************************************//**
  * @brief        USARTx interrupt handler sub-routine
  * @param[in]    None
  * @return         None
@@ -325,8 +329,13 @@ void rs485_init(
     GPIO_Init(GPIOA, &GPIO_InitStructure);
     /* Enable USARTx Clock */
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2, ENABLE);
+    /*RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);*/
     /* Enable GPIO Clock */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+    /* Enable the USART Pins Software Remapping for this pair
+    of pins and peripheral functions:
+    USART3 Full remap (TX/PD8, RX/PD9, CK/PD10, CTS/PD11, RTS/PD12) */
+    /*GPIO_PinRemapConfig(GPIO_FullRemap_USART3, ENABLE);*/
     /* Configure the NVIC Preemption Priority Bits */
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
     /* Enable the USARTx Interrupt */

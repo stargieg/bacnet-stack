@@ -32,6 +32,10 @@
 #include <stdint.h>
 #include <string.h>     /* for memmove */
 #include <time.h>       /* for timezone, localtime */
+/* OS specific include*/
+#include "net.h"
+#include "timer.h"
+/* BACnet includes */
 #include "bacdef.h"
 #include "bacdcode.h"
 #include "bacenum.h"
@@ -45,6 +49,12 @@
 #include "address.h"
 /* include the device object */
 #include "device.h"     /* me */
+
+#if defined(__BORLANDC__) || defined(_WIN32)
+/* seems to not be defined in time.h as specified by The Open Group */
+/* difference from UTC and local standard time  */
+long int timezone;
+#endif
 
 /* note: you really only need to define variables for
    properties that are writable or that may change.
@@ -69,16 +79,21 @@ static char *Description = "command line client";
 /* static uint8_t Max_Segments_Accepted = 0; */
 /* VT_Classes_Supported */
 /* Active_VT_Sessions */
-/* static BACNET_TIME Local_Time;  rely on OS, if there is one */
-/* static BACNET_DATE Local_Date;   rely on OS, if there is one */
+static BACNET_TIME Local_Time;  /* rely on OS, if there is one */
+static BACNET_DATE Local_Date;  /* rely on OS, if there is one */
 /* NOTE: BACnet UTC Offset is inverse of common practice.
    If your UTC offset is -5hours of GMT,
    then BACnet UTC offset is +5hours.
    BACnet UTC offset is expressed in minutes. */
-/* static int32_t UTC_Offset = 5 * 60; */
-/* static bool Daylight_Savings_Status = false;    rely on OS */
-/* List_Of_Session_Keys */
+static int32_t UTC_Offset = 5 * 60;
+static bool Daylight_Savings_Status = false;    /* rely on OS */
+#if defined(BACNET_TIME_MASTER)
+static bool Align_Intervals;
+static uint32_t Interval_Minutes;
+static uint32_t Interval_Offset_Minutes;
 /* Time_Synchronization_Recipients */
+#endif
+/* List_Of_Session_Keys */
 /* Max_Master - rely on MS/TP subsystem, if there is one */
 /* Max_Info_Frames - rely on MS/TP subsystem, if there is one */
 /* Device_Address_Binding - required, but relies on binding cache */
@@ -632,6 +647,157 @@ bool Device_Object_Name_Copy(
 
     return found;
 }
+
+static void Update_Current_Time(
+    void)
+{
+    struct tm *tblock = NULL;
+#if defined(_MSC_VER)
+    time_t tTemp;
+#else
+    struct timeval tv;
+#endif
+/*
+struct tm
+
+int    tm_sec   Seconds [0,60].
+int    tm_min   Minutes [0,59].
+int    tm_hour  Hour [0,23].
+int    tm_mday  Day of month [1,31].
+int    tm_mon   Month of year [0,11].
+int    tm_year  Years since 1900.
+int    tm_wday  Day of week [0,6] (Sunday =0).
+int    tm_yday  Day of year [0,365].
+int    tm_isdst Daylight Savings flag.
+*/
+#if defined(_MSC_VER)
+    time(&tTemp);
+    tblock = (struct tm *)localtime(&tTemp);
+#else
+    if (gettimeofday(&tv, NULL) == 0) {
+        tblock = (struct tm *)localtime((const time_t *)&tv.tv_sec);
+    }
+#endif
+
+    if (tblock) {
+        datetime_set_date(&Local_Date, (uint16_t) tblock->tm_year + 1900,
+            (uint8_t) tblock->tm_mon + 1, (uint8_t) tblock->tm_mday);
+#if !defined(_MSC_VER)
+        datetime_set_time(&Local_Time, (uint8_t) tblock->tm_hour,
+            (uint8_t) tblock->tm_min, (uint8_t) tblock->tm_sec,
+            (uint8_t) (tv.tv_usec / 10000));
+#else
+        datetime_set_time(&Local_Time, (uint8_t) tblock->tm_hour,
+            (uint8_t) tblock->tm_min, (uint8_t) tblock->tm_sec, 0);
+#endif
+        if (tblock->tm_isdst) {
+            Daylight_Savings_Status = true;
+        } else {
+            Daylight_Savings_Status = false;
+        }
+        /* note: timezone is declared in <time.h> stdlib. */
+        UTC_Offset = timezone / 60;
+    } else {
+        datetime_date_wildcard_set(&Local_Date);
+        datetime_time_wildcard_set(&Local_Time);
+        Daylight_Savings_Status = false;
+    }
+}
+
+void Device_getCurrentDateTime(
+    BACNET_DATE_TIME * DateTime)
+{
+    Update_Current_Time();
+
+    DateTime->date = Local_Date;
+    DateTime->time = Local_Time;
+}
+
+int32_t Device_UTC_Offset(void)
+{
+    Update_Current_Time();
+
+    return UTC_Offset;
+}
+
+bool Device_Daylight_Savings_Status(void)
+{
+    return Daylight_Savings_Status;
+}
+
+#if defined(BACNET_TIME_MASTER)
+/**
+ * Sets the time sync interval in minutes
+ *
+ * @param flag
+ * This property, of type BOOLEAN, specifies whether (TRUE)
+ * or not (FALSE) clock-aligned periodic time synchronization is
+ * enabled. If periodic time synchronization is enabled and the
+ * time synchronization interval is a factor of (divides without
+ * remainder) an hour or day, then the beginning of the period
+ * specified for time synchronization shall be aligned to the hour or
+ * day, respectively. If this property is present, it shall be writable.
+ */
+bool Device_Align_Intervals_Set(bool flag)
+{
+    Align_Intervals = flag;
+
+    return true;
+}
+
+bool Device_Align_Intervals(void)
+{
+    return Align_Intervals;
+}
+
+/**
+ * Sets the time sync interval in minutes
+ *
+ * @param minutes
+ * This property, of type Unsigned, specifies the periodic
+ * interval in minutes at which TimeSynchronization and
+ * UTCTimeSynchronization requests shall be sent. If this
+ * property has a value of zero, then periodic time synchronization is
+ * disabled. If this property is present, it shall be writable.
+ */
+bool Device_Time_Sync_Interval_Set(uint32_t minutes)
+{
+    Interval_Minutes = minutes;
+
+    return true;
+}
+
+uint32_t Device_Time_Sync_Interval(void)
+{
+    return Interval_Minutes;
+}
+
+/**
+ * Sets the time sync interval offset value.
+ *
+ * @param minutes
+ * This property, of type Unsigned, specifies the offset in
+ * minutes from the beginning of the period specified for time
+ * synchronization until the actual time synchronization requests
+ * are sent. The offset used shall be the value of Interval_Offset
+ * modulo the value of Time_Synchronization_Interval;
+ * e.g., if Interval_Offset has the value 31 and
+ * Time_Synchronization_Interval is 30, the offset used shall be 1.
+ * Interval_Offset shall have no effect if Align_Intervals is
+ * FALSE. If this property is present, it shall be writable.
+ */
+bool Device_Interval_Offset_Set(uint32_t minutes)
+{
+    Interval_Offset_Minutes = minutes;
+
+    return true;
+}
+
+uint32_t Device_Interval_Offset(void)
+{
+    return Interval_Offset_Minutes;
+}
+#endif
 
 /* return the length of the apdu encoded or BACNET_STATUS_ERROR for error or
    BACNET_STATUS_ABORT for abort message */

@@ -47,13 +47,23 @@ extern "C" {
         unsigned index);
     const char *bactext_application_tag_name(
         unsigned index);
+	bool bactext_application_tag_index(
+		const char *search_name,
+		unsigned *found_index);
     const char *bactext_object_type_name(
         unsigned index);
     bool bactext_object_type_index(
         const char *search_name,
         unsigned *found_index);
+    const char *bactext_notify_type_name(
+        unsigned index);
+    const char *bactext_event_type_name(
+        unsigned index);
     const char *bactext_property_name(
         unsigned index);
+    const char *bactext_property_name_default(
+        unsigned index,
+        const char *default_string);
     bool bactext_property_index(
         const char *search_name,
         unsigned *found_index);
@@ -93,9 +103,13 @@ extern "C" {
         unsigned index);
     const char *bactext_segmentation_name(
         unsigned index);
+	bool bactext_segmentation_index(
+		const char *search_name,
+		unsigned *found_index);
     const char *bactext_node_type_name(
         unsigned index);
-
+    const char *bactext_character_string_encoding_name(
+        unsigned index);
     const char *bactext_event_transition_name(
         unsigned index);
     bool bactext_event_transition_index(
@@ -111,6 +125,17 @@ extern "C" {
     const char *bactext_network_layer_msg_name(
         unsigned index);
 
+	const char *bactext_life_safety_state_name(
+        unsigned index);
+
+    const char *bactext_lighting_operation_name(
+        unsigned index);
+
+	const char *bactext_lighting_in_progress(
+		unsigned index);
+
+	const char *bactext_lighting_transition(
+		unsigned index);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

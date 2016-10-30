@@ -38,6 +38,7 @@
 #include "npdu.h"
 #include "bits.h"
 #include "ringbuf.h"
+#include "debug.h"
 /* OS Specific include */
 #include "net.h"
 
@@ -89,12 +90,12 @@ static RING_BUFFER PDU_Queue;
 /* that a node must wait for a station to begin replying to a */
 /* confirmed request: 255 milliseconds. (Implementations may use */
 /* larger values for this timeout, not to exceed 300 milliseconds.) */
-static uint16_t Treply_timeout = 260;
+static uint16_t Treply_timeout = 300;
 /* The minimum time without a DataAvailable or ReceiveError event that a */
 /* node must wait for a remote node to begin using a token or replying to */
 /* a Poll For Master frame: 20 milliseconds. (Implementations may use */
 /* larger values for this timeout, not to exceed 100 milliseconds.) */
-static uint8_t Tusage_timeout = 60;
+static uint8_t Tusage_timeout = 100;
 /* Timer that indicates line silence - and functions */
 
 static struct timeval start;
@@ -154,15 +155,22 @@ int dlmstp_send_pdu(
     struct mstp_pdu_packet *pkt;
     unsigned i = 0;
 
-    pkt = (struct mstp_pdu_packet *) Ringbuf_Alloc(&PDU_Queue);
+    pkt = (struct mstp_pdu_packet *) Ringbuf_Data_Peek(&PDU_Queue);
     if (pkt) {
         pkt->data_expecting_reply = npdu_data->data_expecting_reply;
         for (i = 0; i < pdu_len; i++) {
             pkt->buffer[i] = pdu[i];
         }
         pkt->length = pdu_len;
-        pkt->destination_mac = dest->mac[0];
-        bytes_sent = pdu_len;
+        if (dest && dest->mac_len) {
+            pkt->destination_mac = dest->mac[0];
+        } else {
+            /* mac_len = 0 is a broadcast address */
+            pkt->destination_mac = MSTP_BROADCAST_ADDRESS;
+        }
+        if (Ringbuf_Data_Put(&PDU_Queue, (uint8_t *)pkt)) {
+            bytes_sent = pdu_len;
+        }
     }
 
     return bytes_sent;
@@ -176,31 +184,30 @@ uint16_t dlmstp_receive(
 {       /* milliseconds to wait for a packet */
     uint16_t pdu_len = 0;
     struct timespec abstime;
-    int rv = 0;
 
     (void) max_pdu;
     /* see if there is a packet available, and a place
        to put the reply (if necessary) and process it */
+    pthread_mutex_lock(&Receive_Packet_Mutex);
     get_abstime(&abstime, timeout);
-    rv = pthread_cond_timedwait(&Receive_Packet_Flag, &Receive_Packet_Mutex,
+    pthread_cond_timedwait(&Receive_Packet_Flag, &Receive_Packet_Mutex,
         &abstime);
-    if (rv == 0) {
-        if (Receive_Packet.ready) {
-            if (Receive_Packet.pdu_len) {
-                MSTP_Packets++;
-                if (src) {
-                    memmove(src, &Receive_Packet.address,
-                        sizeof(Receive_Packet.address));
-                }
-                if (pdu) {
-                    memmove(pdu, &Receive_Packet.pdu,
-                        sizeof(Receive_Packet.pdu));
-                }
-                pdu_len = Receive_Packet.pdu_len;
+    if (Receive_Packet.ready) {
+        if (Receive_Packet.pdu_len) {
+            MSTP_Packets++;
+            if (src) {
+                memmove(src, &Receive_Packet.address,
+                    sizeof(Receive_Packet.address));
             }
-            Receive_Packet.ready = false;
+            if (pdu) {
+                memmove(pdu, &Receive_Packet.pdu,
+                    sizeof(Receive_Packet.pdu));
+            }
+            pdu_len = Receive_Packet.pdu_len;
         }
+        Receive_Packet.ready = false;
     }
+    pthread_mutex_unlock(&Receive_Packet_Mutex);
 
     return pdu_len;
 }
@@ -241,7 +248,7 @@ static void *dlmstp_master_fsm_task(
             }
         }
         if (run_master) {
-            if (MSTP_Port.This_Station <= DEFAULT_MAX_MASTER) {
+            if (MSTP_Port.This_Station <= 127) {
                 while (MSTP_Master_Node_FSM(&MSTP_Port)) {
                     /* do nothing while immediate transitioning */
                 }
@@ -285,11 +292,18 @@ uint16_t MSTP_Put_Receive(
 {
     uint16_t pdu_len = 0;
 
-    if (!Receive_Packet.ready) {
+    pthread_mutex_lock(&Receive_Packet_Mutex);
+    if (Receive_Packet.ready) {
+        debug_printf("MS/TP: Dropped! Not Ready.\n");
+    } else {
         /* bounds check - maybe this should send an abort? */
         pdu_len = mstp_port->DataLength;
-        if (pdu_len > sizeof(Receive_Packet.pdu))
+        if (pdu_len > sizeof(Receive_Packet.pdu)) {
             pdu_len = sizeof(Receive_Packet.pdu);
+        }
+        if (pdu_len == 0) {
+            debug_printf("MS/TP: PDU Length is 0!\n");
+        }
         memmove((void *) &Receive_Packet.pdu[0],
             (void *) &mstp_port->InputBuffer[0], pdu_len);
         dlmstp_fill_bacnet_address(&Receive_Packet.address,
@@ -298,6 +312,7 @@ uint16_t MSTP_Put_Receive(
         Receive_Packet.ready = true;
         pthread_cond_signal(&Receive_Packet_Flag);
     }
+    pthread_mutex_unlock(&Receive_Packet_Mutex);
 
     return pdu_len;
 }
@@ -467,6 +482,9 @@ static bool dlmstp_compare_data_expecting_reply(
 #endif
         return false;
     }
+#if 0
+    /* the NDPU priority doesn't get passed through the stack, and
+       all outgoing messages have NORMAL priority */
     if (request.npdu_data.priority != reply.npdu_data.priority) {
 #if PRINT_ENABLED
         fprintf(stderr,
@@ -474,6 +492,7 @@ static bool dlmstp_compare_data_expecting_reply(
 #endif
         return false;
     }
+#endif
     if (!bacnet_address_same(&request.address, &reply.address)) {
 #if PRINT_ENABLED
         fprintf(stderr,

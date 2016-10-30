@@ -1,18 +1,30 @@
-/*
-Copyright (C) 2012  Andriy Sukhynyuk, Vasyl Tkhir, Andriy Ivasiv
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+/**
+* @file
+* @author Andriy Sukhynyuk, Vasyl Tkhir, Andriy Ivasiv
+* @date 2012
+* @brief Network layer for BACnet routing
+*
+* @section LICENSE
+*
+* Permission is hereby granted, free of charge, to any person obtaining
+* a copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall be included
+* in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -158,6 +170,23 @@ uint16_t process_network_message(
         case NETWORK_MESSAGE_DISCONNECT_CONNECTION_TO_NETWORK:
             /* hell if I know what to do with these messages */
             break;
+        case NETWORK_MESSAGE_CHALLENGE_REQUEST:
+        case NETWORK_MESSAGE_SECURITY_PAYLOAD:
+        case NETWORK_MESSAGE_SECURITY_RESPONSE:
+        case NETWORK_MESSAGE_REQUEST_KEY_UPDATE:
+        case NETWORK_MESSAGE_UPDATE_KEY_SET:
+        case NETWORK_MESSAGE_UPDATE_DISTRIBUTION_KEY:
+        case NETWORK_MESSAGE_REQUEST_MASTER_KEY:
+        case NETWORK_MESSAGE_SET_MASTER_KEY:
+        case NETWORK_MESSAGE_NETWORK_NUMBER_IS:
+            /* security messages */
+            break;
+        case NETWORK_MESSAGE_WHAT_IS_NETWORK_NUMBER:
+            buff_len =
+                create_network_message(NETWORK_MESSAGE_NETWORK_NUMBER_IS,
+                data, buff, &buff);
+            break;
+
 
         default:
             PRINT(ERROR, "Error: Message unsupported\n");
@@ -268,6 +297,21 @@ uint16_t create_network_message(
         case NETWORK_MESSAGE_DISCONNECT_CONNECTION_TO_NETWORK:
             /* hell if I know what to do with these messages */
             break;
+        case NETWORK_MESSAGE_CHALLENGE_REQUEST:
+        case NETWORK_MESSAGE_SECURITY_PAYLOAD:
+        case NETWORK_MESSAGE_SECURITY_RESPONSE:
+        case NETWORK_MESSAGE_REQUEST_KEY_UPDATE:
+        case NETWORK_MESSAGE_UPDATE_KEY_SET:
+        case NETWORK_MESSAGE_UPDATE_DISTRIBUTION_KEY:
+        case NETWORK_MESSAGE_REQUEST_MASTER_KEY:
+        case NETWORK_MESSAGE_SET_MASTER_KEY:
+            /* security messages */
+            break;
+        case NETWORK_MESSAGE_NETWORK_NUMBER_IS:
+            /* fixme: needs message constructed */
+            break;
+        default:
+            break;
     }
 
     return buff_len;
@@ -287,6 +331,7 @@ void send_network_message(
     if (!data) {
         data = (MSG_DATA *) malloc(sizeof(MSG_DATA));
         data->dest.net = BACNET_BROADCAST_NETWORK;
+        data->dest.len = 0;
     }
 
     buff_len = create_network_message(network_message_type, data, buff, val);

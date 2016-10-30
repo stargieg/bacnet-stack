@@ -1,8 +1,7 @@
 /**************************************************************************
 *
-* Copyright (C) 2006 Steve Karg <skarg@users.sourceforge.net>
+* Copyright (C) 2005 Steve Karg <skarg@users.sourceforge.net>
 * Copyright (C) 2011 Krzysztof Malorny <malornykrzysztof@gmail.com>
-* Copyright (C) 2013 Patrick Grimm <patrick@lunatiki.de>
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -25,44 +24,33 @@
 *
 *********************************************************************/
 
-/* Analog Input Objects - customize for your use */
+/* Analog Input Objects customize for your use */
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 
 #include "bacdef.h"
 #include "bacdcode.h"
 #include "bacenum.h"
-#include "bacapp.h"
 #include "bactext.h"
 #include "config.h"     /* the custom stuff */
 #include "device.h"
 #include "handlers.h"
+#include "proplist.h"
+#include "timestamp.h"
 #include "ai.h"
-#include "ucix.h"
 
-/* number of demo objects */
+
 #ifndef MAX_ANALOG_INPUTS
-#define MAX_ANALOG_INPUTS 1024
+#define MAX_ANALOG_INPUTS 4
 #endif
-unsigned max_analog_inputs_int = 0;
 
-/* When all the priorities are level null, the present value returns */
-/* the Relinquish Default value */
-#define ANALOG_RELINQUISH_DEFAULT 0
-
-/* we choose to have a NULL level in our system represented by */
-/* a particular value.  When the priorities are not in use, they */
-/* will be relinquished (i.e. set to the NULL level). */
-#define ANALOG_LEVEL_NULL 255
 
 ANALOG_INPUT_DESCR AI_Descr[MAX_ANALOG_INPUTS];
 
 /* These three arrays are used by the ReadPropertyMultiple handler */
-static const int Analog_Input_Properties_Required[] = {
+static const int Properties_Required[] = {
     PROP_OBJECT_IDENTIFIER,
     PROP_OBJECT_NAME,
     PROP_OBJECT_TYPE,
@@ -74,12 +62,10 @@ static const int Analog_Input_Properties_Required[] = {
     -1
 };
 
-static const int Analog_Input_Properties_Optional[] = {
+static const int Properties_Optional[] = {
     PROP_DESCRIPTION,
-    PROP_PRIORITY_ARRAY,
-    PROP_RELINQUISH_DEFAULT,
-    PROP_MAX_PRES_VALUE,
-    PROP_MIN_PRES_VALUE,
+    PROP_RELIABILITY,
+    PROP_COV_INCREMENT,
 #if defined(INTRINSIC_REPORTING)
     PROP_TIME_DELAY,
     PROP_NOTIFICATION_CLASS,
@@ -92,15 +78,15 @@ static const int Analog_Input_Properties_Optional[] = {
     PROP_NOTIFY_TYPE,
     PROP_EVENT_TIME_STAMPS,
 #endif
-    PROP_RELIABILITY,
     -1
 };
 
-static const int Analog_Input_Properties_Proprietary[] = {
+static const int Properties_Proprietary[] = {
+    9997,
+    9998,
+    9999,
     -1
 };
-
-struct uci_context *ctx;
 
 void Analog_Input_Property_Lists(
     const int **pRequired,
@@ -108,31 +94,12 @@ void Analog_Input_Property_Lists(
     const int **pProprietary)
 {
     if (pRequired)
-        *pRequired = Analog_Input_Properties_Required;
+        *pRequired = Properties_Required;
     if (pOptional)
-        *pOptional = Analog_Input_Properties_Optional;
+        *pOptional = Properties_Optional;
     if (pProprietary)
-        *pProprietary = Analog_Input_Properties_Proprietary;
+        *pProprietary = Properties_Proprietary;
 
-    return;
-}
-
-void Analog_Input_Load_UCI_List(const char *sec_idx,
-	struct ai_inst_itr_ctx *itr)
-{
-	ai_inst_tuple_t *t = malloc(sizeof(ai_inst_tuple_t));
-	bool disable;
-	disable = ucix_get_option_int(itr->ctx, itr->section, sec_idx,
-	"disable", 0);
-	if (strcmp(sec_idx,"default") == 0)
-		return;
-	if (disable)
-		return;
-	if( (t = (ai_inst_tuple_t *)malloc(sizeof(ai_inst_tuple_t))) != NULL ) {
-		strncpy(t->idx, sec_idx, sizeof(t->idx));
-		t->next = itr->list;
-		itr->list = t;
-	}
     return;
 }
 
@@ -140,305 +107,62 @@ void Analog_Input_Load_UCI_List(const char *sec_idx,
 void Analog_Input_Init(
     void)
 {
-    unsigned i, j;
-    static bool initialized = false;
-    char name[64];
-    const char *uciname;
-    int ucidisable;
-    const char *ucivalue;
-    int Out_Of_Service;
-    char description[64];
-    const char *ucidescription;
-    const char *ucidescription_default;
-    const char *idx_c;
-    char idx_cc[64];
-    int uciunit = 0;
-    int uciunit_default = 0;
-    const char *ucivalue_default;
-    char max_value[64];
-    const char *ucimax_value_default;
-    const char *ucimax_value;
-    char min_value[64];
-    const char *ucimin_value_default;
-    const char *ucimin_value;
-    int ucinc_default;
-    int ucinc;
-    int ucievent_default;
-    int ucievent;
-    int ucitime_delay_default;
-    int ucitime_delay;
-    int ucilimit_default;
-    int ucilimit;
-    char high_limit[64];
-    const char *ucihigh_limit_default;
-    const char *ucihigh_limit;
-    char low_limit[64];
-    const char *ucilow_limit_default;
-    const char *ucilow_limit;
-    char dead_limit[64];
-    const char *ucidead_limit_default;
-    const char *ucidead_limit;
-    char cov_increment[64];
-    const char *ucicov_increment;
-    const char *ucicov_increment_default;
-    const char *sec = "bacnet_ai";
-
-	char *section;
-	char *type;
-	struct ai_inst_itr_ctx itr_m;
-	section = "bacnet_ai";
-
-#if PRINT_ENABLED
-    fprintf(stderr, "Analog_Input_Init\n");
-#endif
-    if (!initialized) {
-        initialized = true;
-        ctx = ucix_init(sec);
-#if PRINT_ENABLED
-        if(!ctx)
-            fprintf(stderr, "Failed to load config file bacnet_ai\n");
-#endif
-		type = "ai";
-		ai_inst_tuple_t *cur = malloc(sizeof (ai_inst_tuple_t));
-		itr_m.list = NULL;
-		itr_m.section = section;
-		itr_m.ctx = ctx;
-		ucix_for_each_section_type(ctx, section, type,
-			(void *)Analog_Input_Load_UCI_List, &itr_m);
-
-        ucidescription_default = ucix_get_option(ctx, sec, "default",
-            "description");
-        uciunit_default = ucix_get_option_int(ctx, sec, "default",
-            "si_unit", 0);
-        ucivalue_default = ucix_get_option(ctx, sec, "default",
-            "value");
-        ucinc_default = ucix_get_option_int(ctx, sec, "default",
-            "nc", -1);
-        ucievent_default = ucix_get_option_int(ctx, sec, "default",
-            "event", -1);
-        ucitime_delay_default = ucix_get_option_int(ctx, sec, "default",
-            "time_delay", -1);
-        ucilimit_default = ucix_get_option_int(ctx, sec, "default",
-            "limit", -1);
-        ucihigh_limit_default = ucix_get_option(ctx, sec, "default",
-            "high_limit");
-        ucilow_limit_default = ucix_get_option(ctx, sec, "default",
-            "low_limit");
-        ucidead_limit_default = ucix_get_option(ctx, sec, "default",
-            "dead_limit");
-        ucicov_increment_default = ucix_get_option(ctx, sec, "default",
-            "cov_increment");
-        ucimax_value_default = ucix_get_option(ctx, sec, "default",
-            "max_value");
-        ucimin_value_default = ucix_get_option(ctx, sec, "default",
-            "min_value");
-        i = 0;
-		for( cur = itr_m.list; cur; cur = cur->next ) {
-			strncpy(idx_cc, cur->idx, sizeof(idx_cc));
-            idx_c = idx_cc;
-            uciname = ucix_get_option(ctx, "bacnet_ai", idx_c, "name");
-            ucidisable = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
-                "disable", 0);
-            if ((uciname != 0) && (ucidisable == 0)) {
-                memset(&AI_Descr[i], 0x00, sizeof(ANALOG_INPUT_DESCR));
-                /* initialize all the analog input priority arrays to NULL */
-                for (j = 0; j < BACNET_MAX_PRIORITY; j++) {
-                    AI_Descr[i].Priority_Array[j] = ANALOG_LEVEL_NULL;
-                }
-                AI_Descr[i].Instance=atoi(idx_cc);
-                AI_Descr[i].Disable=false;
-                sprintf(name, "%s", uciname);
-                ucix_string_copy(AI_Descr[i].Object_Name,
-                    sizeof(AI_Descr[i].Object_Name), name);
-                ucidescription = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "description");
-                if (ucidescription != 0) {
-                    sprintf(description, "%s", ucidescription);
-                } else if (ucidescription_default != 0) {
-                    sprintf(description, "%s %lu", ucidescription_default,
-                        (unsigned long) i);
-                } else {
-                    sprintf(description, "AI%lu no uci section configured",
-                        (unsigned long) i);
-                }
-                ucix_string_copy(AI_Descr[i].Object_Description,
-                    sizeof(AI_Descr[i].Object_Description), description);
-                uciunit = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
-                    "si_unit", 0);
-                if (uciunit != 0) {
-                    AI_Descr[i].Units = uciunit;
-                } else if (uciunit_default != 0) {
-                    AI_Descr[i].Units = uciunit_default;
-                } else {
-                    AI_Descr[i].Units = UNITS_PERCENT;
-                }
-                Out_Of_Service = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
-                    "Out_Of_Service", 1);
-                if (Out_Of_Service == 0) {
-                    AI_Descr[i].Reliability = RELIABILITY_NO_FAULT_DETECTED;
-                    AI_Descr[i].Out_Of_Service = 0;
-                } else {
-                    AI_Descr[i].Reliability = RELIABILITY_COMMUNICATION_FAILURE;
-                    AI_Descr[i].Out_Of_Service = 1;
-                }
-
-                ucivalue = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "value");
-                if (ucivalue == NULL) {
-                    if (ucivalue_default == NULL) {
-                        ucivalue = 0;
-                    } else {
-                        ucivalue = ucivalue_default;
-                        AI_Descr[i].Reliability = 
-                            RELIABILITY_COMMUNICATION_FAILURE;
-                    }
-                }
-                AI_Descr[i].Priority_Array[15] = strtof(ucivalue,
-                    (char **) NULL);
-
-                AI_Descr[i].Relinquish_Default = 0; //TODO read uci
-
-                ucicov_increment = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "cov_increment");
-                if (ucicov_increment != 0) {
-                    sprintf(cov_increment, "%s", ucicov_increment);
-                } else {
-                    if (ucicov_increment_default != 0) {
-                        sprintf(cov_increment, "%s", ucicov_increment_default);
-                    } else {
-                        sprintf(cov_increment, "%s", "0");
-                    }
-                }
-                AI_Descr[i].COV_Increment = strtof(cov_increment,
-                    (char **) NULL);
-
-                ucimax_value = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "max_value");
-                if (ucimax_value != 0) {
-                    sprintf(max_value, "%s", ucimax_value);
-                } else {
-                    if (ucimax_value_default != 0) {
-                        sprintf(max_value, "%s", ucimax_value_default);
-                    } else {
-                        sprintf(max_value, "%s", "0");
-                    }
-                }
-                AI_Descr[i].Max_Pres_Value = strtof(max_value, (char **) NULL);
-
-                ucimin_value = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "min_value");
-                if (ucimin_value != 0) {
-                    sprintf(min_value, "%s", ucimin_value);
-                } else {
-                    if (ucimin_value_default != 0) {
-                        sprintf(min_value, "%s", ucimin_value_default);
-                    } else {
-                        sprintf(min_value, "%s", "0");
-                    }
-                }
-                AI_Descr[i].Min_Pres_Value = strtof(min_value, (char **) NULL);
-
+    unsigned i;
 #if defined(INTRINSIC_REPORTING)
-                ucinc = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
-                    "nc", ucinc_default);
-                ucievent = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
-                    "event", ucievent_default);
-                ucitime_delay = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
-                    "time_delay", ucitime_delay_default);
-                ucilimit = ucix_get_option_int(ctx, "bacnet_ai", idx_c,
-                    "limit", ucilimit_default);
-                ucihigh_limit = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "high_limit");
-                if (ucihigh_limit != 0) {
-                    sprintf(high_limit, "%s", ucihigh_limit);
-                } else {
-                    if (ucihigh_limit_default != 0) {
-                        sprintf(high_limit, "%s", ucihigh_limit_default);
-                    } else {
-                        sprintf(high_limit, "%s", "0");
-                    }
-                }
-                ucilow_limit = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "low_limit");
-                if (ucilow_limit != 0) {
-                    sprintf(low_limit, "%s", ucilow_limit);
-                } else {
-                    if (ucilow_limit_default != 0) {
-                        sprintf(low_limit, "%s", ucilow_limit_default);
-                    } else {
-                        sprintf(low_limit, "%s", "0");
-                    }
-                }
-                ucidead_limit = ucix_get_option(ctx, "bacnet_ai", idx_c,
-                    "dead_limit");
-                if (ucidead_limit != 0) {
-                    sprintf(dead_limit, "%s", ucidead_limit);
-                } else {
-                    if (ucidead_limit_default != 0) {
-                        sprintf(dead_limit, "%s", ucidead_limit_default);
-                    } else {
-                        sprintf(dead_limit, "%s", "0");
-                    }
-                }
-                AI_Descr[i].Event_State = EVENT_STATE_NORMAL;
-                /* notification class not connected */
-                if (ucinc > -1) AI_Descr[i].Notification_Class = ucinc;
-                else AI_Descr[i].Notification_Class = 0;
-                if (ucievent > -1) AI_Descr[i].Event_Enable = ucievent;
-                else AI_Descr[i].Event_Enable = 0;
-                if (ucitime_delay > -1) AI_Descr[i].Time_Delay = ucitime_delay;
-                else AI_Descr[i].Time_Delay = 0;
-                if (ucilimit > -1) AI_Descr[i].Limit_Enable = ucilimit;
-                else AI_Descr[i].Limit_Enable = 0;
-                AI_Descr[i].High_Limit = strtof(high_limit, (char **) NULL);
-                AI_Descr[i].Low_Limit = strtof(low_limit, (char **) NULL);
-                AI_Descr[i].Deadband = strtof(dead_limit, (char **) NULL);
-
-                /* initialize Event time stamps using wildcards
-                   and set Acked_transitions */
-                for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
-                    datetime_wildcard_set(&AI_Descr[i].Event_Time_Stamps[j]);
-                    AI_Descr[i].Acked_Transitions[j].bIsAcked = true;
-                }
-
-                /* Set handler for GetEventInformation function */
-                handler_get_event_information_set(OBJECT_ANALOG_INPUT,
-                    Analog_Input_Event_Information);
-                /* Set handler for AcknowledgeAlarm function */
-                handler_alarm_ack_set(OBJECT_ANALOG_INPUT, Analog_Input_Alarm_Ack);
-                /* Set handler for GetAlarmSummary Service */
-                handler_get_alarm_summary_set(OBJECT_ANALOG_INPUT,
-                    Analog_Input_Alarm_Summary);
+    unsigned j;
 #endif
-                i++;
-                max_analog_inputs_int = i;
-            }
+
+    for (i = 0; i < MAX_ANALOG_INPUTS; i++) {
+        AI_Descr[i].Present_Value = 0.0f;
+        AI_Descr[i].Out_Of_Service = false;
+        AI_Descr[i].Units = UNITS_PERCENT;
+        AI_Descr[i].Reliability = RELIABILITY_NO_FAULT_DETECTED;
+        AI_Descr[i].Prior_Value = 0.0f;
+        AI_Descr[i].COV_Increment = 1.0f;
+        AI_Descr[i].Changed = false;
+#if defined(INTRINSIC_REPORTING)
+        AI_Descr[i].Event_State = EVENT_STATE_NORMAL;
+        /* notification class not connected */
+        AI_Descr[i].Notification_Class = BACNET_MAX_INSTANCE;
+        /* initialize Event time stamps using wildcards
+           and set Acked_transitions */
+        for (j = 0; j < MAX_BACNET_EVENT_TRANSITION; j++) {
+            datetime_wildcard_set(&AI_Descr[i].Event_Time_Stamps[j]);
+            AI_Descr[i].Acked_Transitions[j].bIsAcked = true;
         }
-#if PRINT_ENABLED
-        fprintf(stderr, "max_analog_inputs %i\n", max_analog_inputs_int);
+
+        /* Set handler for GetEventInformation function */
+        handler_get_event_information_set(OBJECT_ANALOG_INPUT,
+            Analog_Input_Event_Information);
+        /* Set handler for AcknowledgeAlarm function */
+        handler_alarm_ack_set(OBJECT_ANALOG_INPUT, Analog_Input_Alarm_Ack);
+        /* Set handler for GetAlarmSummary Service */
+        handler_get_alarm_summary_set(OBJECT_ANALOG_INPUT,
+            Analog_Input_Alarm_Summary);
 #endif
-        if(ctx)
-            ucix_cleanup(ctx);
     }
-    return;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
-/* more complex, and then you need to return the index */
-/* that correlates to the correct instance number */
-unsigned Analog_Input_Instance_To_Index(
+/* more complex, and then you need validate that the */
+/* given instance exists */
+bool Analog_Input_Valid_Instance(
     uint32_t object_instance)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    int index,instance,i;
-    index = max_analog_inputs_int;
-    for (i = 0; i < index; i++) {
-    	CurrentAI = &AI_Descr[i];
-    	instance = CurrentAI->Instance;
-    	if (CurrentAI->Instance == object_instance) {
-    		return i;
-    	}
-    }
+    unsigned int index;
+
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS)
+        return true;
+
+    return false;
+}
+
+/* we simply have 0-n object instances.  Yours might be */
+/* more complex, and then count how many you have */
+unsigned Analog_Input_Count(
+    void)
+{
     return MAX_ANALOG_INPUTS;
 }
 
@@ -448,74 +172,113 @@ unsigned Analog_Input_Instance_To_Index(
 uint32_t Analog_Input_Index_To_Instance(
     unsigned index)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    uint32_t instance;
-	CurrentAI = &AI_Descr[index];
-	instance = CurrentAI->Instance;
-	return instance;
+    return index;
 }
 
 /* we simply have 0-n object instances.  Yours might be */
-/* more complex, and then count how many you have */
-unsigned Analog_Input_Count(
-    void)
-{
-    return max_analog_inputs_int;
-}
-
-/* we simply have 0-n object instances.  Yours might be */
-/* more complex, and then you need validate that the */
-/* given instance exists */
-bool Analog_Input_Valid_Instance(
+/* more complex, and then you need to return the index */
+/* that correlates to the correct instance number */
+unsigned Analog_Input_Instance_To_Index(
     uint32_t object_instance)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
+    unsigned index = MAX_ANALOG_INPUTS;
+
+    if (object_instance < MAX_ANALOG_INPUTS)
+        index = object_instance;
+
+    return index;
+}
+
+float Analog_Input_Present_Value(
+    uint32_t object_instance)
+{
+    float value = 0.0;
+    unsigned int index;
+
     index = Analog_Input_Instance_To_Index(object_instance);
-    if (index == MAX_ANALOG_INPUTS) {
-#if PRINT_ENABLED
-        fprintf(stderr, "Analog_Input_Valid_Instance %i invalid\n",object_instance);
-#endif
-    	return false;
+    if (index < MAX_ANALOG_INPUTS) {
+        value = AI_Descr[index].Present_Value;
     }
-    CurrentAI = &AI_Descr[index];
-    if (CurrentAI->Disable == false)
-            return true;
 
-    return false;
+    return value;
 }
 
-bool Analog_Input_Change_Of_Value(
-    uint32_t object_instance)
+static void Analog_Input_COV_Detect(unsigned int index,
+    float value)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    bool status = false;
-    unsigned index = 0;
+    float prior_value = 0.0;
+    float cov_increment = 0.0;
+    float cov_delta = 0.0;
 
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        status = CurrentAI->Change_Of_Value;
+    if (index < MAX_ANALOG_INPUTS) {
+        prior_value = AI_Descr[index].Prior_Value;
+        cov_increment = AI_Descr[index].COV_Increment;
+        if (prior_value > value) {
+            cov_delta = prior_value - value;
+        } else {
+            cov_delta = value - prior_value;
+        }
+        if (cov_delta >= cov_increment) {
+            AI_Descr[index].Changed = true;
+            AI_Descr[index].Prior_Value = value;
+        }
+    }
+}
+
+void Analog_Input_Present_Value_Set(
+    uint32_t object_instance,
+    float value)
+{
+    unsigned int index = 0;
+
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+        Analog_Input_COV_Detect(index, value);
+        AI_Descr[index].Present_Value = value;
+    }
+}
+
+bool Analog_Input_Object_Name(
+    uint32_t object_instance,
+    BACNET_CHARACTER_STRING * object_name)
+{
+    static char text_string[32] = "";   /* okay for single thread */
+    unsigned int index;
+    bool status = false;
+
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+        sprintf(text_string, "ANALOG INPUT %lu", (unsigned long) index);
+        status = characterstring_init_ansi(object_name, text_string);
     }
 
     return status;
 }
 
+bool Analog_Input_Change_Of_Value(
+    uint32_t object_instance)
+{
+    unsigned index = 0;
+    bool changed = false;
+
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+        changed = AI_Descr[index].Changed;
+    }
+
+    return changed;
+}
+
 void Analog_Input_Change_Of_Value_Clear(
     uint32_t object_instance)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
     unsigned index = 0;
 
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        CurrentAI->Change_Of_Value = false;
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+        AI_Descr[index].Changed = false;
     }
-
-    return;
 }
-
 
 /* returns true if value has changed */
 bool Analog_Input_Encode_Value_List(
@@ -528,9 +291,10 @@ bool Analog_Input_Encode_Value_List(
         value_list->propertyIdentifier = PROP_PRESENT_VALUE;
         value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
         value_list->value.context_specific = false;
-        value_list->value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
-        value_list->value.type.Enumerated =
+        value_list->value.tag = BACNET_APPLICATION_TAG_REAL;
+        value_list->value.type.Real =
             Analog_Input_Present_Value(object_instance);
+        value_list->value.next = NULL;
         value_list->priority = BACNET_NO_PRIORITY;
         value_list = value_list->next;
     }
@@ -553,102 +317,51 @@ bool Analog_Input_Encode_Value_List(
             bitstring_set_bit(&value_list->value.type.Bit_String,
                 STATUS_FLAG_OUT_OF_SERVICE, false);
         }
+        value_list->value.next = NULL;
         value_list->priority = BACNET_NO_PRIORITY;
+        value_list->next = NULL;
     }
     status = Analog_Input_Change_Of_Value(object_instance);
 
     return status;
 }
 
-float Analog_Input_Present_Value(
+float Analog_Input_COV_Increment(
     uint32_t object_instance)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    float value = ANALOG_RELINQUISH_DEFAULT;
-    unsigned index = 0; /* offset from instance lookup */
-    unsigned i = 0;
+    unsigned index = 0;
+    float value = 0;
 
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        /* When all the priorities are level null, the present value returns */
-        /* the Relinquish Default value */
-        value = CurrentAI->Relinquish_Default;
-        for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
-            if (CurrentAI->Priority_Array[i] != ANALOG_LEVEL_NULL) {
-                value = CurrentAI->Priority_Array[i];
-                break;
-            }
-        }
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+        value = AI_Descr[index].COV_Increment;
     }
 
     return value;
 }
 
-unsigned Analog_Input_Present_Value_Priority(
-    uint32_t object_instance)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* instance to index conversion */
-    unsigned i = 0;     /* loop counter */
-    unsigned priority = 0;      /* return value */
-
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
-            if (CurrentAI->Priority_Array[priority] != ANALOG_LEVEL_NULL) {
-                priority = i + 1;
-                break;
-            }
-        }
-    }
-
-    return priority;
-}
-
-bool Analog_Input_Present_Value_Set(
+void Analog_Input_COV_Increment_Set(
     uint32_t object_instance,
-    float value,
-    uint8_t priority)
+    float value)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
-    bool status = false;
+    unsigned index = 0;
 
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        if (priority && (priority <= BACNET_MAX_PRIORITY) &&
-            (priority != 6 /* reserved */ ) ) {
-            //CurrentAI->Present_Value = value;
-            CurrentAI->Priority_Array[priority - 1] = value;
-            /* Note: you could set the physical output here to the next
-               highest priority, or to the relinquish default if no
-               priorities are set.
-               However, if Out of Service is TRUE, then don't set the
-               physical output.  This comment may apply to the
-               main loop (i.e. check out of service before changing output) */
-            if (priority == 8) {
-                CurrentAI->Priority_Array[15] = value;
-            }
-            status = true;
-        }
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+        AI_Descr[index].COV_Increment = value;
+        Analog_Input_COV_Detect(index, AI_Descr[index].Present_Value);
     }
-    return status;
 }
 
 bool Analog_Input_Out_Of_Service(
     uint32_t object_instance)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
+    unsigned index = 0;
     bool value = false;
 
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        value = CurrentAI->Out_Of_Service;
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+        value = AI_Descr[index].Out_Of_Service;
     }
 
     return value;
@@ -658,233 +371,39 @@ void Analog_Input_Out_Of_Service_Set(
     uint32_t object_instance,
     bool value)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
     unsigned index = 0;
 
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        CurrentAI->Out_Of_Service = value;
-    }
-
-    return;
-}
-
-void Analog_Input_Reliability_Set(
-    uint32_t object_instance,
-    uint8_t value)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0;
-
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        CurrentAI->Reliability = value;
-    }
-
-    return;
-}
-
-uint8_t Analog_Input_Reliability(
-    uint32_t object_instance)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
-    uint8_t value = 0;
-
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        value = CurrentAI->Reliability;
-    }
-
-    return value;
-}
-
-static char *Analog_Input_Description(
-    uint32_t object_instance)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
-    char *pName = NULL; /* return value */
-
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        pName = CurrentAI->Object_Description;
-    }
-
-    return pName;
-}
-
-bool Analog_Input_Description_Set(
-    uint32_t object_instance,
-    char *new_name)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
-    size_t i = 0;       /* loop counter */
-    bool status = false;        /* return value */
-
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        status = true;
-        if (new_name) {
-            for (i = 0; i < sizeof(CurrentAI->Object_Description); i++) {
-                CurrentAI->Object_Description[i] = new_name[i];
-                if (new_name[i] == 0) {
-                    break;
-                }
-            }
-        } else {
-            for (i = 0; i < sizeof(CurrentAI->Object_Description); i++) {
-                CurrentAI->Object_Description[i] = 0;
-            }
+    index = Analog_Input_Instance_To_Index(object_instance);
+    if (index < MAX_ANALOG_INPUTS) {
+		/* 	BACnet Testing Observed Incident oi00104
+			The Changed flag was not being set when a client wrote to the Out-of-Service bit.
+			Revealed by BACnet Test Client v1.8.16 ( www.bac-test.com/bacnet-test-client-download )
+				BC 135.1: 8.2.1-A
+				BC 135.1: 8.2.2-A
+    		Any discussions can be directed to edward@bac-test.com
+    		Please feel free to remove this comment when my changes accepted after suitable time for
+    		review by all interested parties. Say 6 months -> September 2016 */
+        if (AI_Descr[index].Out_Of_Service != value) {
+            AI_Descr[index].Changed = true;
         }
+        AI_Descr[index].Out_Of_Service = value;
     }
-
-    return status;
 }
 
-static bool Analog_Input_Description_Write(
-    uint32_t object_instance,
-    BACNET_CHARACTER_STRING *char_string,
-    BACNET_ERROR_CLASS *error_class,
-    BACNET_ERROR_CODE *error_code)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
-    size_t length = 0;
-    uint8_t encoding = 0;
-    bool status = false;        /* return value */
-    const char *idx_c;
-    char idx_cc[64];
-
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        length = characterstring_length(char_string);
-        if (length <= sizeof(CurrentAI->Object_Description)) {
-            encoding = characterstring_encoding(char_string);
-            if (encoding == CHARACTER_UTF8) {
-                status = characterstring_ansi_copy(
-                    CurrentAI->Object_Description,
-                    sizeof(CurrentAI->Object_Description),
-                    char_string);
-                if (!status) {
-                    *error_class = ERROR_CLASS_PROPERTY;
-                    *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
-                } else {
-                    sprintf(idx_cc,"%d",CurrentAI->Instance);
-                    idx_c = idx_cc;
-                    if(ctx) {
-                        ucix_add_option(ctx, "bacnet_ai", idx_c,
-                            "description", char_string->value);
-#if PRINT_ENABLED
-                    } else {
-                        fprintf(stderr,
-                            "Failed to open config file bacnet_ai\n");
-#endif
-                    }
-                }
-            } else {
-                *error_class = ERROR_CLASS_PROPERTY;
-                *error_code = ERROR_CODE_CHARACTER_SET_NOT_SUPPORTED;
-            }
-        } else {
-            *error_class = ERROR_CLASS_PROPERTY;
-            *error_code = ERROR_CODE_NO_SPACE_TO_WRITE_PROPERTY;
-        }
-    }
-
-    return status;
-}
-
-/* note: the object name must be unique within this device */
-bool Analog_Input_Object_Name(
-    uint32_t object_instance,
-    BACNET_CHARACTER_STRING * object_name)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
-    bool status = false;
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        status = characterstring_init_ansi(object_name, CurrentAI->Object_Name);
-    }
-
-    return status;
-}
-
-static bool Analog_Input_Object_Name_Write(
-    uint32_t object_instance,
-    BACNET_CHARACTER_STRING *char_string,
-    BACNET_ERROR_CLASS *error_class,
-    BACNET_ERROR_CODE *error_code)
-{
-    ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0; /* offset from instance lookup */
-    size_t length = 0;
-    uint8_t encoding = 0;
-    bool status = false;        /* return value */
-    const char *idx_c;
-    char idx_cc[64];
-
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-        length = characterstring_length(char_string);
-        if (length <= sizeof(CurrentAI->Object_Name)) {
-            encoding = characterstring_encoding(char_string);
-            if (encoding == CHARACTER_UTF8) {
-                status = characterstring_ansi_copy(
-                    CurrentAI->Object_Name,
-                    sizeof(CurrentAI->Object_Name),
-                    char_string);
-                if (!status) {
-                    *error_class = ERROR_CLASS_PROPERTY;
-                    *error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
-                } else {
-                    sprintf(idx_cc,"%d",CurrentAI->Instance);
-                    idx_c = idx_cc;
-                    if(ctx) {
-                        ucix_add_option(ctx, "bacnet_ai", idx_c,
-                            "name", char_string->value);
-#if PRINT_ENABLED
-                    } else {
-                        fprintf(stderr,
-                            "Failed to open config file bacnet_ai\n");
-#endif
-                    }
-                }
-            } else {
-                *error_class = ERROR_CLASS_PROPERTY;
-                *error_code = ERROR_CODE_CHARACTER_SET_NOT_SUPPORTED;
-            }
-        } else {
-            *error_class = ERROR_CLASS_PROPERTY;
-            *error_code = ERROR_CODE_NO_SPACE_TO_WRITE_PROPERTY;
-        }
-    }
-
-    return status;
-}
-
-/* return apdu len, or BACNET_STATUS_ERROR on error */
+/* return apdu length, or BACNET_STATUS_ERROR on error */
+/* assumption - object already exists */
 int Analog_Input_Read_Property(
     BACNET_READ_PROPERTY_DATA * rpdata)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
-    int len = 0;
     int apdu_len = 0;   /* return value */
     BACNET_BIT_STRING bit_string;
     BACNET_CHARACTER_STRING char_string;
-    float present_value = 0;
-    unsigned index = 0;
+    ANALOG_INPUT_DESCR *CurrentAI;
+    unsigned object_index = 0;
+#if defined(INTRINSIC_REPORTING)
     unsigned i = 0;
+    int len = 0;
+#endif
     uint8_t *apdu = NULL;
 
     if ((rpdata == NULL) || (rpdata->application_data == NULL) ||
@@ -892,15 +411,14 @@ int Analog_Input_Read_Property(
         return 0;
     }
 
-    apdu = rpdata->application_data;
-
-    if (Analog_Input_Valid_Instance(rpdata->object_instance)) {
-        index = Analog_Input_Instance_To_Index(rpdata->object_instance);
-        CurrentAI = &AI_Descr[index];
-    } else
+    object_index = Analog_Input_Instance_To_Index(rpdata->object_instance);
+    if (object_index < MAX_ANALOG_INPUTS)
+        CurrentAI = &AI_Descr[object_index];
+    else
         return BACNET_STATUS_ERROR;
 
-    switch (rpdata->object_property) {
+    apdu = rpdata->application_data;
+    switch ((int) rpdata->object_property) {
         case PROP_OBJECT_IDENTIFIER:
             apdu_len =
                 encode_application_object_id(&apdu[0], OBJECT_ANALOG_INPUT,
@@ -908,14 +426,8 @@ int Analog_Input_Read_Property(
             break;
 
         case PROP_OBJECT_NAME:
-            Analog_Input_Object_Name(rpdata->object_instance, &char_string);
-            apdu_len =
-                encode_application_character_string(&apdu[0], &char_string);
-            break;
-
         case PROP_DESCRIPTION:
-            characterstring_init_ansi(&char_string,
-                Analog_Input_Description(rpdata->object_instance));
+            Analog_Input_Object_Name(rpdata->object_instance, &char_string);
             apdu_len =
                 encode_application_character_string(&apdu[0], &char_string);
             break;
@@ -926,8 +438,9 @@ int Analog_Input_Read_Property(
             break;
 
         case PROP_PRESENT_VALUE:
-            present_value = Analog_Input_Present_Value(rpdata->object_instance);
-            apdu_len = encode_application_real(&apdu[0], present_value);
+            apdu_len =
+                encode_application_real(&apdu[0],
+                Analog_Input_Present_Value(rpdata->object_instance));
             break;
 
         case PROP_STATUS_FLAGS:
@@ -940,13 +453,8 @@ int Analog_Input_Read_Property(
 #endif
             bitstring_set_bit(&bit_string, STATUS_FLAG_FAULT, false);
             bitstring_set_bit(&bit_string, STATUS_FLAG_OVERRIDDEN, false);
-            if (Analog_Input_Out_Of_Service(rpdata->object_instance)) {
-                bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
-                    true);
-            } else {
-                bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
-                    false);
-            }
+            bitstring_set_bit(&bit_string, STATUS_FLAG_OUT_OF_SERVICE,
+                CurrentAI->Out_Of_Service);
 
             apdu_len = encode_application_bitstring(&apdu[0], &bit_string);
             break;
@@ -962,20 +470,16 @@ int Analog_Input_Read_Property(
 #endif
             break;
 
-        case PROP_OUT_OF_SERVICE:
-            apdu_len =
-                encode_application_boolean(&apdu[0],
-                Analog_Input_Out_Of_Service(rpdata->object_instance));
-            break;
-
         case PROP_RELIABILITY:
-            apdu_len = encode_application_enumerated(&apdu[0], 
+            apdu_len =
+                encode_application_enumerated(&apdu[0],
                 CurrentAI->Reliability);
             break;
 
-        case PROP_COV_INCREMENT:
-            apdu_len = encode_application_real(&apdu[0], 
-                CurrentAI->COV_Increment);
+        case PROP_OUT_OF_SERVICE:
+            apdu_len =
+                encode_application_boolean(&apdu[0],
+                CurrentAI->Out_Of_Service);
             break;
 
         case PROP_UNITS:
@@ -983,66 +487,9 @@ int Analog_Input_Read_Property(
                 encode_application_enumerated(&apdu[0], CurrentAI->Units);
             break;
 
-        case PROP_PRIORITY_ARRAY:
-            /* Array element zero is the number of elements in the array */
-            if (rpdata->array_index == 0)
-                apdu_len =
-                    encode_application_unsigned(&apdu[0], BACNET_MAX_PRIORITY);
-            /* if no index was specified, then try to encode the entire list */
-            /* into one packet. */
-            else if (rpdata->array_index == BACNET_ARRAY_ALL) {
-                for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
-                    /* FIXME: check if we have room before adding it to APDU */
-                    if (CurrentAI->Priority_Array[i] == ANALOG_LEVEL_NULL)
-                        len = encode_application_null(&apdu[apdu_len]);
-                    else {
-                        present_value = CurrentAI->Priority_Array[i];
-                        len =
-                            encode_application_real(&apdu[apdu_len],
-                            present_value);
-                    }
-                    /* add it if we have room */
-                    if ((apdu_len + len) < MAX_APDU)
-                        apdu_len += len;
-                    else {
-                        rpdata->error_class = ERROR_CLASS_SERVICES;
-                        rpdata->error_code = ERROR_CODE_NO_SPACE_FOR_OBJECT;
-                        apdu_len = BACNET_STATUS_ERROR;
-                        break;
-                    }
-                }
-            } else {
-                if (rpdata->array_index <= BACNET_MAX_PRIORITY) {
-                    if (CurrentAI->Priority_Array[rpdata->array_index - 1]
-                        == ANALOG_LEVEL_NULL)
-                        apdu_len = encode_application_null(&apdu[0]);
-                    else {
-                        present_value =
-                            CurrentAI->Priority_Array[rpdata->array_index - 1];
-                        apdu_len =
-                            encode_application_real(&apdu[0], present_value);
-                    }
-                } else {
-                    rpdata->error_class = ERROR_CLASS_PROPERTY;
-                    rpdata->error_code = ERROR_CODE_INVALID_ARRAY_INDEX;
-                    apdu_len = BACNET_STATUS_ERROR;
-                }
-            }
-            break;
-
-        case PROP_RELINQUISH_DEFAULT:
-            present_value = CurrentAI->Relinquish_Default;
-            apdu_len = encode_application_real(&apdu[0], present_value);
-            break;
-
-        case PROP_MAX_PRES_VALUE:
-            apdu_len =
-                encode_application_real(&apdu[0], CurrentAI->Max_Pres_Value);
-            break;
-
-        case PROP_MIN_PRES_VALUE:
-            apdu_len =
-                encode_application_real(&apdu[0], CurrentAI->Min_Pres_Value);
+        case PROP_COV_INCREMENT:
+            apdu_len = encode_application_real(&apdu[0],
+                CurrentAI->COV_Increment);
             break;
 
 #if defined(INTRINSIC_REPORTING)
@@ -1143,9 +590,9 @@ int Analog_Input_Read_Property(
                     if ((apdu_len + len) < MAX_APDU)
                         apdu_len += len;
                     else {
-                        rpdata->error_class = ERROR_CLASS_SERVICES;
-                        rpdata->error_code = ERROR_CODE_NO_SPACE_FOR_OBJECT;
-                        apdu_len = BACNET_STATUS_ERROR;
+                        rpdata->error_code =
+                            ERROR_CODE_ABORT_SEGMENTATION_NOT_SUPPORTED;
+                        apdu_len = BACNET_STATUS_ABORT;
                         break;
                     }
                 }
@@ -1167,7 +614,18 @@ int Analog_Input_Read_Property(
             }
             break;
 #endif
-
+        case 9997:
+            /* test case for real encoding-decoding real value correctly */
+            apdu_len = encode_application_real(&apdu[0], 90.510F);
+            break;
+        case 9998:
+            /* test case for unsigned encoding-decoding unsigned value correctly */
+            apdu_len = encode_application_unsigned(&apdu[0], 90);
+            break;
+        case 9999:
+            /* test case for signed encoding-decoding negative value correctly */
+            apdu_len = encode_application_signed(&apdu[0], -200);
+            break;
         default:
             rpdata->error_class = ERROR_CLASS_PROPERTY;
             rpdata->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
@@ -1175,9 +633,8 @@ int Analog_Input_Read_Property(
             break;
     }
     /*  only array properties can have array options */
-    if ((apdu_len >= 0) && (rpdata->object_property != PROP_PRIORITY_ARRAY) &&
-        (rpdata->object_property != PROP_EVENT_TIME_STAMPS) &&
-        (rpdata->array_index != BACNET_ARRAY_ALL)) {
+    if ((apdu_len >= 0) && (rpdata->object_property != PROP_EVENT_TIME_STAMPS)
+        && (rpdata->array_index != BACNET_ARRAY_ALL)) {
         rpdata->error_class = ERROR_CLASS_PROPERTY;
         rpdata->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         apdu_len = BACNET_STATUS_ERROR;
@@ -1190,23 +647,11 @@ int Analog_Input_Read_Property(
 bool Analog_Input_Write_Property(
     BACNET_WRITE_PROPERTY_DATA * wp_data)
 {
-    ANALOG_INPUT_DESCR *CurrentAI;
     bool status = false;        /* return value */
-    unsigned index = 0;
-    int object_type = 0;
-    uint32_t object_instance = 0;
-    unsigned int priority = 0;
-    uint8_t level = ANALOG_LEVEL_NULL;
+    unsigned int object_index = 0;
     int len = 0;
     BACNET_APPLICATION_DATA_VALUE value;
-    ctx = ucix_init("bacnet_ai");
-    const char *idx_c;
-    char cur_value[16];
-    float pvalue;
-    int i;
-    time_t cur_value_time;
-    char idx_cc[64];
-    
+    ANALOG_INPUT_DESCR *CurrentAI;
 
     /* decode the some of the request */
     len =
@@ -1219,123 +664,34 @@ bool Analog_Input_Write_Property(
         wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
         return false;
     }
-    if ((wp_data->object_property != PROP_PRIORITY_ARRAY) &&
-        (wp_data->object_property != PROP_EVENT_TIME_STAMPS) &&
+    /*  only array properties can have array options */
+    if ((wp_data->object_property != PROP_EVENT_TIME_STAMPS) &&
         (wp_data->array_index != BACNET_ARRAY_ALL)) {
-        /*  only array properties can have array options */
         wp_data->error_class = ERROR_CLASS_PROPERTY;
         wp_data->error_code = ERROR_CODE_PROPERTY_IS_NOT_AN_ARRAY;
         return false;
     }
-    if (Analog_Input_Valid_Instance(wp_data->object_instance)) {
-        index = Analog_Input_Instance_To_Index(wp_data->object_instance);
-        CurrentAI = &AI_Descr[index];
-        sprintf(idx_cc,"%d",CurrentAI->Instance);
-        idx_c = idx_cc;
-    } else
+    object_index = Analog_Input_Instance_To_Index(wp_data->object_instance);
+    if (object_index < MAX_ANALOG_INPUTS) {
+        CurrentAI = &AI_Descr[object_index];
+    } else {
         return false;
+    }
 
-    switch (wp_data->object_property) {
-        case PROP_OBJECT_NAME:
-            if (value.tag == BACNET_APPLICATION_TAG_CHARACTER_STRING) {
-                /* All the object names in a device must be unique */
-                if (Device_Valid_Object_Name(&value.type.Character_String,
-                    &object_type, &object_instance)) {
-                    if ((object_type == wp_data->object_type) &&
-                        (object_instance == wp_data->object_instance)) {
-                        /* writing same name to same object */
-                        status = true;
-                    } else {
-                        status = false;
-                        wp_data->error_class = ERROR_CLASS_PROPERTY;
-                        wp_data->error_code = ERROR_CODE_DUPLICATE_NAME;
-                    }
-                } else {
-                    status = Analog_Input_Object_Name_Write(
-                        wp_data->object_instance,
-                        &value.type.Character_String,
-                        &wp_data->error_class,
-                        &wp_data->error_code);
-                }
-            } else {
-                wp_data->error_class = ERROR_CLASS_PROPERTY;
-                wp_data->error_code = ERROR_CODE_INVALID_DATA_TYPE;
-            }
-            break;
-        case PROP_DESCRIPTION:
-            if (value.tag == BACNET_APPLICATION_TAG_CHARACTER_STRING) {
-                status = Analog_Input_Description_Write(
-                    wp_data->object_instance,
-                    &value.type.Character_String,
-                    &wp_data->error_class,
-                    &wp_data->error_code);
-            } else {
-                wp_data->error_class = ERROR_CLASS_PROPERTY;
-                wp_data->error_code = ERROR_CODE_INVALID_DATA_TYPE;
-            }
-            break;
+    switch ((int) wp_data->object_property) {
         case PROP_PRESENT_VALUE:
-            if (value.tag == BACNET_APPLICATION_TAG_REAL) {
-                /* Command priority 6 is reserved for use by Minimum On/Off
-                   algorithm and may not be used for other purposes in any
-                   object. */
-                if (Analog_Input_Present_Value_Set(wp_data->object_instance,
-                        value.type.Real, wp_data->priority)) {
-                    status = true;
-                    sprintf(cur_value,"%f",value.type.Real);
-                    ucix_add_option(ctx, "bacnet_ai", idx_c, "value",
-                        cur_value);
-                    cur_value_time = time(NULL);
-                    ucix_add_option_int(ctx, "bacnet_ai", idx_c, "value_time",
-                        cur_value_time);
-                    ucix_add_option_int(ctx, "bacnet_ai", idx_c, "write",
-                        1);
-                } else if (wp_data->priority == 6) {
-                    /* Command priority 6 is reserved for use by Minimum On/Off
-                       algorithm and may not be used for other purposes in any
-                       object. */
+            status =
+                WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
+                &wp_data->error_class, &wp_data->error_code);
+
+            if (status) {
+                if (CurrentAI->Out_Of_Service == true) {
+                    Analog_Input_Present_Value_Set(wp_data->object_instance,
+                        value.type.Real);
+                } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
-                } else {
-                    wp_data->error_class = ERROR_CLASS_PROPERTY;
-                    wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
-                }
-            } else {
-                status =
-                    WPValidateArgType(&value, BACNET_APPLICATION_TAG_NULL,
-                    &wp_data->error_class, &wp_data->error_code);
-                if (status) {
-                    level = ANALOG_LEVEL_NULL;
-                    priority = wp_data->priority;
-                    if (priority && (priority <= BACNET_MAX_PRIORITY)) {
-                        priority--;
-                        CurrentAI->Priority_Array[priority] = level;
-                        /* Note: you could set the physical output here to the next
-                           highest priority, or to the relinquish default if no
-                           priorities are set.
-                           However, if Out of Service is TRUE, then don't set the
-                           physical output.  This comment may apply to the
-                           main loop (i.e. check out of service before changing output) */
-                        pvalue = CurrentAI->Relinquish_Default;
-                        for (i = 0; i < BACNET_MAX_PRIORITY; i++) {
-                            if (CurrentAI->Priority_Array[i] != ANALOG_LEVEL_NULL) {
-                                pvalue = CurrentAI->Priority_Array[i];
-                                break;
-                            }
-                        }
-                        sprintf(cur_value,"%f",pvalue);
-                        ucix_add_option(ctx, "bacnet_ai", idx_c, "value",
-                            cur_value);
-                        cur_value_time = time(NULL);
-                        ucix_add_option_int(ctx, "bacnet_ai", idx_c, "value_time",
-                            cur_value_time);
-                        ucix_add_option_int(ctx, "bacnet_ai", idx_c, "write",
-                            1);
-                    } else {
-                        status = false;
-                        wp_data->error_class = ERROR_CLASS_PROPERTY;
-                        wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
-                    }
+                    status = false;
                 }
             }
             break;
@@ -1345,25 +701,9 @@ bool Analog_Input_Write_Property(
                 WPValidateArgType(&value, BACNET_APPLICATION_TAG_BOOLEAN,
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
-                CurrentAI->Out_Of_Service = value.type.Boolean;
-            }
-            break;
-
-        case PROP_RELIABILITY:
-            status =
-                WPValidateArgType(&value, BACNET_APPLICATION_TAG_ENUMERATED,
-                &wp_data->error_class, &wp_data->error_code);
-            if (status) {
-                CurrentAI->Reliability = value.type.Enumerated;
-            }
-            break;
-
-        case PROP_COV_INCREMENT:
-            status =
-                WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
-                &wp_data->error_class, &wp_data->error_code);
-            if (status) {
-                CurrentAI->COV_Increment = value.type.Real;
+                Analog_Input_Out_Of_Service_Set(
+                    wp_data->object_instance,
+                    value.type.Boolean);
             }
             break;
 
@@ -1376,36 +716,20 @@ bool Analog_Input_Write_Property(
             }
             break;
 
-        case PROP_RELINQUISH_DEFAULT:
+        case PROP_COV_INCREMENT:
             status =
                 WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
                 &wp_data->error_class, &wp_data->error_code);
             if (status) {
-                CurrentAI->Relinquish_Default = value.type.Real;
-            }
-            break;
-
-        case PROP_MAX_PRES_VALUE:
-            status =
-                WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
-                &wp_data->error_class, &wp_data->error_code);
-
-            if (status) {
-                CurrentAI->Max_Pres_Value = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "max_value",
+                if (value.type.Real >= 0.0) {
+                    Analog_Input_COV_Increment_Set(
+                        wp_data->object_instance,
                         value.type.Real);
-            }
-            break;
-
-        case PROP_MIN_PRES_VALUE:
-            status =
-                WPValidateArgType(&value, BACNET_APPLICATION_TAG_REAL,
-                &wp_data->error_class, &wp_data->error_code);
-
-            if (status) {
-                CurrentAI->Min_Pres_Value = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "min_value",
-                        value.type.Real);
+                } else {
+                    status = false;
+                    wp_data->error_class = ERROR_CLASS_PROPERTY;
+                    wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
+                }
             }
             break;
 
@@ -1418,8 +742,6 @@ bool Analog_Input_Write_Property(
             if (status) {
                 CurrentAI->Time_Delay = value.type.Unsigned_Int;
                 CurrentAI->Remaining_Time_Delay = CurrentAI->Time_Delay;
-                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "time_delay",
-                    value.type.Unsigned_Int);
             }
             break;
 
@@ -1430,8 +752,6 @@ bool Analog_Input_Write_Property(
 
             if (status) {
                 CurrentAI->Notification_Class = value.type.Unsigned_Int;
-                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "nc",
-                    value.type.Unsigned_Int);
             }
             break;
 
@@ -1442,8 +762,6 @@ bool Analog_Input_Write_Property(
 
             if (status) {
                 CurrentAI->High_Limit = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "high_limit",
-                        value.type.Real);
             }
             break;
 
@@ -1454,8 +772,6 @@ bool Analog_Input_Write_Property(
 
             if (status) {
                 CurrentAI->Low_Limit = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "low_limit",
-                        value.type.Real);
             }
             break;
 
@@ -1466,8 +782,6 @@ bool Analog_Input_Write_Property(
 
             if (status) {
                 CurrentAI->Deadband = value.type.Real;
-                ucix_add_option_int(ctx, "bacnet_ai", idx_c, "dead_limit",
-                        value.type.Real);
             }
             break;
 
@@ -1479,8 +793,6 @@ bool Analog_Input_Write_Property(
             if (status) {
                 if (value.type.Bit_String.bits_used == 2) {
                     CurrentAI->Limit_Enable = value.type.Bit_String.value[0];
-                    ucix_add_option_int(ctx, "bacnet_ai", idx_c, "limit",
-                        value.type.Bit_String.value[0]);
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1497,8 +809,6 @@ bool Analog_Input_Write_Property(
             if (status) {
                 if (value.type.Bit_String.bits_used == 3) {
                     CurrentAI->Event_Enable = value.type.Bit_String.value[0];
-                    ucix_add_option_int(ctx, "bacnet_ai", idx_c, "event",
-                        value.type.Bit_String.value[0]);
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1530,17 +840,19 @@ bool Analog_Input_Write_Property(
             break;
 #endif
         case PROP_OBJECT_IDENTIFIER:
+        case PROP_OBJECT_NAME:
         case PROP_OBJECT_TYPE:
         case PROP_STATUS_FLAGS:
         case PROP_EVENT_STATE:
-        case PROP_PRIORITY_ARRAY:
-            wp_data->error_class = ERROR_CLASS_PROPERTY;
-            wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
-            break;
+        case PROP_DESCRIPTION:
+        case PROP_RELIABILITY:
 #if defined(INTRINSIC_REPORTING)
         case PROP_ACKED_TRANSITIONS:
         case PROP_EVENT_TIME_STAMPS:
 #endif
+        case 9997:
+        case 9998:
+        case 9999:
             wp_data->error_class = ERROR_CLASS_PROPERTY;
             wp_data->error_code = ERROR_CODE_WRITE_ACCESS_DENIED;
             break;
@@ -1549,8 +861,7 @@ bool Analog_Input_Write_Property(
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
     }
-    ucix_commit(ctx, "bacnet_ai");
-    ucix_cleanup(ctx);
+
     return status;
 }
 
@@ -1559,20 +870,21 @@ void Analog_Input_Intrinsic_Reporting(
     uint32_t object_instance)
 {
 #if defined(INTRINSIC_REPORTING)
-    ANALOG_INPUT_DESCR *CurrentAI;
     BACNET_EVENT_NOTIFICATION_DATA event_data;
     BACNET_CHARACTER_STRING msgText;
-    unsigned index = 0;
+    ANALOG_INPUT_DESCR *CurrentAI;
+    unsigned int object_index;
     uint8_t FromState = 0;
     uint8_t ToState;
     float ExceededLimit = 0.0f;
     float PresentVal = 0.0f;
     bool SendNotify = false;
 
-    if (Analog_Input_Valid_Instance(object_instance)) {
-        index = Analog_Input_Instance_To_Index(object_instance);
-        CurrentAI = &AI_Descr[index];
-    } else
+
+    object_index = Analog_Input_Instance_To_Index(object_instance);
+    if (object_index < MAX_ANALOG_INPUTS)
+        CurrentAI = &AI_Descr[object_index];
+    else
         return;
 
     /* check limits */
@@ -1857,14 +1169,13 @@ int Analog_Input_Event_Information(
     unsigned index,
     BACNET_GET_EVENT_INFORMATION_DATA * getevent_data)
 {
-    //ANALOG_INPUT_DESCR *CurrentAI;
     bool IsNotAckedTransitions;
     bool IsActiveEvent;
     int i;
 
 
     /* check index */
-    if (Analog_Input_Valid_Instance(index)) {
+    if (index < MAX_ANALOG_INPUTS) {
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (AI_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
@@ -1927,20 +1238,22 @@ int Analog_Input_Event_Information(
         return 0;       /* no active event at this index */
 }
 
+
 int Analog_Input_Alarm_Ack(
     BACNET_ALARM_ACK_DATA * alarmack_data,
     BACNET_ERROR_CODE * error_code)
 {
     ANALOG_INPUT_DESCR *CurrentAI;
-    unsigned index = 0;
+    unsigned int object_index;
 
-    if (Analog_Input_Valid_Instance(alarmack_data->eventObjectIdentifier.
-        instance)) {
-        index =
-            Analog_Input_Instance_To_Index(alarmack_data->eventObjectIdentifier.
-            instance);
-        CurrentAI = &AI_Descr[index];
-    } else {
+
+    object_index =
+        Analog_Input_Instance_To_Index(alarmack_data->eventObjectIdentifier.
+        instance);
+
+    if (object_index < MAX_ANALOG_INPUTS)
+        CurrentAI = &AI_Descr[object_index];
+    else {
         *error_code = ERROR_CODE_UNKNOWN_OBJECT;
         return -1;
     }
@@ -1962,7 +1275,7 @@ int Analog_Input_Alarm_Ack(
                     return -1;
                 }
 
-                /* Clean transitions flag. */
+                /* FIXME: Send ack notification */
                 CurrentAI->Acked_Transitions[TRANSITION_TO_OFFNORMAL].
                     bIsAcked = true;
             } else {
@@ -1972,29 +1285,6 @@ int Analog_Input_Alarm_Ack(
             break;
 
         case EVENT_STATE_FAULT:
-            if (CurrentAI->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
-                false) {
-                if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
-                    *error_code = ERROR_CODE_INVALID_TIME_STAMP;
-                    return -1;
-                }
-                if (datetime_compare(&CurrentAI->
-                        Acked_Transitions[TRANSITION_TO_NORMAL].Time_Stamp,
-                        &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
-                    *error_code = ERROR_CODE_INVALID_TIME_STAMP;
-                    return -1;
-                }
-
-                /* Clean transitions flag. */
-                CurrentAI->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked =
-                    true;
-            } else {
-                *error_code = ERROR_CODE_INVALID_EVENT_STATE;
-                return -1;
-            }
-            break;
-
-        case EVENT_STATE_NORMAL:
             if (CurrentAI->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked ==
                 false) {
                 if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
@@ -2008,7 +1298,30 @@ int Analog_Input_Alarm_Ack(
                     return -1;
                 }
 
-                /* Clean transitions flag. */
+                /* FIXME: Send ack notification */
+                CurrentAI->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked =
+                    true;
+            } else {
+                *error_code = ERROR_CODE_INVALID_EVENT_STATE;
+                return -1;
+            }
+            break;
+
+        case EVENT_STATE_NORMAL:
+            if (CurrentAI->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
+                false) {
+                if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
+                    *error_code = ERROR_CODE_INVALID_TIME_STAMP;
+                    return -1;
+                }
+                if (datetime_compare(&CurrentAI->
+                        Acked_Transitions[TRANSITION_TO_NORMAL].Time_Stamp,
+                        &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
+                    *error_code = ERROR_CODE_INVALID_TIME_STAMP;
+                    return -1;
+                }
+
+                /* FIXME: Send ack notification */
                 CurrentAI->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked =
                     true;
             } else {
@@ -2020,12 +1333,9 @@ int Analog_Input_Alarm_Ack(
         default:
             return -2;
     }
-
-    /* Need to send AckNotification. */
     CurrentAI->Ack_notify_data.bSendAckNotify = true;
     CurrentAI->Ack_notify_data.EventState = alarmack_data->eventStateAcked;
 
-    /* Return OK */
     return 1;
 }
 
@@ -2033,10 +1343,9 @@ int Analog_Input_Alarm_Summary(
     unsigned index,
     BACNET_GET_ALARM_SUMMARY_DATA * getalarm_data)
 {
-    //ANALOG_INPUT_DESCR *CurrentAI;
 
     /* check index */
-    if (index < max_analog_inputs_int) {
+    if (index < MAX_ANALOG_INPUTS) {
         /* Event_State is not equal to NORMAL  and
            Notify_Type property value is ALARM */
         if ((AI_Descr[index].Event_State != EVENT_STATE_NORMAL) &&
@@ -2082,24 +1391,32 @@ bool WPValidateArgType(
     BACNET_ERROR_CLASS * pErrorClass,
     BACNET_ERROR_CODE * pErrorCode)
 {
-    pValue = pValue;
-    ucExpectedTag = ucExpectedTag;
-    pErrorClass = pErrorClass;
-    pErrorCode = pErrorCode;
+    bool bResult;
 
-    return false;
+    /*
+     * start out assuming success and only set up error
+     * response if validation fails.
+     */
+    bResult = true;
+    if (pValue->tag != ucExpectedTag) {
+        bResult = false;
+        *pErrorClass = ERROR_CLASS_PROPERTY;
+        *pErrorCode = ERROR_CODE_INVALID_DATA_TYPE;
+    }
+
+    return (bResult);
 }
 
-void testAnalog_Input(
+void testAnalogInput(
     Test * pTest)
 {
-    BACNET_READ_PROPERTY_DATA rpdata;
     uint8_t apdu[MAX_APDU] = { 0 };
     int len = 0;
     uint32_t len_value = 0;
     uint8_t tag_number = 0;
-    uint16_t decoded_type = 0;
     uint32_t decoded_instance = 0;
+    uint16_t decoded_type = 0;
+    BACNET_READ_PROPERTY_DATA rpdata;
 
     Analog_Input_Init();
     rpdata.application_data = &apdu[0];
@@ -2128,7 +1445,7 @@ int main(
 
     pTest = ct_create("BACnet Analog Input", NULL);
     /* individual tests */
-    rc = ct_addTestFunction(pTest, testAnalog_Input);
+    rc = ct_addTestFunction(pTest, testAnalogInput);
     assert(rc);
 
     ct_setStream(pTest, stdout);

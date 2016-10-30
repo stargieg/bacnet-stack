@@ -175,15 +175,20 @@ bool Binary_Output_Present_Value_Set(
     return status;
 }
 
-static void Binary_Output_Polarity_Set(
+bool Binary_Output_Polarity_Set(
     uint32_t instance,
     BACNET_POLARITY polarity)
 {
+    bool status = false;
+
     if (instance < MAX_BINARY_OUTPUTS) {
         if (polarity < MAX_POLARITY) {
             Polarity[instance] = polarity;
+            status = true;
         }
     }
+
+    return status;
 }
 
 BACNET_POLARITY Binary_Output_Polarity(
@@ -198,7 +203,7 @@ BACNET_POLARITY Binary_Output_Polarity(
     return polarity;
 }
 
-static void Binary_Output_Out_Of_Service_Set(
+void Binary_Output_Out_Of_Service_Set(
     uint32_t instance,
     bool flag)
 {
@@ -313,9 +318,9 @@ int Binary_Output_Read_Property(
                     if ((apdu_len + len) < MAX_APDU)
                         apdu_len += len;
                     else {
-                        rpdata->error_class = ERROR_CLASS_SERVICES;
-                        rpdata->error_code = ERROR_CODE_NO_SPACE_FOR_OBJECT;
-                        apdu_len = BACNET_STATUS_ERROR;
+                        rpdata->error_code =
+                            ERROR_CODE_ABORT_SEGMENTATION_NOT_SUPPORTED;
+                        apdu_len = BACNET_STATUS_ABORT;
                         break;
                     }
                 }
