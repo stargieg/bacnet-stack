@@ -65,7 +65,6 @@ endif
 ifeq (${BACNET_PORT},linux)
 ifneq (${OSTYPE},cygwin)
 	SUBDIRS += mstpcap mstpcrc
-#SUBDIRS += router
 endif
 endif
 
