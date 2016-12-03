@@ -24,7 +24,7 @@ INCLUDES = $(INCLUDE1) $(INCLUDE2)
 BACNET_LIB := -L$(BACNET_LIB_DIR),-l$(BACNET_LIB_NAME)
 # build for UCI
 ifneq (,$(findstring -DBAC_UCI,$(BACNET_DEFINES)))
-BACNET_LIB := $(BACNET_LIB),-L$(UCI_LIB_DIR),-luci
+BACNET_LIB := $(BACNET_LIB),-L$(UCI_LIB_DIR),-luci,-lubox
 endif
 # OS specific builds
 ifeq (${BACNET_PORT},linux)
