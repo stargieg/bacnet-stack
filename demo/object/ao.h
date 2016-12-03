@@ -71,6 +71,7 @@ extern "C" {
         uint32_t Notification_Class;
         float High_Limit;
         float Low_Limit;
+        float Feedback_Value;
         float Deadband;
         unsigned Limit_Enable:2;
         unsigned Event_Enable:3;
