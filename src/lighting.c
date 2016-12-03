@@ -142,7 +142,7 @@ int lighting_command_decode(
     uint32_t unsigned_value = 0;
     float real_value = 0.0;
 
-    apdu_max_len = apdu_max_len;
+    unused_var(apdu_max_len);
     /* check for value pointers */
     if (apdu_max_len && data) {
         /* Tag 0: operation */

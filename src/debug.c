@@ -60,6 +60,6 @@ void debug_printf(
     const char *format,
     ...)
 {
-    format = format;
+    unused_var(format);
 }
 #endif

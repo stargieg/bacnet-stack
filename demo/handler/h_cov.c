@@ -215,7 +215,7 @@ static int cov_encode_subscription(
 
 
     /* FIXME: unused parameter */
-    max_apdu = max_apdu;
+    unused_var(max_apdu);
     if (!cov_subscription) {
         return 0;
     }

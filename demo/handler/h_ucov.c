@@ -69,7 +69,7 @@ void handler_ucov_notification(
     unsigned index = 0;
 
     /* src not needed for this application */
-    src = src;
+    unused_var(src);
     /* create linked list to store data if more
        than one property value is expected */
     pProperty_value = &property_value[0];

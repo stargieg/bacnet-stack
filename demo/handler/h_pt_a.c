@@ -199,8 +199,8 @@ void handler_conf_private_trans_ack(
  * we were expecting. But this is just to silence some compiler
  * warnings from Borland.
  */
-    src = src;
-    service_data = service_data;
+    unused_var(src);
+    unused_var(service_data);
 
     len = 0;
 

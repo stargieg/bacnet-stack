@@ -748,7 +748,7 @@ int address_list_encode(
     /* FIXME: I really shouild check the length remaining here but it is
        fairly pointless until we have the true length remaining in
        the packet to work with as at the moment it is just MAX_APDU */
-    apdu_len = apdu_len;
+    unused_var(apdu_len);
     /* look for matching address */
     pMatch = Address_Cache;
     while (pMatch <= &Address_Cache[MAX_ADDRESS_CACHE - 1]) {

@@ -35,6 +35,9 @@
 #pragma warning( disable : 4996)
 #endif
 
+/* This removes compilation warnings/errors about unreferenced variables. */
+#define unused_var(x) (x)=(x)
+
 /* This stack implements this version of BACnet */
 #define BACNET_PROTOCOL_VERSION 1
 /* Although this stack can implement a later revision,

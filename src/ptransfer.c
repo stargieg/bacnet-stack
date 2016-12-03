@@ -55,7 +55,7 @@ static int pt_encode_apdu(
     }
 */
     /* unused parameter */
-    max_apdu = max_apdu;
+    unused_var(max_apdu);
     if (apdu) {
         len =
             encode_context_unsigned(&apdu[apdu_len], 0,
