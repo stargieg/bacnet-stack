@@ -33,7 +33,6 @@ TARGET_EXT =
 SYSTEM_LIB=-lc,-lgcc,-lrt,-lm
 endif
 ifeq (${BACNET_PORT},bsd)
-PFLAGS = -pthread
 TARGET_EXT =
 SYSTEM_LIB=-lc,-lm
 endif
