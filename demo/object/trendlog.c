@@ -349,9 +349,9 @@ void Trend_Log_Init(
                 TL_Descr[i].ulRecordCount = TL_INIT_ENTRIES;
                 TL_Descr[i].ulTotalRecordCount = TL_INIT_ENTRIES;
 
-                TL_Descr[i].Source.deviceIndentifier.instance =
+                TL_Descr[i].Source.deviceIdentifier.instance =
                     Device_Object_Instance_Number();
-                TL_Descr[i].Source.deviceIndentifier.type = ucidevice_type;
+                TL_Descr[i].Source.deviceIdentifier.type = ucidevice_type;
                 TL_Descr[i].Source.objectIdentifier.instance = uciobject_instance;
                 TL_Descr[i].Source.objectIdentifier.type = uciobject_type;
                 TL_Descr[i].Source.arrayIndex = BACNET_ARRAY_ALL;
@@ -1180,10 +1180,10 @@ bool Trend_Log_Write_Property(
 
                 if (value.context_tag == 3) {
                     /* Got a device ID so deal with it */
-                    TempSource.deviceIndentifier = value.type.Object_Id;
-                    if ((TempSource.deviceIndentifier.instance !=
+                    TempSource.deviceIdentifier = value.type.Object_Id;
+                    if ((TempSource.deviceIdentifier.instance !=
                             Device_Object_Instance_Number()) ||
-                        (TempSource.deviceIndentifier.type != OBJECT_DEVICE)) {
+                        (TempSource.deviceIdentifier.type != OBJECT_DEVICE)) {
                         /* Not our ID so can't handle it at the moment */
                         wp_data->error_class = ERROR_CLASS_PROPERTY;
                         wp_data->error_code =
@@ -1193,8 +1193,8 @@ bool Trend_Log_Write_Property(
                 }
             }
             /* Make sure device ID is set to ours in case not supplied */
-            TempSource.deviceIndentifier.type = OBJECT_DEVICE;
-            TempSource.deviceIndentifier.instance =
+            TempSource.deviceIdentifier.type = OBJECT_DEVICE;
+            TempSource.deviceIdentifier.instance =
                 Device_Object_Instance_Number();
             /* Quick comparison if structures are packed ... */
             if (memcmp(&TempSource, &CurrentTL->Source,
