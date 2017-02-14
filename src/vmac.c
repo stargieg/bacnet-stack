@@ -60,7 +60,7 @@ static OS_Keylist VMAC_List;
  */
 unsigned int VMAC_Count(void)
 {
-    return Keylist_Count(VMAC_List);
+    return (unsigned int)Keylist_Count(VMAC_List);
 }
 
 /**
@@ -76,7 +76,7 @@ bool VMAC_Add(uint32_t device_id, struct vmac_data *src)
     bool status = false;
     struct vmac_data *pVMAC = NULL;
     int index = 0;
-    unsigned int i = 0;
+    size_t i = 0;
 
     pVMAC = Keylist_Data(VMAC_List, device_id);
     if (!pVMAC) {
@@ -155,7 +155,7 @@ bool VMAC_Different(
             status = true;
         } else {
             if (vmac1->mac_len < mac_len) {
-                mac_len = vmac1->mac_len;
+                mac_len = (unsigned int)vmac1->mac_len;
             }
             for (i = 0; i < mac_len; i++) {
                 if (vmac1->mac[i] != vmac1->mac[i]) {
@@ -189,7 +189,7 @@ bool VMAC_Match(
             status = false;
         } else {
             if (vmac1->mac_len < mac_len) {
-                mac_len = vmac1->mac_len;
+                mac_len = (unsigned int)vmac1->mac_len;
             }
             for (i = 0; i < mac_len; i++) {
                 if (vmac1->mac[i] != vmac1->mac[i]) {
