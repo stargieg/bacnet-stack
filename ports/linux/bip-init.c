@@ -77,8 +77,7 @@ static int get_local_ifr_ioctl(
 
     return rv;
 }
-
-static int get_local_address_ioctl(
+int get_local_address_ioctl(
     char *ifname,
     struct in_addr *addr,
     int request)
