@@ -94,7 +94,7 @@ bool VMAC_Add(uint32_t device_id, struct vmac_data *src)
             index = Keylist_Data_Add(VMAC_List, device_id, pVMAC);
             if (index >= 0) {
                 status = true;
-                debug_printf("VMAC %u added.\n", device_id);
+                debug_printf("VMAC %u added.\n", (unsigned int)device_id);
             }
         }
     }
