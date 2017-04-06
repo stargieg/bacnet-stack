@@ -227,9 +227,6 @@ struct tl_inst_itr_ctx {
         uint8_t * apdu,
         BACNET_READ_RANGE_DATA * pRequest);
 
-    void TL_fetch_property(
-        int i);
-
     void trend_log_timer(
         uint16_t uSeconds);
 
