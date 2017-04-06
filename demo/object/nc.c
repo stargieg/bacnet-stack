@@ -912,7 +912,7 @@ bool Notification_Class_Write_Property(
                     }
                     if (status == true) {
                         for (idx = 0; idx < MAX_BACNET_EVENT_TRANSITION; idx++)
-                            CurrentNotify->Priority[idx] = TmpPriority[idx];	
+                            CurrentNC->Priority[idx] = TmpPriority[idx];	
                     }
                 } else if (wp_data->array_index <= 3) {
                     if (value.type.Unsigned_Int > 255) {
