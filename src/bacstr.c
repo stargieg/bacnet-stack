@@ -230,7 +230,6 @@ bool bitstring_same(
     return false;
 }
 
-#if PRINT_ENABLED
 /* converts an null terminated ASCII string to an bitstring.
    Expects "1,0,1,0,1,1" or "101011" as the bits
    returns true if successfully converted and fits; false if too long */
@@ -275,7 +274,6 @@ bool bitstring_init_ascii(
 
     return status;
 }
-#endif
 
 #define CHARACTER_STRING_CAPACITY (MAX_CHARACTER_STRING_BYTES - 1)
 /* returns false if the string exceeds capacity
