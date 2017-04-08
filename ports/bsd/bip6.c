@@ -44,6 +44,16 @@
 #include "net.h"
 #include <ifaddrs.h>
 
+#if defined(__APPLE__) || defined(__darwin__)
+/* OSX seems not to define these. */
+#ifndef s6_addr16
+#define s6_addr16 __u6_addr.__u6_addr16
+#endif
+#ifndef s6_addr32
+#define s6_addr32 __u6_addr.__u6_addr32
+#endif
+#endif
+
 static void debug_print_ipv6(const char *str, const struct in6_addr * addr) {
    debug_printf( "BIP6: %s %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n",
         str,
@@ -390,7 +400,7 @@ bool bip6_init(
     if (ifname) {
         bip6_set_interface(ifname);
     } else {
-        bip6_set_interface("eth0");
+        bip6_set_interface("en0");
     }
     if (BIP6_Addr.port == 0) {
         bip6_set_port(0xBAC0);
