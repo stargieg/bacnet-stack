@@ -43,7 +43,7 @@
 #include "handlers.h"
 #include "txbuf.h"
 #include "client.h"
-#define PRINT_ENABLED 1
+
 /** @file s_getevent.c  Send a GetEventInformation request. */
 
 /** Send a GetEventInformation request to a remote network for a specific device, a range,

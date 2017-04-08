@@ -41,8 +41,6 @@
 #include "device.h"
 #include "datalink.h"
 #include "bvlc.h"
-/* some demo stuff needed */
-#define DEBUG_ENABLED 0
 #include "debug.h"
 #include "filename.h"
 #include "handlers.h"
