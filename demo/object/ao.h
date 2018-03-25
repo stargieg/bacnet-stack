@@ -50,10 +50,8 @@ extern "C" {
         char Object_Name[64];
         char Object_Description[64];
         unsigned Event_State:3;
-        //float Present_Value;
         BACNET_RELIABILITY Reliability;
         bool Out_Of_Service;
-        bool Change_Of_Value;
         uint8_t Units;
         float Prior_Value;
         float COV_Increment;

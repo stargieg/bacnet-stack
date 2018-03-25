@@ -588,8 +588,8 @@ bool Analog_Input_Encode_Value_List(
         value_list->value.next = NULL;
         value_list->priority = BACNET_NO_PRIORITY;
         value_list->next = NULL;
+        status = true;
     }
-    status = Analog_Input_Change_Of_Value(object_instance);
 
     return status;
 }

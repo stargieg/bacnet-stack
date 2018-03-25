@@ -493,7 +493,7 @@ bool Analog_Value_Change_Of_Value(
     if (Analog_Value_Valid_Instance(object_instance)) {
         index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
-        status = CurrentAV->Change_Of_Value;
+        status = CurrentAV->Changed;
     }
 
     return status;
@@ -508,11 +508,18 @@ void Analog_Value_Change_Of_Value_Clear(
     if (Analog_Value_Valid_Instance(object_instance)) {
         index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
-        CurrentAV->Change_Of_Value = false;
+        CurrentAV->Changed = false;
     }
 }
 
-/* returns true if value has changed */
+/**
+ * For a given object instance-number, loads the value_list with the COV data.
+ *
+ * @param  object_instance - object-instance number of the object
+ * @param  value_list - list of COV data
+ *
+ * @return  true if the value list is encoded
+ */
 bool Analog_Value_Encode_Value_List(
     uint32_t object_instance,
     BACNET_PROPERTY_VALUE * value_list)
@@ -552,8 +559,8 @@ bool Analog_Value_Encode_Value_List(
         value_list->value.next = NULL;
         value_list->priority = BACNET_NO_PRIORITY;
         value_list->next = NULL;
+        status = true;
     }
-    status = Analog_Value_Change_Of_Value(object_instance);
 
     return status;
 }

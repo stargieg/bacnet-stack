@@ -53,7 +53,7 @@ extern "C" {
         BACNET_BINARY_PV Present_Value;
         BACNET_POLARITY Polarity;
         bool Out_Of_Service;
-        bool Change_Of_Value;
+        bool Changed;
         uint8_t Reliability;
         bool Disable;
         BACNET_CHARACTER_STRING Inactive_Text;

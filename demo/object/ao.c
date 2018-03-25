@@ -530,7 +530,7 @@ bool Analog_Output_Change_Of_Value(
     if (Analog_Output_Valid_Instance(object_instance)) {
         index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
-        changed = CurrentAO->Change_Of_Value;
+        changed = CurrentAO->Changed;
     }
 
     return changed;
@@ -545,7 +545,7 @@ void Analog_Output_Change_Of_Value_Clear(
     if (Analog_Output_Valid_Instance(object_instance)) {
         index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
-        CurrentAO->Change_Of_Value = false;
+        CurrentAO->Changed = false;
     }
 }
 
@@ -589,8 +589,8 @@ bool Analog_Output_Encode_Value_List(
         value_list->value.next = NULL;
         value_list->priority = BACNET_NO_PRIORITY;
         value_list->next = NULL;
+        status = true;
     }
-    status = Analog_Output_Change_Of_Value(object_instance);
 
     return status;
 }

@@ -54,7 +54,7 @@ int max_multi_state_values;
         uint8_t Present_Value;
         unsigned Event_State:3;
         bool Out_Of_Service;
-        bool Change_Of_Value;
+        bool Changed;
         uint8_t Reliability;
         bool Disable;
         uint8_t Units;

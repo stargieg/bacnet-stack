@@ -469,7 +469,7 @@ void Binary_Output_Out_Of_Service_Set(
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         if (CurrentBO->Out_Of_Service != value) {
-            CurrentBO->Change_Of_Value = true;
+            CurrentBO->Changed = true;
         }
         CurrentBO->Out_Of_Service = value;
     }
@@ -721,7 +721,7 @@ bool Binary_Output_Change_Of_Value(
     if (Binary_Output_Valid_Instance(object_instance)) {
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
-        status = CurrentBO->Change_Of_Value;
+        status = CurrentBO->Changed;
     }
 
     return status;
@@ -736,11 +736,18 @@ void Binary_Output_Change_Of_Value_Clear(
     if (Binary_Output_Valid_Instance(object_instance)) {
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
-        CurrentBO->Change_Of_Value = false;
+        CurrentBO->Changed = false;
     }
 }
 
-/* returns true if value has changed */
+/**
+ * For a given object instance-number, loads the value_list with the COV data.
+ *
+ * @param  object_instance - object-instance number of the object
+ * @param  value_list - list of COV data
+ *
+ * @return  true if the value list is encoded
+ */
 bool Binary_Output_Encode_Value_List(
     uint32_t object_instance,
     BACNET_PROPERTY_VALUE * value_list)
@@ -752,6 +759,7 @@ bool Binary_Output_Encode_Value_List(
         value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
         value_list->value.context_specific = false;
         value_list->value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+        value_list->value.next = NULL;
         value_list->value.type.Enumerated =
             Binary_Output_Present_Value(object_instance);
         value_list->priority = BACNET_NO_PRIORITY;
@@ -762,6 +770,7 @@ bool Binary_Output_Encode_Value_List(
         value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
         value_list->value.context_specific = false;
         value_list->value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
+        value_list->value.next = NULL;
         bitstring_init(&value_list->value.type.Bit_String);
         bitstring_set_bit(&value_list->value.type.Bit_String,
             STATUS_FLAG_IN_ALARM, false);
@@ -777,8 +786,9 @@ bool Binary_Output_Encode_Value_List(
                 STATUS_FLAG_OUT_OF_SERVICE, false);
         }
         value_list->priority = BACNET_NO_PRIORITY;
+        value_list->next = NULL;
+        status = true;
     }
-    status = Binary_Output_Change_Of_Value(object_instance);
 
     return status;
 }

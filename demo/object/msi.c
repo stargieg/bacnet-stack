@@ -413,7 +413,7 @@ bool Multistate_Input_Change_Of_Value(
     if (Multistate_Input_Valid_Instance(object_instance)) {
         index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
-        status = CurrentMSI->Change_Of_Value;
+        status = CurrentMSI->Changed;
     }
 
     return status;
@@ -428,14 +428,21 @@ void Multistate_Input_Change_Of_Value_Clear(
     if (Multistate_Input_Valid_Instance(object_instance)) {
         index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
-        CurrentMSI->Change_Of_Value = false;
+        CurrentMSI->Changed = false;
     }
 
     return;
 }
 
 
-/* returns true if value has changed */
+/**
+ * For a given object instance-number, loads the value_list with the COV data.
+ *
+ * @param  object_instance - object-instance number of the object
+ * @param  value_list - list of COV data
+ *
+ * @return  true if the value list is encoded
+ */
 bool Multistate_Input_Encode_Value_List(
     uint32_t object_instance,
     BACNET_PROPERTY_VALUE * value_list)
@@ -447,6 +454,7 @@ bool Multistate_Input_Encode_Value_List(
         value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
         value_list->value.context_specific = false;
         value_list->value.tag = BACNET_APPLICATION_TAG_ENUMERATED;
+        value_list->value.next = NULL;
         value_list->value.type.Enumerated =
             Multistate_Input_Present_Value(object_instance);
         value_list->priority = BACNET_NO_PRIORITY;
@@ -457,6 +465,7 @@ bool Multistate_Input_Encode_Value_List(
         value_list->propertyArrayIndex = BACNET_ARRAY_ALL;
         value_list->value.context_specific = false;
         value_list->value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
+        value_list->value.next = NULL;
         bitstring_init(&value_list->value.type.Bit_String);
         bitstring_set_bit(&value_list->value.type.Bit_String,
             STATUS_FLAG_IN_ALARM, false);
@@ -472,8 +481,9 @@ bool Multistate_Input_Encode_Value_List(
                 STATUS_FLAG_OUT_OF_SERVICE, false);
         }
         value_list->priority = BACNET_NO_PRIORITY;
+        value_list->next = NULL;
+        status = true;
     }
-    status =  Multistate_Input_Change_Of_Value(object_instance);
 
     return status;
 }
