@@ -292,6 +292,9 @@ void Analog_Value_Init(
                 AV_Descr[i].Priority_Array[15] = strtof(ucivalue,
                     (char **) NULL);
 
+                AV_Descr[i].Prior_Value = strtof(ucivalue,
+                    (char **) NULL);
+
                 AV_Descr[i].Relinquish_Default = 0; //TODO read uci
 
                 ucicov_increment = ucix_get_option(ctx, "bacnet_av", idx_c,
@@ -592,7 +595,7 @@ void Analog_Value_COV_Increment_Set(
         index = Analog_Value_Instance_To_Index(object_instance);
         CurrentAV = &AV_Descr[index];
         CurrentAV->COV_Increment = value;
-        Analog_Value_COV_Detect(index, Analog_Value_Present_Value(index));
+        Analog_Value_COV_Detect(object_instance, Analog_Value_Present_Value(object_instance));
     }
 }
 
@@ -668,7 +671,7 @@ bool Analog_Value_Present_Value_Set(
             if (priority == 8) {
                 CurrentAV->Priority_Array[15] = value;
             }
-            Analog_Value_COV_Detect(index, Analog_Value_Present_Value(index));
+            Analog_Value_COV_Detect(object_instance, Analog_Value_Present_Value(object_instance));
             status = true;
         }
     }
@@ -696,7 +699,7 @@ bool Analog_Value_Present_Value_Relinquish(
                However, if Out of Service is TRUE, then don't set the
                physical output.  This comment may apply to the
                main loop (i.e. check out of service before changing output) */
-            Analog_Value_COV_Detect(index, Analog_Value_Present_Value(index));
+            Analog_Value_COV_Detect(object_instance, Analog_Value_Present_Value(object_instance));
             status = true;
         }
     }

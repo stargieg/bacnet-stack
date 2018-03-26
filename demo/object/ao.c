@@ -303,6 +303,9 @@ void Analog_Output_Init(
                 AO_Descr[i].Priority_Array[15] = strtof(ucivalue,
                     (char **) NULL);
 
+                AO_Descr[i].Prior_Value = strtof(ucivalue,
+                    (char **) NULL);
+
                 AO_Descr[i].Relinquish_Default = 0; //TODO read uci
 
                 ucicov_increment = ucix_get_option(ctx, "bacnet_ao", idx_c,
@@ -549,7 +552,14 @@ void Analog_Output_Change_Of_Value_Clear(
     }
 }
 
-/* returns true if value has changed */
+/**
+ * For a given object instance-number, loads the value_list with the COV data.
+ *
+ * @param  object_instance - object-instance number of the object
+ * @param  value_list - list of COV data
+ *
+ * @return  true if the value list is encoded
+ */
 bool Analog_Output_Encode_Value_List(
     uint32_t object_instance,
     BACNET_PROPERTY_VALUE * value_list)
@@ -622,7 +632,7 @@ void Analog_Output_COV_Increment_Set(
         index = Analog_Output_Instance_To_Index(object_instance);
         CurrentAO = &AO_Descr[index];
         CurrentAO->COV_Increment = value;
-        Analog_Output_COV_Detect(index, Analog_Output_Present_Value(index));
+        Analog_Output_COV_Detect(object_instance, Analog_Output_Present_Value(object_instance));
     }
 }
 
@@ -699,7 +709,7 @@ bool Analog_Output_Present_Value_Set(
             if (priority == 8) {
                 CurrentAO->Priority_Array[15] = value;
             }
-            Analog_Output_COV_Detect(index, Analog_Output_Present_Value(index));
+            Analog_Output_COV_Detect(object_instance, Analog_Output_Present_Value(object_instance));
             status = true;
         }
     }
@@ -727,7 +737,7 @@ bool Analog_Output_Present_Value_Relinquish(
                However, if Out of Service is TRUE, then don't set the
                physical output.  This comment may apply to the
                main loop (i.e. check out of service before changing output) */
-            Analog_Output_COV_Detect(index, Analog_Output_Present_Value(index));
+            Analog_Output_COV_Detect(object_instance, Analog_Output_Present_Value(object_instance));
             status = true;
         }
     }

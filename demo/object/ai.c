@@ -301,6 +301,8 @@ void Analog_Input_Init(
                 }
                 AI_Descr[i].Priority_Array[15] = strtof(ucivalue,
                     (char **) NULL);
+                AI_Descr[i].Prior_Value = strtof(ucivalue,
+                    (char **) NULL);
 
                 AI_Descr[i].Relinquish_Default = 0; //TODO read uci
 
@@ -548,7 +550,14 @@ void Analog_Input_Change_Of_Value_Clear(
     }
 }
 
-/* returns true if value has changed */
+/**
+ * For a given object instance-number, loads the value_list with the COV data.
+ *
+ * @param  object_instance - object-instance number of the object
+ * @param  value_list - list of COV data
+ *
+ * @return  true if the value list is encoded
+ */
 bool Analog_Input_Encode_Value_List(
     uint32_t object_instance,
     BACNET_PROPERTY_VALUE * value_list)
@@ -621,7 +630,7 @@ void Analog_Input_COV_Increment_Set(
         index = Analog_Input_Instance_To_Index(object_instance);
         CurrentAI = &AI_Descr[index];
         CurrentAI->COV_Increment = value;
-        Analog_Input_COV_Detect(index, Analog_Input_Present_Value(index));
+        Analog_Input_COV_Detect(object_instance, Analog_Input_Present_Value(object_instance));
     }
 }
 
@@ -698,7 +707,7 @@ bool Analog_Input_Present_Value_Set(
             if (priority == 8) {
                 CurrentAI->Priority_Array[15] = value;
             }
-            Analog_Input_COV_Detect(index, value);
+            Analog_Input_COV_Detect(object_instance, Analog_Input_Present_Value(object_instance));
             status = true;
         }
     }
