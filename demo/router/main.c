@@ -39,7 +39,6 @@
 #include <errno.h>
 #include <assert.h>
 #include <fcntl.h>
-#include <libconfig.h>  /* read config files */
 #include <unistd.h>     /* for getopt */
 #include <termios.h>    /* used in kbhit() */
 #include <getopt.h>
@@ -239,215 +238,14 @@ void print_help(
         "-s, --stopbits <1|2>\n\tspecify MSTP port stopbits\n");
 }
 
-bool read_config(
-    char *filepath)
-{
-    config_t cfg;
-    config_setting_t *setting;
-    ROUTER_PORT *current = head;
-    int result, fd;
-
-    config_init(&cfg);
-
-    /* open configuration file */
-    if (!config_read_file(&cfg, filepath)) {
-        PRINT(ERROR, "Config file error: %d - %s\n", config_error_line(&cfg),
-            config_error_text(&cfg));
-        config_destroy(&cfg);
-        return false;
-    }
-
-    /* get router "port" count */
-    setting = config_lookup(&cfg, "ports");
-    if (setting != NULL) {
-        int count = config_setting_length(setting);
-        int i;
-
-        /* lookup and initialize router "port" parameters */
-        for (i = 0; i < count; i++) {
-            const char *dev_type;
-            const char *iface;
-            long int param;
-            const char *str_param;
-            config_setting_t *port = config_setting_get_elem(setting, i);
-
-            /* create new list node to store port information */
-            if (head == NULL) {
-                head = (ROUTER_PORT *) malloc(sizeof(ROUTER_PORT));
-                head->next = NULL;
-                current = head;
-            } else {
-                ROUTER_PORT *tmp = current;
-                current = current->next;
-                current = (ROUTER_PORT *) malloc(sizeof(ROUTER_PORT));
-                current->next = NULL;
-                tmp->next = current;
-            }
-
-            port_count++;
-            config_setting_lookup_string(port, "device_type", &dev_type);
-            printf("dev_type = %s\r\n", dev_type);
-            if (strcmp(dev_type, "bip") == 0) {
-                current->type = BIP;
-
-                result = config_setting_lookup_string(port, "device", &iface);
-                if (result) {
-                    current->iface =
-                        (char *) malloc((strlen(iface) + 1) * sizeof(char));
-                    strcpy(current->iface, iface);
-
-                    /* check if interface is valid */
-                    fd = socket(AF_INET, SOCK_DGRAM, 0);
-                    if (fd) {
-                        struct ifreq ifr;
-                        strncpy(ifr.ifr_name, current->iface,
-                            sizeof(ifr.ifr_name) - 1);
-                        result = ioctl(fd, SIOCGIFADDR, &ifr);
-                        if (result != -1) {
-                            close(fd);
-                        } else {
-                            PRINT(ERROR,
-                                "Error: Invalid interface for BIP device\n");
-                            return false;
-                        }
-                    }
-                } else {
-                    current->iface = "eth0";
-                }
-
-                result =
-                    config_setting_lookup_int(port, "port", (int *) &param);
-                if (result) {
-                    current->params.bip_params.port = param;
-                } else {
-                    current->params.bip_params.port = 0xBAC0;
-                }
-                result =
-                    config_setting_lookup_int(port, "network", (int *) &param);
-                if (result) {
-                    current->route_info.net = param;
-                } else {
-                    current->route_info.net = get_next_free_dnet();
-                }
-
-            } else if (strcmp(dev_type, "mstp") == 0) {
-                current->type = MSTP;
-
-                result = config_setting_lookup_string(port, "device", &iface);
-                if (result) {
-                    current->iface =
-                        (char *) malloc((strlen(iface) + 1) * sizeof(char));
-                    strcpy(current->iface, iface);
-
-                    /* check if interface is valid */
-                    fd = open(current->iface, O_NOCTTY | O_NONBLOCK);
-                    if (fd != -1) {
-                        close(fd);
-                    } else {
-                        PRINT(ERROR,
-                            "Error: Invalid interface for MSTP device\n");
-                        return false;
-                    }
-                } else {
-                    current->iface = "/dev/ttyS0";
-                }
-                result =
-                    config_setting_lookup_int(port, "mac", (int *) &param);
-                if (result) {
-                    current->route_info.mac[0] = param;
-                    current->route_info.mac_len = 1;
-                } else {
-                    current->route_info.mac[0] = 127;
-                    current->route_info.mac_len = 1;
-                }
-                result =
-                    config_setting_lookup_int(port, "max_master",
-                    (int *) &param);
-                if (result) {
-                    current->params.mstp_params.max_master = param;
-                } else {
-                    current->params.mstp_params.max_master = 127;
-                }
-                result =
-                    config_setting_lookup_int(port, "max_frames",
-                    (int *) &param);
-                if (result) {
-                    current->params.mstp_params.max_frames = param;
-                } else {
-                    current->params.mstp_params.max_frames = 1;
-                }
-                result =
-                    config_setting_lookup_int(port, "baud", (int *) &param);
-                if (result) {
-                    current->params.mstp_params.baudrate = param;
-                } else {
-                    current->params.mstp_params.baudrate = 9600;
-                }
-                result =
-                    config_setting_lookup_string(port, "parity", &str_param);
-                if (result) {
-                    switch (str_param[0]) {
-                        case 'E':
-                            current->params.mstp_params.parity = PARITY_EVEN;
-                            break;
-                        case 'O':
-                            current->params.mstp_params.parity = PARITY_ODD;
-                            break;
-                        default:
-                            current->params.mstp_params.parity = PARITY_NONE;
-                            break;
-                    }
-                } else {
-                    current->params.mstp_params.parity = PARITY_NONE;
-                }
-                result =
-                    config_setting_lookup_int(port, "databits",
-                    (int *) &param);
-                if (result && param >= 5 && param <= 8) {
-                    current->params.mstp_params.databits = param;
-                } else {
-                    current->params.mstp_params.databits = 8;
-                }
-                result =
-                    config_setting_lookup_int(port, "stopbits",
-                    (int *) &param);
-                if (result && param >= 1 && param <= 2) {
-                    current->params.mstp_params.stopbits = param;
-                } else {
-                    current->params.mstp_params.stopbits = 1;
-                }
-                result =
-                    config_setting_lookup_int(port, "network", (int *) &param);
-                if (result) {
-                    current->route_info.net = param;
-                } else {
-                    current->route_info.net = get_next_free_dnet();
-                }
-
-            } else {
-                PRINT(ERROR, "Error: %s unsuported\n", dev_type);
-                return false;
-            }
-        }
-    } else {
-        config_destroy(&cfg);
-        return false;
-    }
-
-    config_destroy(&cfg);
-    printf("cmd file parse success\r\n");
-    return true;
-}
-
 bool parse_cmd(
     int argc,
     char *argv[])
 {
-    const char *optString = "hc:D:";
+    const char *optString = "hD:";
     const char *bipString = "p:n:D:";
     const char *mstpString = "m:b:p:d:s:n:D:";
     const struct option Options[] = {
-        {"config", required_argument, NULL, 'c'},
         {"device", required_argument, NULL, 'D'},
         {"network", required_argument, NULL, 'n'},
         {"port", required_argument, NULL, 'P'},
@@ -474,9 +272,6 @@ bool parse_cmd(
             case 'h':
                 print_help();
                 return false;
-                break;
-            case 'c':
-                return read_config(optarg);
                 break;
             case 'D':
 

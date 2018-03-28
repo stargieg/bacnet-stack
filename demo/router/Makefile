@@ -13,7 +13,7 @@ ifeq (${BACNET_PORT},linux)
 #PFLAGS =
 # -pthread
 TARGET_EXT =
-LIBS = -lpthread -lconfig
+LIBS = -lpthread
 LFLAGS += $(LIBS)
 endif
 
