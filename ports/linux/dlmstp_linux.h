@@ -28,6 +28,7 @@
 /*#include "dlmstp.h" */
 /*#include "bits/pthreadtypes.h"*/
 #include <pthread.h>
+#include <sys/time.h>
 #include <semaphore.h>
 
 #include <stdbool.h>
