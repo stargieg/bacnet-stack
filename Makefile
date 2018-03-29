@@ -45,7 +45,7 @@ DEFINES += $(MAKE_DEFINE)
 BACNET_PORT ?= linux
 
 # Default compiler settings
-OPTIMIZATION = -Os
+OPTIMIZATION = -O0
 DEBUGGING =
 WARNINGS = -Wall -Wmissing-prototypes
 ifeq (${BUILD},debug)

@@ -43,7 +43,7 @@ DEFINES += -D_NO_OLDNAMES
 endif
 #build for release (default) or debug
 DEBUGGING =
-OPTIMIZATION = -Os
+OPTIMIZATION = -O0
 ifeq (${BUILD},debug)
 OPTIMIZATION = -O0
 DEBUGGING = -g -DDEBUG_ENABLED=1
