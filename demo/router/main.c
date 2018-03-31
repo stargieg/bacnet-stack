@@ -227,8 +227,9 @@ void print_help(
 {
     printf("Usage: router <init_method> [init_parameters]\n" "\ninit_method:\n"
         "-c, --config <filepath>\n\tinitialize router with a configuration file (.cfg) located at <filepath>\n"
-        "-D, --device <dev_type> <iface> [params]\n\tinitialize a <dev_type> device using an <iface> interface specified with\n\t[params]\n"
+        "-D, --device <dev_type> [params]\n\tinitialize a <dev_type> device specified with\n\t[params]\n"
         "\ninit_parameters:\n"
+        "-i, --interface <iface>\n\tusing an <iface> interface\n"
         "-n, --network <net>\n\tspecify device network number\n"
         "-P, --port <port>\n\tspecify udp port for BIP device\n"
         "-m, --mac <mac_address> [max_master] [max_frames]\n\tspecify MSTP port parameters\n"
@@ -243,10 +244,11 @@ bool parse_cmd(
     char *argv[])
 {
     const char *optString = "hD:";
-    const char *bipString = "p:n:D:";
-    const char *mstpString = "m:b:p:d:s:n:D:";
+    const char *bipString = "p:n:D:i:";
+    const char *mstpString = "m:b:p:d:s:n:D:i:";
     const struct option Options[] = {
         {"device", required_argument, NULL, 'D'},
+        {"interface", required_argument, NULL, 'i'},
         {"network", required_argument, NULL, 'n'},
         {"port", required_argument, NULL, 'P'},
         {"mac", required_argument, NULL, 'm'},
@@ -289,39 +291,38 @@ bool parse_cmd(
                 }
 
                 port_count++;
+                PRINT(ERROR,
+                   "Info: Port %i\n",port_count);
                 if (strcmp(optarg, "bip") == 0) {
                     current->type = BIP;
 
-                    if (optind < argc && argv[optind][0] != '-') {
-                        current->iface = argv[optind];
-                    } else {
-                        current->iface = "eth0";
-                    }
-
                     /* setup default parameters */
+                    current->iface = "eth0";
                     current->params.bip_params.port = 0xBAC0;   /* 47808 */
                     current->route_info.net = get_next_free_dnet();
 
-                    /* check if interface is valid */
-                    fd = socket(AF_INET, SOCK_DGRAM, 0);
-                    if (fd) {
-                        struct ifreq ifr;
-                        strncpy(ifr.ifr_name, current->iface,
-                            sizeof(ifr.ifr_name) - 1);
-                        result = ioctl(fd, SIOCGIFADDR, &ifr);
-                        if (result != -1) {
-                            close(fd);
-                        } else {
-                            PRINT(ERROR,
-                                "Error: Invalid interface for BIP device \n");
-                            return false;
-                        }
-                    }
-
                     dev_opt =
                         getopt_long(argc, argv, bipString, Options, &index);
-                    while (dev_opt != -1 && dev_opt != 'd') {
+                    while (dev_opt != -1 && dev_opt != 'D') {
                         switch (dev_opt) {
+                           case 'i':
+                                PRINT(ERROR,"info: argc %s\n",optarg);
+                                current->iface = optarg;
+                                /* check if interface is valid */
+                                fd = socket(AF_INET, SOCK_DGRAM, 0);
+                                if (fd) {
+                                    struct ifreq ifr;
+                                    strncpy(ifr.ifr_name, current->iface,
+                                        sizeof(ifr.ifr_name) - 1);
+                                    result = ioctl(fd, SIOCGIFADDR, &ifr);
+                                    if (result != -1) {
+                                        close(fd);
+                                    } else {
+                                        PRINT(ERROR,
+                                            "Error: Invalid interface for BIP device \n");
+                                        return false;
+                                    }
+                                }
                             case 'P':
                                 result = atoi(optarg);
                                 if (result) {
@@ -349,23 +350,8 @@ bool parse_cmd(
                 } else if (strcmp(optarg, "mstp") == 0) {
                     current->type = MSTP;
 
-                    if (optind < argc && argv[optind][0] != '-') {
-                        current->iface = argv[optind];
-                    } else {
-                        current->iface = "/dev/ttyS0";
-                    }
-
-                    /* check if interface is valid */
-                    fd = open(current->iface, O_NOCTTY | O_NONBLOCK);
-                    if (fd != -1) {
-                        close(fd);
-                    } else {
-                        PRINT(ERROR,
-                            "Error: Invalid interface for MSTP device\n");
-                        return false;
-                    }
-
                     /* setup default parameters */
+                    current->iface = "/dev/ttyUSB0";
                     current->route_info.mac[0] = 127;
                     current->route_info.mac_len = 1;
                     current->params.mstp_params.max_master = 127;
@@ -380,6 +366,18 @@ bool parse_cmd(
                         getopt_long(argc, argv, mstpString, Options, &index);
                     while (dev_opt != -1 && dev_opt != 'D') {
                         switch (dev_opt) {
+                            case 'i':
+                                PRINT(ERROR,"info: argc %s\n",optarg);
+                                current->iface = optarg;
+                                /* check if interface is valid */
+                                fd = open(current->iface, O_NOCTTY | O_NONBLOCK);
+                                if (fd != -1) {
+                                    close(fd);
+                                } else {
+                                    PRINT(ERROR,
+                                        "Error: Invalid interface for MSTP device\n");
+                                    return false;
+                                }
                             case 'm':
                                 result = atoi(optarg);
                                 if (result) {
