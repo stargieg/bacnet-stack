@@ -538,6 +538,7 @@ bool Multistate_Value_Present_Value_Set(
             if (priority == 8) {
                 CurrentMSV->Priority_Array[15] = (uint8_t) value;
             }
+            CurrentMSV->Changed = true;
             status = true;
         }
     }
@@ -571,6 +572,7 @@ void Multistate_Value_Out_Of_Service_Set(
         index = Multistate_Value_Instance_To_Index(object_instance);
         CurrentMSV = &MSV_Descr[index];
         CurrentMSV->Out_Of_Service = value;
+        CurrentMSV->Changed = true;
     }
 }
 

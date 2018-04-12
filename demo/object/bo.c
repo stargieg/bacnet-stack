@@ -808,7 +808,7 @@ bool Binary_Output_Present_Value_Set(
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         if (priority && (priority <= BACNET_MAX_PRIORITY) &&
-            (priority != 6 /* reserved */ ) && (value > 0)) {
+            (priority != 6 /* reserved */ )) {
 #if defined(INTRINSIC_REPORTING)
             CurrentBO->Feedback_Value = (uint8_t) value;
 #endif
@@ -816,6 +816,7 @@ bool Binary_Output_Present_Value_Set(
             if (priority == 8) {
                 CurrentBO->Priority_Array[15] = (uint8_t) value;
             }
+            CurrentBO->Changed = true;
             status = true;
         }
     }
@@ -853,6 +854,7 @@ bool Binary_Output_Polarity_Set(
         index = Binary_Output_Instance_To_Index(object_instance);
         CurrentBO = &BO_Descr[index];
         CurrentBO->Polarity=polarity;
+        CurrentBO->Changed = true;
         sprintf(idx_cc,"%d",index);
         idx_c = idx_cc;
         if(ctx) {
@@ -1132,6 +1134,13 @@ int Binary_Output_Read_Property(
             break;
 
 #if defined(INTRINSIC_REPORTING)
+        case PROP_ALARM_VALUE:
+            len =
+                encode_application_enumerated(&apdu[apdu_len],
+                (CurrentBO->Feedback_Value == 1) ? 0 : 1);
+                apdu_len += len;
+            break;
+
         case PROP_FEEDBACK_VALUE:
             len =
                 encode_application_enumerated(&apdu[apdu_len],

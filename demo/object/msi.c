@@ -538,6 +538,7 @@ bool Multistate_Input_Present_Value_Set(
             if (priority == 8) {
                 CurrentMSI->Priority_Array[15] = (uint8_t) value;
             }
+            CurrentMSI->Changed = true;
             status = true;
         }
     }
@@ -571,6 +572,7 @@ void Multistate_Input_Out_Of_Service_Set(
         index = Multistate_Input_Instance_To_Index(object_instance);
         CurrentMSI = &MSI_Descr[index];
         CurrentMSI->Out_Of_Service = value;
+        CurrentMSI->Changed = true;
     }
 }
 

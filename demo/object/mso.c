@@ -550,6 +550,7 @@ bool Multistate_Output_Present_Value_Set(
             if (priority == 8) {
                 CurrentMSO->Priority_Array[15] = (uint8_t) value;
             }
+            CurrentMSO->Changed = true;
             status = true;
         }
     }
@@ -583,6 +584,7 @@ void Multistate_Output_Out_Of_Service_Set(
         index = Multistate_Output_Instance_To_Index(object_instance);
         CurrentMSO = &MSO_Descr[index];
         CurrentMSO->Out_Of_Service = value;
+        CurrentMSO->Changed = true;
     }
 }
 

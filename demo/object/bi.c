@@ -805,6 +805,7 @@ bool Binary_Input_Present_Value_Set(
         CurrentBI = &BI_Descr[index];
         CurrentBI->Present_Value = (uint8_t) value;
         CurrentBI->Priority_Array[priority - 1] = (uint8_t) value;
+        CurrentBI->Changed = true;
         status = true;
     }
     return status;
@@ -841,6 +842,7 @@ bool Binary_Input_Polarity_Set(
         index = Binary_Input_Instance_To_Index(object_instance);
         CurrentBI = &BI_Descr[index];
         CurrentBI->Polarity=polarity;
+        CurrentBI->Changed = true;
         sprintf(idx_cc,"%d",index);
         idx_c = idx_cc;
         if(ctx) {
