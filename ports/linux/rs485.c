@@ -391,7 +391,7 @@ void RS485_Send_Frame(
     uint8_t * buffer,   /* frame to send (up to 501 bytes of data) */
     uint16_t nbytes)
 {       /* number of bytes of data (up to 501) */
-    uint32_t turnaround_time = Tturnaround * 1000;
+    uint32_t turnaround_time = Tturnaround * 1000000; /* microseconds */
     uint32_t baud;
     ssize_t written = 0;
     int greska;
