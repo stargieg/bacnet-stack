@@ -515,6 +515,7 @@ static bool Trend_Log_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_tl", idx_c,
                             "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_bv");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -590,6 +591,7 @@ static bool Trend_Log_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_tl", idx_c,
                             "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_tl");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -1284,7 +1286,6 @@ bool Trend_Log_Write_Property(
     }
 
     if(ctx) {
-        ucix_commit(ctx, "bacnet_tl");
         ucix_cleanup(ctx);
     }
 

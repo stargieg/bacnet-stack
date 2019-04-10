@@ -885,6 +885,7 @@ static bool Analog_Output_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_ao", idx_c,
                             "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_ao");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -956,6 +957,7 @@ static bool Analog_Output_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_ao", idx_c,
                             "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_ao");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -1389,6 +1391,7 @@ bool Analog_Output_Write_Property(
                         cur_value_time);
                     ucix_add_option_int(ctx, "bacnet_ao", idx_c, "write",
                         1);
+                    ucix_save_state(ctx, "bacnet_ao");
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1430,6 +1433,7 @@ bool Analog_Output_Write_Property(
                             cur_value_time);
                         ucix_add_option_int(ctx, "bacnet_ao", idx_c, "write",
                             1);
+                        ucix_save_state(ctx, "bacnet_ao");
                     } else {
                         status = false;
                         wp_data->error_class = ERROR_CLASS_PROPERTY;
@@ -1501,6 +1505,7 @@ bool Analog_Output_Write_Property(
                 CurrentAO->Max_Pres_Value = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_ao", idx_c, "max_value",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_ao");
             }
             break;
 
@@ -1513,6 +1518,7 @@ bool Analog_Output_Write_Property(
                 CurrentAO->Min_Pres_Value = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_ao", idx_c, "min_value",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_ao");
             }
             break;
 
@@ -1527,6 +1533,7 @@ bool Analog_Output_Write_Property(
                 CurrentAO->Remaining_Time_Delay = CurrentAO->Time_Delay;
                 ucix_add_option_int(ctx, "bacnet_ao", idx_c, "time_delay",
                     value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_ao");
             }
             break;
 
@@ -1539,6 +1546,7 @@ bool Analog_Output_Write_Property(
                 CurrentAO->Notification_Class = value.type.Unsigned_Int;
                 ucix_add_option_int(ctx, "bacnet_ao", idx_c, "nc",
                     value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_ao");
             }
             break;
 
@@ -1551,6 +1559,7 @@ bool Analog_Output_Write_Property(
                 CurrentAO->High_Limit = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_ao", idx_c, "high_limit",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_ao");
             }
             break;
 
@@ -1563,6 +1572,7 @@ bool Analog_Output_Write_Property(
                 CurrentAO->Low_Limit = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_ao", idx_c, "low_limit",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_ao");
             }
             break;
 
@@ -1575,6 +1585,7 @@ bool Analog_Output_Write_Property(
                 CurrentAO->Deadband = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_ao", idx_c, "dead_limit",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_ao");
             }
             break;
 
@@ -1588,6 +1599,7 @@ bool Analog_Output_Write_Property(
                     CurrentAO->Limit_Enable = value.type.Bit_String.value[0];
                     ucix_add_option_int(ctx, "bacnet_ao", idx_c, "limit",
                         value.type.Bit_String.value[0]);
+                    ucix_commit(ctx, "bacnet_ao");
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1606,6 +1618,7 @@ bool Analog_Output_Write_Property(
                     CurrentAO->Event_Enable = value.type.Bit_String.value[0];
                     ucix_add_option_int(ctx, "bacnet_ao", idx_c, "event",
                         value.type.Bit_String.value[0]);
+                    ucix_commit(ctx, "bacnet_ao");
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1656,7 +1669,6 @@ bool Analog_Output_Write_Property(
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
     }
-    ucix_commit(ctx, "bacnet_ao");
     ucix_cleanup(ctx);
     return status;
 }

@@ -846,6 +846,7 @@ static bool Analog_Value_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_av", idx_c,
                             "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_av");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -917,6 +918,7 @@ static bool Analog_Value_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_av", idx_c,
                             "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_av");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -1340,6 +1342,7 @@ bool Analog_Value_Write_Property(
                         cur_value_time);
                     ucix_add_option_int(ctx, "bacnet_av", idx_c, "write",
                         1);
+                    ucix_save_state(ctx, "bacnet_av");
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1381,6 +1384,7 @@ bool Analog_Value_Write_Property(
                             cur_value_time);
                         ucix_add_option_int(ctx, "bacnet_av", idx_c, "write",
                             1);
+                        ucix_save_state(ctx, "bacnet_av");
                     } else {
                         status = false;
                         wp_data->error_class = ERROR_CLASS_PROPERTY;
@@ -1454,6 +1458,7 @@ bool Analog_Value_Write_Property(
                 CurrentAV->Remaining_Time_Delay = CurrentAV->Time_Delay;
                 ucix_add_option_int(ctx, "bacnet_av", idx_c, "time_delay",
                     value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_av");
             }
             break;
 
@@ -1466,6 +1471,7 @@ bool Analog_Value_Write_Property(
                 CurrentAV->Notification_Class = value.type.Unsigned_Int;
                 ucix_add_option_int(ctx, "bacnet_av", idx_c, "nc",
                     value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_av");
             }
             break;
 
@@ -1478,6 +1484,7 @@ bool Analog_Value_Write_Property(
                 CurrentAV->High_Limit = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_av", idx_c, "high_limit",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_av");
             }
             break;
 
@@ -1490,6 +1497,7 @@ bool Analog_Value_Write_Property(
                 CurrentAV->Low_Limit = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_av", idx_c, "low_limit",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_av");
             }
             break;
 
@@ -1502,6 +1510,7 @@ bool Analog_Value_Write_Property(
                 CurrentAV->Deadband = value.type.Real;
                 ucix_add_option_int(ctx, "bacnet_av", idx_c, "dead_limit",
                         value.type.Real);
+                ucix_commit(ctx, "bacnet_av");
             }
             break;
 
@@ -1515,6 +1524,7 @@ bool Analog_Value_Write_Property(
                     CurrentAV->Limit_Enable = value.type.Bit_String.value[0];
                     ucix_add_option_int(ctx, "bacnet_av", idx_c, "limit",
                         value.type.Bit_String.value[0]);
+                    ucix_commit(ctx, "bacnet_av");
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1533,6 +1543,7 @@ bool Analog_Value_Write_Property(
                     CurrentAV->Event_Enable = value.type.Bit_String.value[0];
                     ucix_add_option_int(ctx, "bacnet_av", idx_c, "event",
                         value.type.Bit_String.value[0]);
+                    ucix_commit(ctx, "bacnet_av");
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1583,7 +1594,6 @@ bool Analog_Value_Write_Property(
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
     }
-    ucix_commit(ctx, "bacnet_av");
     ucix_cleanup(ctx);
     return status;
 }

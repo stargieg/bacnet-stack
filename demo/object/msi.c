@@ -686,6 +686,7 @@ static bool Multistate_Input_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mi", idx_c,
                             "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_mi");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -790,6 +791,7 @@ static bool Multistate_Input_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mi", idx_c,
                             "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_mi");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -1368,6 +1370,7 @@ bool Multistate_Input_Write_Property(
                         cur_value_time);
                     ucix_add_option_int(ctx, "bacnet_mi", idx_c, "write",
                         1);
+                    ucix_save_state(ctx, "bacnet_mi");
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1514,6 +1517,7 @@ bool Multistate_Input_Write_Property(
                     CurrentMSI->number_of_alarmstates = ucialarmstate_n;
                     ucix_set_list(ctx, "bacnet_mi", idx_c, "alarmstate",
                         ucialarmstate, ucialarmstate_n);
+                    ucix_commit(ctx, "bacnet_mi");
                 }
             }
         case PROP_TIME_DELAY:
@@ -1525,6 +1529,7 @@ bool Multistate_Input_Write_Property(
                 CurrentMSI->Time_Delay = value.type.Unsigned_Int;
                 CurrentMSI->Remaining_Time_Delay = CurrentMSI->Time_Delay;
                 ucix_add_option_int(ctx, "bacnet_mi", index_c, "time_delay", value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_mi");
             }
             break;
 
@@ -1536,6 +1541,7 @@ bool Multistate_Input_Write_Property(
             if (status) {
                 CurrentMSI->Notification_Class = value.type.Unsigned_Int;
                 ucix_add_option_int(ctx, "bacnet_mi", index_c, "nc", value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_mi");
             }
             break;
 
@@ -1548,6 +1554,7 @@ bool Multistate_Input_Write_Property(
                 if (value.type.Bit_String.bits_used == 3) {
                     CurrentMSI->Event_Enable = value.type.Bit_String.value[0];
                     ucix_add_option_int(ctx, "bacnet_mi", index_c, "event", value.type.Bit_String.value[0]);
+                    ucix_commit(ctx, "bacnet_mi");
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1599,7 +1606,6 @@ bool Multistate_Input_Write_Property(
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
     }
-    ucix_commit(ctx, "bacnet_mi");
     ucix_cleanup(ctx);
     return status;
 }

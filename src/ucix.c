@@ -69,16 +69,20 @@ void ucix_cleanup(struct uci_context *ctx)
 	uci_free_context(ctx);
 }
 
-void ucix_save(struct uci_context *ctx)
+void ucix_save(struct uci_context *ctx, const char *p)
 {
+	if(ucix_get_ptr(ctx, p, NULL, NULL, NULL))
+		return;
 	uci_set_savedir(ctx, "/tmp/.uci/");
-	uci_save(ctx, NULL);
+	uci_save(ctx, ptr.p);
 }
 
-void ucix_save_state(struct uci_context *ctx)
+void ucix_save_state(struct uci_context *ctx, const char *p)
 {
+	if(ucix_get_ptr(ctx, p, NULL, NULL, NULL))
+		return;
 	uci_set_savedir(ctx, "/var/state/");
-	uci_save(ctx, NULL);
+	uci_save(ctx, ptr.p);
 }
 
 const char* ucix_get_option(struct uci_context *ctx, const char *p, const char *s, const char *o)
@@ -184,7 +188,7 @@ void ucix_set_list(struct uci_context *ctx, const char *p, const char *s, const 
     int i;
     ucix_get_ptr(ctx, p, s, o, NULL);
     uci_delete(ctx, &ptr);
-    ucix_save(ctx);
+    ucix_save(ctx, ptr.p);
     for (i = 0; i < l; i++) {
         if (value[i]) {
             ucix_get_ptr(ctx, p, s, o, value[i]);

@@ -437,6 +437,7 @@ static bool Notification_Class_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_nc", idx_c, 
                             "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_nc");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr, 
@@ -541,6 +542,7 @@ static bool Notification_Class_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_nc", idx_c,
                             "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_nc");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -1262,7 +1264,6 @@ bool Notification_Class_Write_Property(
                 ucix_set_list(ctx, "bacnet_nc", idx_c, "recipient",
                     ucirecp, ucirecp_n);
                 ucix_commit(ctx, "bacnet_nc");
-                ucix_cleanup(ctx);
             }
 
             status = true;
@@ -1273,6 +1274,9 @@ bool Notification_Class_Write_Property(
             wp_data->error_class = ERROR_CLASS_PROPERTY;
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
+    }
+    if(ctx) {
+        ucix_cleanup(ctx);
     }
     return status;
 }

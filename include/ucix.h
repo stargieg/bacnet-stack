@@ -42,8 +42,8 @@ struct uci_itr_ctx {
 typedef struct value_tuple value_tuple_t;
 
 void ucix_cleanup(struct uci_context *ctx);
-void ucix_save(struct uci_context *ctx);
-void ucix_save_state(struct uci_context *ctx);
+void ucix_save(struct uci_context *ctx, const char *p);
+void ucix_save_state(struct uci_context *ctx, const char *p);
 const char* ucix_get_option(struct uci_context *ctx,
 	const char *p, const char *s, const char *o);
 int ucix_get_list(char *value[254], struct uci_context *ctx,

@@ -582,6 +582,7 @@ static bool Binary_Value_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bv", idx_c,
                             "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_bv");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -686,6 +687,7 @@ static bool Binary_Value_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bv", idx_c,
                             "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_bv");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -847,6 +849,7 @@ bool Binary_Value_Polarity_Set(
         if(ctx) {
             ucix_add_option_int(ctx, "bacnet_bv", idx_c,
                 "polarity", polarity);
+            ucix_commit(ctx, "bacnet_bv");
 #if PRINT_ENABLED
         } else {
             fprintf(stderr,
@@ -890,6 +893,7 @@ static bool Binary_Value_Active_Text_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bv", idx_c,
                             "active", char_string->value);
+                        ucix_commit(ctx, "bacnet_bv");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -942,6 +946,7 @@ static bool Binary_Value_Inactive_Text_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_bv", idx_c,
                             "inactive", char_string->value);
+                        ucix_commit(ctx, "bacnet_bv");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -1359,6 +1364,7 @@ bool Binary_Value_Write_Property(
                         cur_value_time);
                     ucix_add_option_int(ctx, "bacnet_bv", idx_c, "write",
                         1);
+                    ucix_save_state(ctx, "bacnet_bv");
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1399,6 +1405,7 @@ bool Binary_Value_Write_Property(
                             cur_value_time);
                         ucix_add_option_int(ctx, "bacnet_bv", idx_c, "write",
                             1);
+                        ucix_save_state(ctx, "bacnet_bv");
                     } else {
                         status = false;
                         wp_data->error_class = ERROR_CLASS_PROPERTY;
@@ -1467,6 +1474,7 @@ bool Binary_Value_Write_Property(
                     CurrentBV->Alarm_Value = alarm_value;
                     ucix_add_option_int(ctx, "bacnet_bv", idx_c, "alarmstate",
                         alarm_value);
+                    ucix_commit(ctx, "bacnet_bv");
                 }
             }
         case PROP_TIME_DELAY:
@@ -1478,6 +1486,7 @@ bool Binary_Value_Write_Property(
                 CurrentBV->Time_Delay = value.type.Unsigned_Int;
                 CurrentBV->Remaining_Time_Delay = CurrentBV->Time_Delay;
                 ucix_add_option_int(ctx, "bacnet_bv", index_c, "time_delay", value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_bv");
             }
             break;
 
@@ -1489,6 +1498,7 @@ bool Binary_Value_Write_Property(
             if (status) {
                 CurrentBV->Notification_Class = value.type.Unsigned_Int;
                 ucix_add_option_int(ctx, "bacnet_bv", index_c, "nc", value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_bv");
             }
             break;
 
@@ -1501,6 +1511,7 @@ bool Binary_Value_Write_Property(
                 if (value.type.Bit_String.bits_used == 3) {
                     CurrentBV->Event_Enable = value.type.Bit_String.value[0];
                     ucix_add_option_int(ctx, "bacnet_bv", index_c, "event", value.type.Bit_String.value[0]);
+                    ucix_commit(ctx, "bacnet_bv");
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1577,7 +1588,6 @@ bool Binary_Value_Write_Property(
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
     }
-    ucix_commit(ctx, "bacnet_bv");
     ucix_cleanup(ctx);
     return status;
 }

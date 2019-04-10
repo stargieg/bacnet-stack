@@ -698,6 +698,7 @@ static bool Multistate_Output_Description_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mo", idx_c,
                             "description", char_string->value);
+                        ucix_commit(ctx, "bacnet_mo");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -802,6 +803,7 @@ static bool Multistate_Output_Object_Name_Write(
                     if(ctx) {
                         ucix_add_option(ctx, "bacnet_mo", idx_c,
                             "name", char_string->value);
+                        ucix_commit(ctx, "bacnet_mo");
 #if PRINT_ENABLED
                     } else {
                         fprintf(stderr,
@@ -1363,6 +1365,7 @@ bool Multistate_Output_Write_Property(
                         cur_value_time);
                     ucix_add_option_int(ctx, "bacnet_mo", idx_c, "write",
                         1);
+                    ucix_save_state(ctx, "bacnet_mo");
                 } else if (wp_data->priority == 6) {
                     /* Command priority 6 is reserved for use by Minimum On/Off
                        algorithm and may not be used for other purposes in any
@@ -1499,6 +1502,7 @@ bool Multistate_Output_Write_Property(
                 CurrentMSO->Time_Delay = value.type.Unsigned_Int;
                 CurrentMSO->Remaining_Time_Delay = CurrentMSO->Time_Delay;
                 ucix_add_option_int(ctx, "bacnet_mo", index_c, "time_delay", value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_mo");
             }
             break;
 
@@ -1510,6 +1514,7 @@ bool Multistate_Output_Write_Property(
             if (status) {
                 CurrentMSO->Notification_Class = value.type.Unsigned_Int;
                 ucix_add_option_int(ctx, "bacnet_mo", index_c, "nc", value.type.Unsigned_Int);
+                ucix_commit(ctx, "bacnet_mo");
             }
             break;
 
@@ -1522,6 +1527,7 @@ bool Multistate_Output_Write_Property(
                 if (value.type.Bit_String.bits_used == 3) {
                     CurrentMSO->Event_Enable = value.type.Bit_String.value[0];
                     ucix_add_option_int(ctx, "bacnet_mo", index_c, "event", value.type.Bit_String.value[0]);
+                    ucix_commit(ctx, "bacnet_mo");
                 } else {
                     wp_data->error_class = ERROR_CLASS_PROPERTY;
                     wp_data->error_code = ERROR_CODE_VALUE_OUT_OF_RANGE;
@@ -1573,7 +1579,6 @@ bool Multistate_Output_Write_Property(
             wp_data->error_code = ERROR_CODE_UNKNOWN_PROPERTY;
             break;
     }
-    ucix_commit(ctx, "bacnet_mo");
     ucix_cleanup(ctx);
     return status;
 }
