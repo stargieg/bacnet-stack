@@ -1954,7 +1954,7 @@ int Analog_Input_Event_Information(
 
 
     /* check index */
-    if (Analog_Input_Valid_Instance(index)) {
+    if (index < max_analog_inputs_int) {
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (AI_Descr[index].Event_State != EVENT_STATE_NORMAL);
 

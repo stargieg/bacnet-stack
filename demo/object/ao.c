@@ -1983,7 +1983,7 @@ int Analog_Output_Event_Information(
 
 
     /* check index */
-    if (Analog_Output_Valid_Instance(index)) {
+    if (index < max_analog_outputs_int) {
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (AO_Descr[index].Event_State != EVENT_STATE_NORMAL);
 

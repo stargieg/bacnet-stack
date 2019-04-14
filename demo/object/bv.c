@@ -1599,17 +1599,16 @@ void Binary_Value_Intrinsic_Reporting(
     BINARY_VALUE_DESCR *CurrentBV;
     BACNET_EVENT_NOTIFICATION_DATA event_data;
     BACNET_CHARACTER_STRING msgText;
-    unsigned int index;
+    unsigned index = 0;
     uint8_t FromState = 0;
     uint8_t ToState;
     uint8_t PresentVal = 0;
     bool SendNotify = false;
-    bool tonormal = true;
 
-    index = Binary_Value_Instance_To_Index(object_instance);
-    if (index < max_binary_values_int)
+    if (Binary_Value_Valid_Instance(object_instance)) {
+        index = Binary_Value_Instance_To_Index(object_instance);
         CurrentBV = &BV_Descr[index];
-    else
+    } else
         return;
 
     if (CurrentBV->Ack_notify_data.bSendAckNotify) {
@@ -1655,10 +1654,7 @@ void Binary_Value_Intrinsic_Reporting(
                 break;
 
             case EVENT_STATE_FAULT:
-                if (PresentVal == CurrentBV->Alarm_Value) {
-                       tonormal = false;
-                }
-                if ((tonormal) &&
+                if ((PresentVal != CurrentBV->Alarm_Value) &&
                     ((CurrentBV->Event_Enable & EVENT_ENABLE_TO_NORMAL) ==
                     EVENT_ENABLE_TO_NORMAL)) {
                     if (!CurrentBV->Remaining_Time_Delay)
@@ -1940,14 +1936,14 @@ int Binary_Value_Alarm_Ack(
             break;
 
         case EVENT_STATE_FAULT:
-            if (CurrentBV->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
+            if (CurrentBV->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked ==
                 false) {
                 if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
                 }
                 if (datetime_compare(&CurrentBV->Acked_Transitions
-                        [TRANSITION_TO_NORMAL].Time_Stamp,
+                        [TRANSITION_TO_FAULT].Time_Stamp,
                         &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
@@ -1963,14 +1959,14 @@ int Binary_Value_Alarm_Ack(
             break;
 
         case EVENT_STATE_NORMAL:
-            if (CurrentBV->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked ==
+            if (CurrentBV->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
                 false) {
                 if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
                 }
                 if (datetime_compare(&CurrentBV->Acked_Transitions
-                        [TRANSITION_TO_FAULT].Time_Stamp,
+                        [TRANSITION_TO_NORMAL].Time_Stamp,
                         &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;

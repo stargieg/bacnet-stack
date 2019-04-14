@@ -257,7 +257,7 @@ static object_functions_t My_Object_Table[] = {
             Binary_Value_Encode_Value_List,
             Binary_Value_Change_Of_Value,
             Binary_Value_Change_Of_Value_Clear,
-        Binary_Input_Intrinsic_Reporting},
+        Binary_Value_Intrinsic_Reporting},
 #endif
 #if defined(CSV)
     {OBJECT_CHARACTERSTRING_VALUE,

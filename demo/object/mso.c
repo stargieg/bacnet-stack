@@ -1825,7 +1825,6 @@ int Multistate_Output_Event_Information(
 
     /* check index */
     if (index < max_multi_state_outputs_int) {
-        //CurrentMSO = &MSO_Descr[index];
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (MSO_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
@@ -1930,14 +1929,14 @@ int Multistate_Output_Alarm_Ack(
             break;
 
         case EVENT_STATE_FAULT:
-            if (CurrentMSO->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
+            if (CurrentMSO->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked ==
                 false) {
                 if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
                 }
                 if (datetime_compare(&CurrentMSO->Acked_Transitions
-                        [TRANSITION_TO_NORMAL].Time_Stamp,
+                        [TRANSITION_TO_FAULT].Time_Stamp,
                         &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
@@ -1953,14 +1952,14 @@ int Multistate_Output_Alarm_Ack(
             break;
 
         case EVENT_STATE_NORMAL:
-            if (CurrentMSO->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked ==
+            if (CurrentMSO->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
                 false) {
                 if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
                 }
                 if (datetime_compare(&CurrentMSO->Acked_Transitions
-                        [TRANSITION_TO_FAULT].Time_Stamp,
+                        [TRANSITION_TO_NORMAL].Time_Stamp,
                         &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;

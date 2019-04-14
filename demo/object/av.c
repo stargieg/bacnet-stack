@@ -1908,7 +1908,7 @@ int Analog_Value_Event_Information(
 
 
     /* check index */
-    if (Analog_Value_Valid_Instance(index)) {
+    if (index < max_analog_values_int) {
         /* Event_State not equal to NORMAL */
         IsActiveEvent = (AV_Descr[index].Event_State != EVENT_STATE_NORMAL);
 
@@ -2016,14 +2016,14 @@ int Analog_Value_Alarm_Ack(
             break;
 
         case EVENT_STATE_FAULT:
-            if (CurrentAV->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
+            if (CurrentAV->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked ==
                 false) {
                 if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
                 }
                 if (datetime_compare(&CurrentAV->
-                        Acked_Transitions[TRANSITION_TO_NORMAL].Time_Stamp,
+                        Acked_Transitions[TRANSITION_TO_FAULT].Time_Stamp,
                         &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
@@ -2039,14 +2039,14 @@ int Analog_Value_Alarm_Ack(
             break;
 
         case EVENT_STATE_NORMAL:
-            if (CurrentAV->Acked_Transitions[TRANSITION_TO_FAULT].bIsAcked ==
+            if (CurrentAV->Acked_Transitions[TRANSITION_TO_NORMAL].bIsAcked ==
                 false) {
                 if (alarmack_data->eventTimeStamp.tag != TIME_STAMP_DATETIME) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
                 }
                 if (datetime_compare(&CurrentAV->
-                        Acked_Transitions[TRANSITION_TO_FAULT].Time_Stamp,
+                        Acked_Transitions[TRANSITION_TO_NORMAL].Time_Stamp,
                         &alarmack_data->eventTimeStamp.value.dateTime) > 0) {
                     *error_code = ERROR_CODE_INVALID_TIME_STAMP;
                     return -1;
