@@ -186,9 +186,9 @@ struct bo_inst_itr_ctx {
         uint32_t object_instance);
 
     bool Binary_Output_Present_Value_Set(
-        uint32_t object_instance,
-        BACNET_BINARY_PV value,
-        uint8_t priority);
+    uint32_t instance,
+    BACNET_BINARY_PV binary_value,
+    unsigned priority);
 
     unsigned Binary_Output_Present_Value_Priority(
         uint32_t object_instance);
